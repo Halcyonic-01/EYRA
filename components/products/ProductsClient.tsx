@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { Search, X } from "lucide-react";
 import { ProductCard } from "./ProductCard";
 import { Dropdown } from "@/components/ui/Dropdown";
@@ -171,9 +172,9 @@ export function ProductsClient({
       {/* Breadcrumb */}
       <div className="py-5">
         <nav aria-label="Breadcrumb" className="flex items-center gap-1 font-sans font-normal text-[16px] leading-[24px]">
-          <a href="/" className="text-[#5F5F5F] hover:text-black transition-colors duration-200 text-center">
+          <Link href="/" className="text-[#5F5F5F] hover:text-black transition-colors duration-200 text-center">
             Home
-          </a>
+          </Link>
           <span className="text-[#5F5F5F] mx-1">›</span>
           <span className="text-black">Products</span>
         </nav>
