@@ -44,6 +44,11 @@ export function CartClient() {
     return `${productId}-${size ?? "null"}`;
   }
 
+  // Units, not cart lines. The checkout sidebar counts the same way, so a cart
+  // holding one product at quantity 3 no longer says "1 item" here and
+  // "3 items" on the very next screen.
+  const totalQty = items.reduce((n, i) => n + i.quantity, 0);
+
   // Server-authoritative totals, fall back to a client-side subtotal estimate
   // only when the Medusa cart hasn't synced yet (no variantIds or pending sync).
   const totals = useMemo(() => {
@@ -106,7 +111,7 @@ export function CartClient() {
               Shopping cart
             </h1>
             <span className="font-sans font-normal text-[14px] text-[#626262]">
-              {items.length} {items.length === 1 ? "item" : "items"}
+              {totalQty} {totalQty === 1 ? "item" : "items"}
             </span>
           </div>
 
@@ -223,7 +228,7 @@ export function CartClient() {
           <div className="flex flex-col gap-3 text-[14px] font-sans font-normal">
             <div className="flex items-center justify-between">
               <span className="text-[#626262]">
-                Subtotal ({items.length} {items.length === 1 ? "item" : "items"})
+                Subtotal ({totalQty} {totalQty === 1 ? "item" : "items"})
               </span>
               <span className="text-black font-medium">
                 ₹{totals.subtotal.toLocaleString("en-IN")}
