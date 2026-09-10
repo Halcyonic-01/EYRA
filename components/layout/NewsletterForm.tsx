@@ -14,18 +14,26 @@ export function NewsletterForm({ variant = "dark" }: NewsletterFormProps) {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const email = new FormData(e.currentTarget).get("email") as string;
+    const email = String(new FormData(e.currentTarget).get("email") ?? "");
     if (!email.trim()) return;
 
     setStatus("loading");
 
-    const res = await fetch("/api/newsletter/subscribe", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email }),
-    });
-
-    setStatus(res.ok ? "success" : "error");
+    // Without this catch a dropped connection rejects the fetch, the handler
+    // exits on an unhandled rejection, and status is left on "loading"
+    // forever, which disables both the input and the submit button. The
+    // subscriber is then stuck looking at a dead form until a full reload.
+    try {
+      const res = await fetch("/api/newsletter/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      setStatus(res.ok ? "success" : "error");
+    } catch (err) {
+      console.error("[newsletter] subscribe request failed:", err);
+      setStatus("error");
+    }
   };
 
   if (status === "success") {
