@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useCartStore } from "@/store/useStore";
@@ -40,32 +40,9 @@ export function CartClient() {
   const updateQuantity = useCartStore((s) => s.updateQuantity);
   const removeFromCart = useCartStore((s) => s.removeFromCart);
 
-  const [checkedKeys, setCheckedKeys] = useState<Set<string>>(() =>
-    new Set(items.map((i) => `${i.product.id}-${i.size ?? "null"}`))
-  );
-
   function itemKey(productId: string, size: number | null) {
     return `${productId}-${size ?? "null"}`;
   }
-
-  function toggleCheck(key: string) {
-    setCheckedKeys((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
-      return next;
-    });
-  }
-
-  function toggleAll() {
-    const allKeys = items.map((i) => itemKey(i.product.id, i.size));
-    const allChecked = allKeys.every((k) => checkedKeys.has(k));
-    setCheckedKeys(allChecked ? new Set() : new Set(allKeys));
-  }
-
-  const allChecked =
-    items.length > 0 &&
-    items.every((i) => checkedKeys.has(itemKey(i.product.id, i.size)));
 
   // Server-authoritative totals, fall back to a client-side subtotal estimate
   // only when the Medusa cart hasn't synced yet (no variantIds or pending sync).
@@ -115,60 +92,39 @@ export function CartClient() {
       <div className="flex flex-col lg:flex-row gap-8 items-start">
         {/* Left: Cart items */}
         <div className="flex-1 min-w-0">
+          {/* There used to be a "Select all" control and a checkbox per item
+              here. Nothing read that selection: the totals below, and the
+              Medusa cart that checkout actually charges, were always the full
+              items list. Worse, the checked set was seeded from `items` in a
+              useState initializer, which runs before the persisted cart has
+              rehydrated, so every item rendered unchecked on arrival while
+              still being billed for. A control that cannot change what you pay
+              is worse than no control, so it is gone; per-item removal is what
+              the trash button already does. */}
           <div className="flex items-center justify-between mb-5">
             <h1 className="font-sans font-medium text-[18px] leading-[27px] text-black">
               Shopping cart
             </h1>
-            <button
-              onClick={toggleAll}
-              className="flex items-center gap-2 font-sans font-normal text-[14px] text-[#626262] hover:text-black transition-colors duration-200"
-            >
-              <span
-                className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors duration-150 ${
-                  allChecked ? "bg-black border-black" : "border-[#CFCFCF]"
-                }`}
-              >
-                {allChecked && (
-                  <svg width="10" height="8" viewBox="0 0 10 8" fill="none" aria-hidden="true">
-                    <path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                )}
-              </span>
-              Select all
-            </button>
+            <span className="font-sans font-normal text-[14px] text-[#626262]">
+              {items.length} {items.length === 1 ? "item" : "items"}
+            </span>
           </div>
 
           <div className="flex flex-col gap-4">
             {items.map((item) => {
               const key = itemKey(item.product.id, item.size);
-              const checked = checkedKeys.has(key);
               const discountPct = Math.round(
                 ((item.product.originalPrice - item.product.price) / item.product.originalPrice) * 100
               );
 
               return (
-                // Below sm: the checkbox+image+info+qty-stepper+remove row's
-                // fixed-width elements alone need ~250px, more than fits
+                // Below sm: the image+info+qty-stepper+remove row's
+                // fixed-width elements alone need ~230px, more than fits
                 // beside a readable info column at a 375px viewport, so the
                 // qty-stepper/remove group drops to its own row underneath
                 // instead of squeezing beside the product info.
                 <div key={key} className="flex flex-col sm:flex-row gap-3 sm:gap-4 p-4 bg-white border border-[#E1E1E1] rounded-2xl">
                   <div className="flex gap-4">
-                    {/* Checkbox */}
-                    <button
-                      onClick={() => toggleCheck(key)}
-                      aria-label={checked ? "Deselect item" : "Select item"}
-                      className={`mt-1 w-5 h-5 rounded border-2 flex-shrink-0 flex items-center justify-center transition-colors duration-150 ${
-                        checked ? "bg-black border-black" : "border-[#CFCFCF] hover:border-black"
-                      }`}
-                    >
-                      {checked && (
-                        <svg width="10" height="8" viewBox="0 0 10 8" fill="none" aria-hidden="true">
-                          <path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
-                      )}
-                    </button>
-
                     {/* Product image */}
                     <div
                       className="relative w-[79px] h-[79px] flex-shrink-0 rounded-2xl overflow-hidden bg-[#F9F9F9]"
