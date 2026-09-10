@@ -132,6 +132,12 @@ export function ProductsClient({
     result = result.filter((p) => priceInRange(p.price, priceRange));
     if (sortBy === "price-asc") result.sort((a, b) => a.price - b.price);
     if (sortBy === "price-desc") result.sort((a, b) => b.price - a.price);
+    // "Newest" was offered in the dropdown but had no branch here, so picking
+    // it just relabelled the control and left the order untouched. getProducts
+    // returns the catalogue in Medusa's creation order, so reversing it puts
+    // the most recently added stock first, which is exactly how /new-arrivals
+    // decides what counts as new.
+    if (sortBy === "newest") result.reverse();
     return result;
   }, [products, query, selectedTypes, priceRange, sortBy]);
 
