@@ -205,7 +205,13 @@ export function ProductDetailClient({
                               ? product.sizeVariantMap?.[String(selectedSize)]
                               : undefined
                             : product.variantId;
-                        toggleWishlist(product, variantId);
+                        // Save the size alongside the variant so moving this
+                        // to the cart later can label the line with it.
+                        toggleWishlist(
+                          product,
+                          variantId,
+                          product.type === "ring" ? selectedSize : null
+                        );
                       }}
                       className="w-[42px] h-[42px] rounded-full bg-white border border-[#DDDDDD] flex items-center justify-center hover:border-black transition-colors duration-200"
                     >

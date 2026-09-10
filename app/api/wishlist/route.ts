@@ -9,6 +9,7 @@ import { applyRateLimit } from "@/lib/rateLimit";
 interface HydratedWishlistItem {
   product: Product;
   variantId: string | undefined;
+  size: number | null;
 }
 
 async function resolveMedusaCustomerId(): Promise<string | null> {
@@ -35,7 +36,7 @@ export async function GET() {
       // Keep entry.variantId exactly as stored. Falling back to
       // product.variantId here used to silently turn a ring wishlisted
       // without a chosen size into one with an arbitrary size attached.
-      return { product, variantId: entry.variantId };
+      return { product, variantId: entry.variantId, size: entry.size ?? null };
     })
   );
   const items = hydrated.filter((item): item is HydratedWishlistItem => item !== null);

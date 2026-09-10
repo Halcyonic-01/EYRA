@@ -33,7 +33,10 @@ export function WishlistClient() {
       router.push(`/products/${item.product.id}`);
       return;
     }
-    addToCart(item.product, null, item.variantId);
+    // Pass the saved size through, otherwise the cart line is keyed on
+    // `null` and shows no size at all, even though variantId pins the cart to
+    // a specific one. The customer could not see which size they were buying.
+    addToCart(item.product, item.size ?? null, item.variantId);
     removeFromWishlist(item.product.id);
   }
 
@@ -70,7 +73,16 @@ export function WishlistClient() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 border-t border-l border-[#CFCFCF]">
         {items.map((item) => {
           const { product, variantId } = item;
-          const inCart = cartItems.some((c) => c.product.id === product.id);
+          // Match the size too, not just the product. Rings carry one variant
+          // per size, so "this product is somewhere in the cart" would disable
+          // "Move to cart" for a size-8 ring merely because a size-12 of the
+          // same ring was already in there. ProductCard draws the same
+          // distinction for the same reason.
+          const inCart = cartItems.some(
+            (c) =>
+              c.product.id === product.id &&
+              (product.type === "ring" ? c.size === (item.size ?? null) : true)
+          );
 
           return (
             <div key={product.id} className="relative border-b border-r border-[#CFCFCF] flex flex-col items-center gap-4 py-8 px-6 group hover:bg-[#F7F7F7] transition-colors duration-200">

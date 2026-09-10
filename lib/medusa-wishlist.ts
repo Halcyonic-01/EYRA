@@ -22,6 +22,13 @@ export interface WishlistEntry {
   /** Medusa product handle, matches Product.id in the storefront. */
   productId: string;
   variantId?: string;
+  /**
+   * Ring size the entry was saved at, when one was chosen. variantId alone
+   * identifies the SKU for Medusa but carries no human-readable size, so
+   * without this the cart line created from a wishlist entry could not show
+   * the customer which size they were about to buy.
+   */
+  size?: number | null;
 }
 
 async function adminFetch<T>(path: string, init?: RequestInit): Promise<T | null> {
@@ -54,13 +61,14 @@ async function adminFetch<T>(path: string, init?: RequestInit): Promise<T | null
 }
 
 function isWishlistEntry(v: unknown): v is WishlistEntry {
-  return (
-    typeof v === "object" &&
-    v !== null &&
-    typeof (v as { productId?: unknown }).productId === "string" &&
-    ((v as { variantId?: unknown }).variantId === undefined ||
-      typeof (v as { variantId?: unknown }).variantId === "string")
-  );
+  if (typeof v !== "object" || v === null) return false;
+  const { productId, variantId, size } = v as Record<string, unknown>;
+  if (typeof productId !== "string") return false;
+  if (variantId !== undefined && typeof variantId !== "string") return false;
+  // Entries written before size was stored simply have none, so absent and
+  // null both stay valid rather than dropping the whole entry.
+  if (size !== undefined && size !== null && typeof size !== "number") return false;
+  return true;
 }
 
 /** Read the customer's stored wishlist. Returns [] if unset, unreachable, or malformed. */

@@ -304,12 +304,20 @@ export interface WishlistItem {
   product: Product;
   /** Resolved Medusa variant ID (size-specific or product default). */
   variantId: string | undefined;
+  /**
+   * Ring size chosen when the item was hearted, null when none was. Kept
+   * alongside variantId because variantId identifies the SKU for Medusa but
+   * says nothing the customer can read: without this, moving a wishlisted
+   * ring to the cart produced a line with the right variant and no visible
+   * size at all. Absent on entries saved before this field existed.
+   */
+  size?: number | null;
 }
 
 interface WishlistStore {
   items: WishlistItem[];
   hasSynced: boolean;
-  toggle: (product: Product, variantId?: string) => void;
+  toggle: (product: Product, variantId?: string, size?: number | null) => void;
   isWishlisted: (productId: string) => boolean;
   remove: (productId: string) => void;
   initWishlist: () => Promise<void>;
@@ -321,7 +329,11 @@ function syncWishlist(items: WishlistItem[]) {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      items: items.map((i) => ({ productId: i.product.id, variantId: i.variantId })),
+      items: items.map((i) => ({
+        productId: i.product.id,
+        variantId: i.variantId,
+        size: i.size ?? null,
+      })),
     }),
   }).catch((err) => {
     console.error("[wishlist] sync failed:", err);
@@ -334,7 +346,7 @@ export const useWishlistStore = create<WishlistStore>()(
       items: [],
       hasSynced: false,
 
-      toggle(product, variantId) {
+      toggle(product, variantId, size = null) {
         set((state) => {
           const exists = state.items.some((i) => i.product.id === product.id);
           // Store variantId exactly as the caller resolved it. Falling back
@@ -343,7 +355,7 @@ export const useWishlistStore = create<WishlistStore>()(
           // variant, defeating the caller's own size-required check.
           const items = exists
             ? state.items.filter((i) => i.product.id !== product.id)
-            : [...state.items, { product, variantId }];
+            : [...state.items, { product, variantId, size }];
           syncWishlist(items);
           return { items };
         });
