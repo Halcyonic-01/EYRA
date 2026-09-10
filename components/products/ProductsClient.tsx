@@ -154,7 +154,10 @@ export function ProductsClient({
     setQuery("");
   }
 
-  const hasActiveFilters = selectedTypes.length > 0 || priceRange !== "all" || query.trim() !== "";
+  // clearFilters resets sortBy too, so sort has to count as "active" here or
+  // the only control that undoes it stays hidden while it is in effect.
+  const hasActiveFilters =
+    selectedTypes.length > 0 || priceRange !== "all" || query.trim() !== "" || sortBy !== "trending";
   const typeLabel = selectedTypes.length === 0
     ? "Type"
     : selectedTypes.length === 1
