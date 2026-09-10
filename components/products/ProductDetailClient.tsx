@@ -117,6 +117,7 @@ export function ProductDetailClient({
   const [sizeRequiredError, setSizeRequiredError] = useState(false);
   const [sizeChartOpen, setSizeChartOpen] = useState(false);
   const [pincode, setPincode] = useState("");
+  const [shareNote, setShareNote] = useState("");
   const pincodeCheck = usePincodeServiceability();
   const touchStartX = useRef<number>(0);
 
@@ -144,6 +145,31 @@ export function ProductDetailClient({
       return null;
     }
     return product.sizeVariantMap?.[String(selectedSize)] ?? product.variantId;
+  }
+
+  /**
+   * The share control rendered but had no click handler at all, so tapping it
+   * did nothing. Native share sheet where the browser offers one (every mobile
+   * browser, which is where sharing a product actually happens), clipboard
+   * copy everywhere else.
+   */
+  async function handleShare() {
+    const url = window.location.href;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: product.name, text: product.description, url });
+        return;
+      }
+      await navigator.clipboard.writeText(url);
+      setShareNote("Link copied");
+    } catch (err) {
+      // A user dismissing the share sheet rejects with AbortError. That is a
+      // deliberate cancel, not a failure worth telling them about.
+      if (err instanceof DOMException && err.name === "AbortError") return;
+      console.error("[EYRA/share] Could not share product link:", err);
+      setShareNote("Could not copy link");
+    }
+    window.setTimeout(() => setShareNote(""), 2000);
   }
 
   function handleTouchStart(e: React.TouchEvent) {
@@ -185,9 +211,18 @@ export function ProductDetailClient({
                   >
                     Try it on
                   </button>
-                  <div className="flex gap-1">
+                  <div className="flex gap-1 items-start">
+                    {shareNote && (
+                      <span
+                        role="status"
+                        className="self-center mr-1 px-2 py-1 rounded-full bg-black/80 text-white font-sans font-normal text-[11px] whitespace-nowrap"
+                      >
+                        {shareNote}
+                      </span>
+                    )}
                     <button
                       aria-label="Share"
+                      onClick={handleShare}
                       className="w-[42px] h-[42px] rounded-full bg-white border border-[#DDDDDD] flex items-center justify-center hover:border-black transition-colors duration-200"
                     >
                       <ShareIcon />
