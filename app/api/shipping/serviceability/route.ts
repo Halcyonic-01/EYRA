@@ -63,6 +63,17 @@ export async function POST(request: NextRequest) {
     cod: "1",
   });
 
+  /**
+   * Used whenever we could not get a real answer out of Shiprocket. It has to
+   * be permissive: the alternative is telling a customer with a perfectly
+   * deliverable address that we don't serve them, and losing the order.
+   */
+  const inconclusive: ServiceabilityResult = {
+    serviceable: true,
+    estimatedDays: 5,
+    availablePaymentMethods: ["prepaid", "cod"],
+  };
+
   let shiprocketData: ShiprocketServiceabilityResponse;
   try {
     const res = await fetch(
@@ -75,15 +86,28 @@ export async function POST(request: NextRequest) {
         cache: "no-store",
       }
     );
+
+    // A non-2xx reply still carries a parseable JSON body, just an error one
+    // with no available_courier_companies in it. Reading it as a normal
+    // response would collapse "our API call failed" into "no courier serves
+    // this pincode", which is what the customer is then told, and what blocks
+    // checkout. Shiprocket tokens expire every ~10 days, so a 401 here is an
+    // expected operational event, not a hypothetical.
+    if (!res.ok) {
+      console.error(
+        `[Shiprocket/serviceability] API returned ${res.status} ${res.statusText} for pincode ${pincode}. ` +
+        (res.status === 401 || res.status === 403
+          ? "SHIPROCKET_API_TOKEN is likely expired or invalid, regenerate it. "
+          : "") +
+        "Falling back to a permissive result so checkout is not blocked."
+      );
+      return Response.json(inconclusive);
+    }
+
     shiprocketData = (await res.json()) as ShiprocketServiceabilityResponse;
   } catch (err) {
     console.error("[Shiprocket/serviceability] Serviceability fetch failed for pincode", pincode, ":", err);
-    const fallback: ServiceabilityResult = {
-      serviceable: true,
-      estimatedDays: 5,
-      availablePaymentMethods: ["prepaid", "cod"],
-    };
-    return Response.json(fallback);
+    return Response.json(inconclusive);
   }
 
   const couriers = shiprocketData?.data?.available_courier_companies ?? [];
