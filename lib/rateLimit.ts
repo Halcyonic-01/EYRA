@@ -39,7 +39,27 @@ export async function applyRateLimit(
   });
 
   const ip = clientIp(request);
-  const { success } = await limiter.limit(ip);
+
+  let success: boolean;
+  try {
+    ({ success } = await limiter.limit(ip));
+  } catch (err) {
+    // Upstash being unreachable used to throw straight out of the route
+    // handler, so every rate-limited endpoint answered 500 for the duration of
+    // the outage, /api/razorpay/verify among them. That turns a blip in an
+    // auxiliary service into failed payment verification and rejected
+    // support tickets.
+    //
+    // Fail open instead: the limiter is a protective control, not a
+    // correctness dependency, and this module already allows the request
+    // through when Upstash is not configured at all. Failing closed only for
+    // the configured-but-erroring case was the inconsistency, not the intent.
+    console.error(
+      `[rateLimit] Upstash check failed for namespace "${namespace}", allowing the request through:`,
+      err
+    );
+    return null;
+  }
 
   if (!success) {
     return Response.json(TOO_MANY_REQUESTS, { status: 429 });
