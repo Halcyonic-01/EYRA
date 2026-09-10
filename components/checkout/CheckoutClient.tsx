@@ -752,6 +752,12 @@ export function CheckoutClient() {
         );
       })
       .catch((err: unknown) => {
+        // An abort is this effect's own cleanup firing because the pincode
+        // changed, not a failed check. The replacement request has already
+        // set "loading" by the time this rejection lands, so reporting it
+        // would knock the newer check back to "idle" and flash the field
+        // between states while the user is still typing.
+        if (err instanceof DOMException && err.name === "AbortError") return;
         console.warn("[EYRA/serviceability] Pincode check failed for", form.pincode, ":", err);
         setPincodeStatus("idle");
       });
