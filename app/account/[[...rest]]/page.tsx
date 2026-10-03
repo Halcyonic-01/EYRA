@@ -90,9 +90,9 @@ export default function AccountPage() {
         </Link>
       </div>
 
-      {/* Clerk UserProfile panel */}
+      {/* Clerk UserProfile panel. The route is a catch-all so its sub-pages (e.g. /account/security) resolve. */}
       <div className="rounded-2xl border border-[#E1E1E1] overflow-hidden bg-white">
-        <UserProfile appearance={clerkAppearance} />
+        <UserProfile routing="path" path="/account" appearance={clerkAppearance} />
       </div>
     </div>
   );

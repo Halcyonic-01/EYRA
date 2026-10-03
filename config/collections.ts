@@ -67,7 +67,7 @@ export const COLLECTIONS: readonly Collection[] = [
     description:
       "Clean lines and structured weight, cut for a bold and modern look.",
     types: ["chain", "ring"],
-    image: "/images/for-him.png",
+    image: "/images/for-him.jpg",
   },
 ] as const;
 
