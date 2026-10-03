@@ -85,7 +85,7 @@ export function Navbar() {
           darkTheme ? "text-white" : "text-black",
         ].join(" ")}>
           {/* Logo */}
-          <Logo variant={darkTheme ? "light" : "dark"} size="md" />
+          <Logo variant={darkTheme ? "light" : "dark"} size="xl" />
 
           {/* Desktop nav */}
           <nav

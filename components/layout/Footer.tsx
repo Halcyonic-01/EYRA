@@ -11,7 +11,7 @@ const { contact, company, seller } = storeConfig;
 // collection that does not exist.
 const SHOP_LINKS = [
   ...COLLECTIONS.filter((c) =>
-    ["rings", "necklaces", "earrings", "bracelets"].includes(c.slug)
+    ["rings", "necklaces", "anklets", "bracelets"].includes(c.slug)
   ).map((c) => ({ label: c.label, href: `/collections/${c.slug}` })),
   { label: "New Arrivals", href: "/new-arrivals" },
   { label: "Best Sellers", href: "/best-sellers" },

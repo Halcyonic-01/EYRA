@@ -9,7 +9,7 @@ import { getProducts } from "@/lib/medusa";
 export const metadata: Metadata = {
   title: "Collections",
   description:
-    "Explore every EYRA collection of 925 sterling silver jewellery, from stacking rings to layered chains and everyday earrings.",
+    "Explore every EYRA collection of 925 sterling silver jewellery, from stacking rings to layered chains and delicate anklets.",
 };
 
 export default async function CollectionsPage() {

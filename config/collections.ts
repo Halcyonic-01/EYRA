@@ -38,12 +38,12 @@ export const COLLECTIONS: readonly Collection[] = [
     image: "/images/collection-2.jpg",
   },
   {
-    slug: "earrings",
-    label: "Earrings",
+    slug: "anklets",
+    label: "Anklets",
     description:
-      "Cuffs, hoops, and drops finished to sit light and stay tarnish free.",
-    types: ["earring"],
-    image: "/images/collection-3.jpg",
+      "Fine chains and delicate charms in 925 sterling silver, light enough for every day.",
+    types: ["anklet"],
+    image: "/images/collection-anklets.jpg",
   },
   {
     slug: "bracelets",
@@ -82,7 +82,11 @@ const SLUG_ALIASES: Record<string, string> = {
   necklace: "necklaces",
   pendants: "necklaces",
   ring: "rings",
-  earring: "earrings",
+  anklet: "anklets",
+  // The Earrings collection was replaced by Anklets; old links land on For Her,
+  // which still includes the earring products.
+  earrings: "for-her",
+  earring: "for-her",
   bracelet: "bracelets",
   her: "for-her",
   him: "for-him",
