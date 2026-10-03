@@ -60,18 +60,6 @@ export function HeroSection() {
             with no baked-in text, captions will need to be reintroduced as
             live DOM elements again at that point.
           */}
-
-          {/* Pagination dots */}
-          <div className="absolute bottom-5 left-1/2 -translate-x-1/2 flex items-center gap-2">
-            {[0, 1, 2].map((i) => (
-              <span
-                key={i}
-                className={`block rounded-full transition-all duration-300 ${
-                  i === 0 ? "w-5 h-1.5 bg-white" : "w-1.5 h-1.5 bg-white/50"
-                }`}
-              />
-            ))}
-          </div>
         </div>
       </div>
     </section>
