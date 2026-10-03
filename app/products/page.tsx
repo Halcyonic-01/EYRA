@@ -6,7 +6,7 @@ import { getProducts } from "@/lib/medusa";
 
 export const metadata: Metadata = {
   title: "Products",
-  description: "Browse our full collection of premium 925 sterling silver jewellery: rings, chains, earrings and more.",
+  description: "Browse our full collection of premium 925 sterling silver jewellery: rings, chains, anklets and more.",
 };
 
 export default async function ProductsPage({

@@ -217,7 +217,7 @@ export function Navbar() {
                 type="search"
                 value={searchValue}
                 onChange={(e) => setSearchValue(e.target.value)}
-                placeholder="Search rings, chains, earrings…"
+                placeholder="Search rings, chains, anklets…"
                 aria-label="Search products"
                 className="flex-1 bg-transparent font-sans font-light text-[16px] text-black placeholder:text-[#909090] focus:outline-none"
               />

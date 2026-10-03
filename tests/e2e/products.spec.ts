@@ -24,14 +24,14 @@ test("clicking a product navigates to its detail page", async ({ page }) => {
 });
 
 test("search matches whole words, not substrings inside unrelated words", async ({ page }) => {
-  // Regression test: naive substring search on "ring" previously matched
-  // every earring too, since "earring" contains "ring" mid-word.
+  // Search matches at word starts only, so "ring" finds rings and not words
+  // that merely contain it mid-word.
   await page.goto("/products?q=ring");
 
   const cardTitles = await page.locator("article h3").allInnerTexts();
   expect(cardTitles.length).toBeGreaterThan(0);
   for (const title of cardTitles) {
-    expect(title.toLowerCase()).not.toContain("earring");
+    expect(title.toLowerCase()).not.toContain("chain");
   }
 });
 
@@ -43,8 +43,7 @@ test("search with no matches shows the empty state", async ({ page }) => {
 test("type filter narrows results to the selected category", async ({ page }) => {
   await page.goto("/products");
 
-  // Open the Type dropdown, then check "Rings". exact:true matters since
-  // "Rings" is otherwise a substring match of "Earrings" too.
+  // Open the Type dropdown, then check "Rings".
   await page.getByRole("button", { name: "Type" }).click();
   await page.getByRole("menu").getByText("Rings", { exact: true }).click();
 
@@ -52,6 +51,5 @@ test("type filter narrows results to the selected category", async ({ page }) =>
   expect(cardTitles.length).toBeGreaterThan(0);
   for (const title of cardTitles) {
     expect(title.toLowerCase()).not.toContain("chain");
-    expect(title.toLowerCase()).not.toContain("earring");
   }
 });

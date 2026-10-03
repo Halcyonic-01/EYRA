@@ -7,7 +7,7 @@ import { ProductCard } from "./ProductCard";
 import { Dropdown } from "@/components/ui/Dropdown";
 import type { Product } from "./types";
 
-type ProductType = "ring" | "chain" | "earring" | "bracelet" | "anklet";
+type ProductType = "ring" | "chain" | "bracelet" | "anklet";
 type SortOption = "trending" | "price-asc" | "price-desc" | "newest";
 type PriceRange = "all" | "under-1500" | "1500-2500" | "2500-4000" | "above-4000";
 
@@ -29,7 +29,6 @@ const SORT_OPTIONS: { label: string; value: SortOption }[] = [
 const TYPE_OPTIONS: { label: string; value: ProductType }[] = [
   { label: "Rings", value: "ring" },
   { label: "Chains", value: "chain" },
-  { label: "Earrings", value: "earring" },
   { label: "Bracelets", value: "bracelet" },
   { label: "Anklets", value: "anklet" },
 ];
@@ -121,8 +120,8 @@ export function ProductsClient({
     const q = query.trim();
     if (q) {
       // Match at word starts only (e.g. "ring" -> "Ring"/"Rings") rather than
-      // anywhere in the string, plain substring matching means "ring" would
-      // also match "earRING" inside every earring's name/type.
+      // anywhere in the string, plain substring matching would also match
+      // inside unrelated words.
       const pattern = new RegExp(`\\b${q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`, "i");
       result = result.filter(
         (p) => pattern.test(p.name) || pattern.test(p.description) || pattern.test(p.type)
@@ -190,7 +189,7 @@ export function ProductsClient({
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search rings, chains, earrings…"
+          placeholder="Search rings, chains, anklets…"
           aria-label="Search products"
           className="flex-1 bg-transparent font-sans font-light text-[15px] text-black placeholder:text-[#909090] focus:outline-none border-b border-[#CFCFCF] focus:border-black pb-1.5 transition-colors duration-200"
         />

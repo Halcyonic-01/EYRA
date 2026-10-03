@@ -9,7 +9,6 @@
  *   JEWELRY_HSN_CODE          BIS HSN code (default: "7113")
  *   JEWELRY_GST_RATE          GST % as a number (default: 3)
  *   SHIP_WEIGHT_RING_G        Ring weight in grams (default: 6)
- *   SHIP_WEIGHT_EARRING_G     Earring weight in grams (default: 6)
  *   SHIP_WEIGHT_CHAIN_G       Chain/necklace weight in grams (default: 15)
  *   SHIP_WEIGHT_BRACELET_G    Bracelet weight in grams (default: 12)
  *   SHIP_WEIGHT_ANKLET_G      Anklet weight in grams (default: 10)
@@ -54,7 +53,6 @@ export const storeConfig = {
     /** Per-product-type manufacturing weights (g). */
     itemWeightsG: {
       ring: envFloat("SHIP_WEIGHT_RING_G", 6),
-      earring: envFloat("SHIP_WEIGHT_EARRING_G", 6),
       chain: envFloat("SHIP_WEIGHT_CHAIN_G", 15),
       bracelet: envFloat("SHIP_WEIGHT_BRACELET_G", 12),
       anklet: envFloat("SHIP_WEIGHT_ANKLET_G", 10),
