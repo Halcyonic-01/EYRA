@@ -4,7 +4,7 @@ import Image from "next/image";
 interface LogoProps {
   className?: string;
   variant?: "dark" | "light";
-  size?: "sm" | "md" | "lg";
+  size?: "sm" | "md" | "lg" | "xl";
 }
 
 /*
@@ -19,6 +19,7 @@ const sizes = {
   sm: { markH: 22 },
   md: { markH: 28 },
   lg: { markH: 38 },
+  xl: { markH: 46 },
 } as const;
 
 export function Logo({ className = "", variant = "dark", size = "md" }: LogoProps) {

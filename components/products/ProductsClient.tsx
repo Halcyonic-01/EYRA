@@ -7,7 +7,7 @@ import { ProductCard } from "./ProductCard";
 import { Dropdown } from "@/components/ui/Dropdown";
 import type { Product } from "./types";
 
-type ProductType = "ring" | "chain" | "earring" | "bracelet";
+type ProductType = "ring" | "chain" | "earring" | "bracelet" | "anklet";
 type SortOption = "trending" | "price-asc" | "price-desc" | "newest";
 type PriceRange = "all" | "under-1500" | "1500-2500" | "2500-4000" | "above-4000";
 
@@ -31,6 +31,7 @@ const TYPE_OPTIONS: { label: string; value: ProductType }[] = [
   { label: "Chains", value: "chain" },
   { label: "Earrings", value: "earring" },
   { label: "Bracelets", value: "bracelet" },
+  { label: "Anklets", value: "anklet" },
 ];
 
 function priceInRange(price: number, range: PriceRange): boolean {

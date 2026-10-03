@@ -12,6 +12,7 @@
  *   SHIP_WEIGHT_EARRING_G     Earring weight in grams (default: 6)
  *   SHIP_WEIGHT_CHAIN_G       Chain/necklace weight in grams (default: 15)
  *   SHIP_WEIGHT_BRACELET_G    Bracelet weight in grams (default: 12)
+ *   SHIP_WEIGHT_ANKLET_G      Anklet weight in grams (default: 10)
  *   SHIP_DEFAULT_WEIGHT_G     Fallback per-item weight in grams (default: 10)
  *   SHIP_MIN_WEIGHT_KG        Shiprocket minimum chargeable slab in kg (default: 0.5)
  *   SHIP_BOX_LENGTH_CM        Jewellery box length in cm (default: 10)
@@ -56,6 +57,7 @@ export const storeConfig = {
       earring: envFloat("SHIP_WEIGHT_EARRING_G", 6),
       chain: envFloat("SHIP_WEIGHT_CHAIN_G", 15),
       bracelet: envFloat("SHIP_WEIGHT_BRACELET_G", 12),
+      anklet: envFloat("SHIP_WEIGHT_ANKLET_G", 10),
     } as Record<string, number>,
     /** Standard jewellery box dimensions (cm) sent to Shiprocket. */
     box: {
