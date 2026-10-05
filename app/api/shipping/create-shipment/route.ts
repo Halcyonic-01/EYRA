@@ -15,7 +15,7 @@ const MEDUSA_BASE = (
 export interface ShipmentItem {
   name: string;
   sku: string;
-  type: string;       // "ring" | "chain" | "earring" | "bracelet" | "anklet"
+  type: string;       // "ring" | "chain" | "bracelet" | "anklet"
   quantity: number;
   price: number;      // unit price in rupees
 }

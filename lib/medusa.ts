@@ -165,12 +165,12 @@ async function getRegionId(): Promise<string | undefined> {
 /* ── Normalizers ──────────────────────────────────────────── */
 
 /**
- * Map Medusa's open-ended product type to the three types our UI understands.
+ * Map Medusa's open-ended product type to the types our UI understands.
  * Falls back to keyword matching on title/handle before defaulting to "ring".
  */
-function normalizeType(p: MedusaProduct): "ring" | "chain" | "earring" | "bracelet" | "anklet" {
+function normalizeType(p: MedusaProduct): "ring" | "chain" | "bracelet" | "anklet" {
   const raw = p.type?.value?.toLowerCase() ?? "";
-  if (raw === "ring" || raw === "chain" || raw === "earring" || raw === "bracelet" || raw === "anklet") {
+  if (raw === "ring" || raw === "chain" || raw === "bracelet" || raw === "anklet") {
     return raw;
   }
   const text = `${p.title} ${p.handle}`.toLowerCase();
@@ -181,13 +181,6 @@ function normalizeType(p: MedusaProduct): "ring" | "chain" | "earring" | "bracel
     return "bracelet";
   }
   if (text.includes("chain") || text.includes("link") || text.includes("necklace") || text.includes("pendant")) return "chain";
-  if (
-    text.includes("earring") ||
-    text.includes("ear cuff") ||
-    text.includes("stud") ||
-    text.includes("hoop") ||
-    text.includes("drop ear")
-  ) return "earring";
   return "ring";
 }
 
@@ -273,10 +266,9 @@ function toDetailProduct(p: MedusaProduct): DetailProduct {
     : [];
 
   // Quality badges come from Medusa product tags; fall back to sensible defaults
-  const defaultSpecs: Record<"ring" | "chain" | "earring" | "bracelet" | "anklet", string[]> = {
+  const defaultSpecs: Record<"ring" | "chain" | "bracelet" | "anklet", string[]> = {
     ring: ["925 Sterling", "Hallmarked", "BIS Certified", "Anti-tarnish"],
     chain: ["925 Sterling", "Nickel Free", "Hallmarked", "Anti-tarnish"],
-    earring: ["925 Sterling", "Anti-tarnish", "Hypoallergenic", "Hallmarked"],
     bracelet: ["925 Sterling", "Hallmarked", "BIS Certified", "Anti-tarnish"],
     anklet: ["925 Sterling", "Hallmarked", "BIS Certified", "Anti-tarnish"],
   };

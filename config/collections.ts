@@ -57,8 +57,8 @@ export const COLLECTIONS: readonly Collection[] = [
     slug: "for-her",
     label: "For Her",
     description:
-      "Delicate rings and sculpted earrings designed for effortless everyday wear.",
-    types: ["ring", "earring"],
+      "Delicate rings and fine anklets designed for effortless everyday wear.",
+    types: ["ring", "anklet"],
     image: "/images/for-her.jpg",
   },
   {
@@ -83,10 +83,6 @@ const SLUG_ALIASES: Record<string, string> = {
   pendants: "necklaces",
   ring: "rings",
   anklet: "anklets",
-  // The Earrings collection was replaced by Anklets; old links land on For Her,
-  // which still includes the earring products.
-  earrings: "for-her",
-  earring: "for-her",
   bracelet: "bracelets",
   her: "for-her",
   him: "for-him",
