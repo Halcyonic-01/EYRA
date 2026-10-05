@@ -6,6 +6,9 @@ import { usePathname, useRouter } from "next/navigation";
 import { Menu, X, Search, ShoppingBag, User, Heart } from "lucide-react";
 import { useAuth } from "@clerk/nextjs";
 import { Logo } from "@/components/ui/Logo";
+import { useWalletBalance } from "@/components/wallet/useWalletBalance";
+import { WalletChip } from "@/components/wallet/WalletChip";
+import { formatRupees } from "@/lib/money";
 import { useCartStore } from "@/store/useStore";
 import { useWishlistStore } from "@/store/useStore";
 
@@ -33,6 +36,11 @@ export function Navbar() {
   // server component, so a client component reads auth state via the hook.
   // Gate on isLoaded so the auth controls do not flip after hydration.
   const { isLoaded, isSignedIn } = useAuth();
+  // Spendable wallet credit, shown next to the account icon when there is any.
+  const wallet = useWalletBalance(Boolean(isLoaded && isSignedIn));
+  const walletHint = wallet?.nextExpiry
+    ? `${formatRupees(wallet.nextExpiry.amount)} expires on ${new Date(wallet.nextExpiry.expiresAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}`
+    : "Your wallet credit";
 
   useEffect(() => {
     if (searchOpen) searchInputRef.current?.focus();
@@ -127,6 +135,9 @@ export function Navbar() {
             {/* Account: signed-in users go to their profile, guests to sign-in.
                 This is deliberately the sole account entry point in the header,
                 no separate text "Sign in" / "Sign up" links. */}
+            {wallet && wallet.balance > 0 && (
+              <WalletChip balance={wallet.balance} hint={walletHint} dark={darkTheme} />
+            )}
             <Link
               href={isSignedIn ? "/account" : "/sign-in"}
               aria-label={isSignedIn ? "Your account" : "Sign in"}
@@ -282,6 +293,13 @@ export function Navbar() {
                 className="w-full text-center px-8 py-3.5 rounded-full border border-white/50 text-white font-sans font-normal text-[0.72rem] tracking-[0.2em] uppercase hover:border-white transition-colors duration-200"
               >
                 My orders
+              </Link>
+              <Link
+                href="/wallet"
+                onClick={closeMenu}
+                className="w-full text-center px-8 py-3.5 rounded-full border border-white/50 text-white font-sans font-normal text-[0.72rem] tracking-[0.2em] uppercase hover:border-white transition-colors duration-200"
+              >
+                {wallet && wallet.balance > 0 ? `My wallet · ${formatRupees(wallet.balance)}` : "My wallet"}
               </Link>
             </div>
           </div>

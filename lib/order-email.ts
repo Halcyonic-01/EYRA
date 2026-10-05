@@ -39,6 +39,8 @@ interface OrderForEmail {
   display_id: number;
   email: string | null;
   total: number;
+  /** Wallet credit used; `total` is already net of it. */
+  credit_line_total?: number;
   metadata: Record<string, unknown> | null;
   items: OrderItemForEmail[];
   shipping_address: OrderShippingAddress | null;
@@ -54,7 +56,7 @@ function adminHeaders(): Record<string, string> {
 async function fetchOrderForEmail(orderId: string): Promise<OrderForEmail | null> {
   try {
     const fields = [
-      "id", "display_id", "email", "total", "metadata",
+      "id", "display_id", "email", "total", "credit_line_total", "metadata",
       "items.title", "items.quantity", "items.unit_price", "items.thumbnail",
       "*shipping_address",
     ].join(",");
@@ -89,7 +91,7 @@ async function markConfirmationEmailSent(orderId: string): Promise<void> {
 }
 
 /** EYRA's brand palette (app/globals.css), mirrored here since email clients can't read @theme tokens. */
-const COLOR = {
+export const COLOR = {
   jet: "#020202",
   carbon: "#4d4d4d",
   ash: "#626262",
@@ -99,7 +101,7 @@ const COLOR = {
   white: "#ffffff",
 };
 
-const SITE_URL = "https://www.eyra.org.in";
+export const SITE_URL = "https://www.eyra.org.in";
 
 function formatAddress(addr: OrderShippingAddress | null): string {
   if (!addr) return "";
@@ -158,6 +160,14 @@ function renderOrderEmail(order: OrderForEmail): string {
             ${rows}
           </table>
           <table role="presentation" width="100%" style="margin-top:16px;font-family:Poppins,Helvetica,Arial,sans-serif;">
+            ${
+              (order.credit_line_total ?? 0) > 0
+                ? `<tr>
+              <td style="font-size:14px;color:${COLOR.ash};padding-bottom:6px;">Wallet credit</td>
+              <td style="font-size:14px;color:${COLOR.ash};text-align:right;padding-bottom:6px;">- ₹${Math.round(order.credit_line_total ?? 0).toLocaleString("en-IN")}</td>
+            </tr>`
+                : ""
+            }
             <tr>
               <td style="font-size:15px;font-weight:600;color:${COLOR.jet};">Total</td>
               <td style="font-size:15px;font-weight:600;color:${COLOR.jet};text-align:right;">₹${Math.round(order.total).toLocaleString("en-IN")}</td>

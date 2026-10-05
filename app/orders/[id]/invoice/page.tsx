@@ -5,6 +5,7 @@ import Link from "next/link";
 
 import { storeConfig } from "@/config/storeConfig";
 import { computeGst, gstStateCode } from "@/lib/gst";
+import { formatRupees } from "@/lib/money";
 import { PrintButton } from "@/components/orders/PrintButton";
 
 /* ── Medusa types ─────────────────────────────────────────── */
@@ -37,6 +38,8 @@ interface MedusaOrder {
   subtotal: number;
   shipping_total: number;
   total: number;
+  /** Wallet credit used. It is a way of paying, so it never reduces the invoice value. */
+  credit_line_total?: number;
   items: MedusaOrderItem[];
   shipping_address: MedusaShippingAddress | null;
 }
@@ -53,8 +56,10 @@ async function fetchOrder(orderId: string): Promise<MedusaOrder | null> {
   try {
     const fields = [
       "id", "display_id", "customer_id", "email", "created_at", "currency_code",
-      "subtotal", "shipping_total", "total",
-      "items.title", "items.quantity", "items.unit_price",
+      "subtotal", "shipping_total", "total", "credit_line_total",
+      // "*items" on purpose: asking for items.quantity by name returns no
+      // quantity, and Medusa then computes every total as zero.
+      "*items",
       "*shipping_address",
     ].join(",");
     const res = await fetch(`${ADMIN_BASE}/admin/orders/${orderId}?fields=${fields}`, {
@@ -113,6 +118,7 @@ export default async function InvoicePage({
   const seller = storeConfig.seller;
   const buyerState = order.shipping_address?.province ?? "";
   const gst = computeGst(order.subtotal, storeConfig.jewelry.gstRate, buyerState, seller.state);
+  const walletCredit = order.credit_line_total ?? 0;
 
   const buyerName = [order.shipping_address?.first_name, order.shipping_address?.last_name]
     .filter(Boolean)
@@ -272,9 +278,21 @@ export default async function InvoicePage({
             </div>
             <div className="h-px bg-[#E1E1E1] my-1" />
             <div className="flex justify-between font-sans font-medium text-[16px]">
-              <span className="text-black">Total</span>
-              <span className="text-black">{formatAmount(order.total)}</span>
+              <span className="text-black">{walletCredit > 0 ? "Invoice Total" : "Total"}</span>
+              <span className="text-black">{formatAmount(order.total + walletCredit)}</span>
             </div>
+            {walletCredit > 0 && (
+              <>
+                <div className="flex justify-between font-sans text-[14px]">
+                  <span className="text-[#626262]">Paid with wallet credit</span>
+                  <span className="text-black">− {formatRupees(walletCredit)}</span>
+                </div>
+                <div className="flex justify-between font-sans font-medium text-[14px]">
+                  <span className="text-black">Balance payable</span>
+                  <span className="text-black">{formatAmount(order.total)}</span>
+                </div>
+              </>
+            )}
           </div>
         </div>
 

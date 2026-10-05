@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+
 import {
   prepareCartForCheckout,
   createPaymentCollection,
@@ -12,23 +13,22 @@ import { sendOrderConfirmationEmail } from "@/lib/order-email";
 import { applyRateLimit } from "@/lib/rateLimit";
 
 /**
- * Complete a Cash-on-Delivery cart into a real Medusa order.
+ * Place an order that wallet credit pays for in full.
  *
- * COD takes no upfront payment, but Medusa's cart-completion workflow still
- * requires an initialized payment session before it will produce an order,
- * `pp_system_default` (Medusa's built-in manual/no-op provider) is exactly
- * what this is for.
+ * Nothing is charged: Medusa still needs an initialized payment session before
+ * it will produce an order, and `pp_system_default` (its built-in no-op
+ * provider) is for exactly that. This route refuses to run unless the wallet
+ * really does cover the whole cart, so it can never be used to skip payment.
  */
 export async function POST(req: NextRequest) {
-  const rateLimitResponse = await applyRateLimit(req, "cod_complete", 10);
+  const rateLimitResponse = await applyRateLimit(req, "wallet_pay", 10);
   if (rateLimitResponse) return rateLimitResponse;
 
   try {
-    const { cartId, email, shippingAddress, useWallet } = (await req.json()) as {
+    const { cartId, email, shippingAddress } = (await req.json()) as {
       cartId?: string;
       email?: string;
       shippingAddress?: CheckoutShippingAddress;
-      useWallet?: boolean;
     };
 
     if (!cartId || !email || !shippingAddress) {
@@ -43,9 +43,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ orderId: null, error: "cart_preparation_failed" }, { status: 200 });
     }
 
-    // Wallet credit is decided after shipping is on the cart, so it can cover
-    // the delivery charge too, and switched-off credit is cleared.
-    const wallet = await syncWalletForCheckout(cartId, useWallet === true);
+    const wallet = await syncWalletForCheckout(cartId, true);
     if (!wallet.ok) {
       return NextResponse.json(
         { orderId: null, error: "wallet_unavailable", message: wallet.message },
@@ -53,10 +51,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Nothing left to collect: this is a wallet-only order, not a COD one.
+    // Safety check: only a cart with nothing left to pay may skip payment.
     const snapshot = await fetchCartSnapshot(cartId);
-    if (snapshot && snapshot.total <= 0) {
-      return NextResponse.json({ orderId: null, error: "fully_covered_by_wallet" }, { status: 200 });
+    if (!snapshot || snapshot.total > 0) {
+      return NextResponse.json({ orderId: null, error: "wallet_not_enough" }, { status: 200 });
     }
 
     const collectionId = await createPaymentCollection(cartId);
@@ -78,7 +76,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ orderId });
   } catch (err) {
-    console.error("[cod/complete]", err);
+    console.error("[wallet/pay]", err);
     return NextResponse.json({ orderId: null, error: "internal" }, { status: 200 });
   }
 }

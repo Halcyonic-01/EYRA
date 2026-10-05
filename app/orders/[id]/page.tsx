@@ -1,8 +1,12 @@
 import type { Metadata } from "next";
+import { formatRupees } from "@/lib/money";
 import { currentUser } from "@clerk/nextjs/server";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
+import { storeConfig } from "@/config/storeConfig";
+import { listReturnRequests } from "@/lib/medusa-returns";
+import { eligibility, reasonLabel, STATUS_LABELS, type ReturnRequestStatus } from "@/lib/return-requests";
 
 /* ── Medusa types ─────────────────────────────────────────── */
 
@@ -37,6 +41,8 @@ interface MedusaOrder {
   subtotal: number;
   tax_total: number;
   shipping_total: number;
+  /** Wallet credit used on this order; `total` is already net of it. */
+  credit_line_total?: number;
   currency_code: string;
   created_at: string;
   items: MedusaOrderItem[];
@@ -82,7 +88,7 @@ async function fetchOrder(orderId: string): Promise<MedusaOrder | null> {
   try {
     // customer_id isn't in Medusa's default retrieve fields, request it
     // explicitly so ownership can be verified before rendering the order.
-    const res = await fetch(`${ADMIN_BASE}/admin/orders/${orderId}?fields=+customer_id`, {
+    const res = await fetch(`${ADMIN_BASE}/admin/orders/${orderId}?fields=+customer_id,+credit_line_total`, {
       // Secret API keys (sk_...) authenticate via HTTP Basic, not this header.
       headers: { Authorization: `Basic ${key}` },
       cache: "no-store",
@@ -310,6 +316,10 @@ export default async function OrderDetailPage({
   const courierName = order.metadata?.courier_name;
   const activities = awbCode ? await fetchTracking(awbCode) : [];
 
+  const requests = (await listReturnRequests(medusaCustomerId, order.id)) ?? [];
+  const requestability = eligibility(order, storeConfig.policy);
+  const canRequest = !requestability.closedReason;
+
   const fullName = [
     order.shipping_address?.first_name,
     order.shipping_address?.last_name,
@@ -369,6 +379,64 @@ export default async function OrderDetailPage({
               awbCode={awbCode}
               courierName={courierName}
             />
+          )}
+
+          {/* Returns and exchanges */}
+          {(requests.length > 0 || canRequest) && (
+            <div className="rounded-2xl border border-[#E1E1E1] overflow-hidden">
+              <div className="bg-[#F7F7F7] px-5 py-3 flex items-center justify-between gap-3">
+                <p className="font-sans font-medium text-[12px] text-[#626262] uppercase tracking-wider">
+                  Returns and exchanges
+                </p>
+                {canRequest && (
+                  <Link
+                    href={`/orders/${order.id}/return`}
+                    className="font-sans text-[12px] text-black underline underline-offset-2 hover:text-[#626262] transition-colors duration-200"
+                  >
+                    Request a return or exchange
+                  </Link>
+                )}
+              </div>
+              {requests.length === 0 ? (
+                <p className="px-5 py-4 font-sans text-[13px] text-[#909090]">
+                  No requests for this order yet.
+                </p>
+              ) : (
+                <div className="divide-y divide-[#F5F5F5]">
+                  {requests.map((request) => (
+                    <div key={request.id} className="px-5 py-4">
+                      <div className="flex items-center justify-between gap-3">
+                        <p className="font-sans text-[14px] text-black capitalize">
+                          {request.type} · {reasonLabel(request.reason)}
+                        </p>
+                        <span
+                          className={`rounded-full px-3 py-1 font-sans text-[11px] ${
+                            request.status === "approved"
+                              ? "bg-[#E8F7DD] text-[#2F7A06]"
+                              : request.status === "rejected"
+                              ? "bg-[#FFF1F1] text-[#B42318]"
+                              : "bg-[#F0F0F0] text-[#626262]"
+                          }`}
+                        >
+                          {STATUS_LABELS[request.status as ReturnRequestStatus]}
+                        </span>
+                      </div>
+                      <p className="mt-1 font-sans text-[12px] text-[#909090]">
+                        {request.items.map((item) => `${item.quantity} × ${item.title}`).join(", ")}
+                      </p>
+                      {request.status === "approved" && request.creditAmount ? (
+                        <p className="mt-1 font-sans text-[12px] text-[#2F7A06]">
+                          {formatRupees(request.creditAmount)} added to your wallet.
+                        </p>
+                      ) : null}
+                      {request.resolutionNote && (
+                        <p className="mt-1 font-sans text-[12px] text-[#626262]">{request.resolutionNote}</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           )}
 
           {/* Order items */}
@@ -441,6 +509,12 @@ export default async function OrderDetailPage({
                   ? <span className="font-medium" style={{ color: "#47B10A" }}>FREE</span>
                   : <span className="text-black">{formatAmount(order.shipping_total)}</span>}
               </div>
+              {(order.credit_line_total ?? 0) > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-[#626262]">Wallet credit</span>
+                  <span className="font-medium" style={{ color: "#47B10A" }}>− {formatRupees(order.credit_line_total ?? 0)}</span>
+                </div>
+              )}
               <div className="h-px bg-[#F0F0F0] my-0.5" />
               <div className="flex justify-between">
                 <span className="font-semibold text-black">Total</span>

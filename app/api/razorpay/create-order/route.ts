@@ -4,8 +4,10 @@ import {
   prepareCartForCheckout,
   createPaymentCollection,
   initPaymentSession,
+  fetchCartSnapshot,
   type CheckoutShippingAddress,
 } from "@/lib/medusa-order";
+import { syncWalletForCheckout } from "@/lib/medusa-wallet";
 import { applyRateLimit } from "@/lib/rateLimit";
 
 export async function POST(req: NextRequest) {
@@ -13,10 +15,11 @@ export async function POST(req: NextRequest) {
   if (rateLimitResponse) return rateLimitResponse;
 
   try {
-    const { cartId, email, shippingAddress } = (await req.json()) as {
+    const { cartId, email, shippingAddress, useWallet } = (await req.json()) as {
       cartId?: string;
       email?: string;
       shippingAddress?: CheckoutShippingAddress;
+      useWallet?: boolean;
     };
 
     if (!cartId || !email || !shippingAddress) {
@@ -32,6 +35,26 @@ export async function POST(req: NextRequest) {
     if (!prepared) {
       return NextResponse.json(
         { razorpayOrderId: null, error: "cart_preparation_failed" },
+        { status: 200 }
+      );
+    }
+
+    // Wallet credit is decided after shipping is on the cart, so it can cover
+    // the delivery charge too, and switched-off credit is cleared.
+    const wallet = await syncWalletForCheckout(cartId, useWallet === true);
+    if (!wallet.ok) {
+      return NextResponse.json(
+        { razorpayOrderId: null, error: "wallet_unavailable", message: wallet.message },
+        { status: 200 }
+      );
+    }
+
+    // Razorpay cannot charge zero. Wallet credit that covers everything is a
+    // wallet-only order, which has its own route.
+    const snapshot = await fetchCartSnapshot(cartId);
+    if (snapshot && snapshot.total <= 0) {
+      return NextResponse.json(
+        { razorpayOrderId: null, error: "fully_covered_by_wallet" },
         { status: 200 }
       );
     }
@@ -69,6 +92,8 @@ export async function POST(req: NextRequest) {
       razorpayOrderId,
       collectionId,
       sessionId: session?.id ?? null,
+      // What Razorpay will actually charge, after any wallet credit.
+      amount: collection?.amount ?? snapshot?.total ?? null,
     });
   } catch (err) {
     console.error("[razorpay/create-order]", err);

@@ -123,6 +123,12 @@ export const storeConfig = {
     returnDays: envFloat("POLICY_RETURN_DAYS", 15),
     /** Exchange window, in days from delivery. */
     exchangeDays: envFloat("POLICY_EXCHANGE_DAYS", 15),
+    /**
+     * Months wallet credit stays usable after it is issued; 0 means never.
+     * The backend reads the same WALLET_CREDIT_VALIDITY_MONTHS to set expiry
+     * dates, so set it to the same value in both places.
+     */
+    walletCreditMonths: envFloat("WALLET_CREDIT_VALIDITY_MONTHS", 6),
     /** Hours to pack and hand an in-stock order to the courier. */
     dispatchHoursMin: envFloat("POLICY_DISPATCH_HOURS_MIN", 24),
     dispatchHoursMax: envFloat("POLICY_DISPATCH_HOURS_MAX", 48),

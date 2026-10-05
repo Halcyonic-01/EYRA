@@ -9,6 +9,8 @@ import { useUser } from "@clerk/nextjs";
 import { useCartStore } from "@/store/useStore";
 import type { CartItem } from "@/store/useStore";
 import { estimatedDeliveryDate, formatDeliveryDateShort } from "@/lib/delivery-date";
+import { formatRupees } from "@/lib/money";
+import { WalletPanel } from "@/components/checkout/WalletPanel";
 
 const INDIAN_STATES = [
   "Andaman and Nicobar Islands","Andhra Pradesh","Arunachal Pradesh",
@@ -51,9 +53,21 @@ interface DisplayTotals {
   tax: number;
   delivery: number;
   discount: number;
+  /** Wallet credit applied to the cart; `total` is already net of it. */
+  walletCredit: number;
   total: number;
   /** True when Medusa cart hasn't synced yet, values are client estimates. */
   isEstimate: boolean;
+}
+
+/** Cart totals returned by /api/wallet/apply, in rupees. */
+interface WalletCartTotals {
+  subtotal: number;
+  taxTotal: number;
+  shippingTotal: number;
+  discountTotal: number;
+  walletCredit: number;
+  total: number;
 }
 
 /* ── Validation ───────────────────────────────────────────── */
@@ -194,6 +208,12 @@ function OrderSidebar({ items, totals }: { items: CartItem[]; totals: DisplayTot
             <span className="text-black">₹{totals.delivery}</span>
           )}
         </div>
+        {totals.walletCredit > 0 && (
+          <div className="flex justify-between">
+            <span className="text-[#626262]">Wallet credit</span>
+            <span className="font-medium" style={{ color: "#47B10A" }}>− {formatRupees(totals.walletCredit)}</span>
+          </div>
+        )}
       </div>
 
       <div className="w-full h-px bg-[#DFDFDF]" />
@@ -460,6 +480,12 @@ function ReviewStep({
               <span className="text-black">₹{totals.delivery}</span>
             )}
           </div>
+          {totals.walletCredit > 0 && (
+            <div className="flex justify-between">
+              <span className="text-[#626262]">Wallet credit</span>
+              <span className="font-medium" style={{ color: "#47B10A" }}>− {formatRupees(totals.walletCredit)}</span>
+            </div>
+          )}
           <div className="h-px bg-[#F0F0F0]" />
           <div className="flex justify-between">
             <span className="font-semibold text-black">Total Payable</span>
@@ -508,12 +534,18 @@ function ReviewStep({
 /* ── Step 3: Payment ──────────────────────────────────────── */
 function PaymentStep({
   totals, shippingForm, paymentMethod, loading, razorpayError, serviceability,
-  onSelectMethod, onBack, onPlaceOrder,
+  walletBalance, walletBusy, walletError, walletOnly,
+  onSelectMethod, onToggleWallet, onBack, onPlaceOrder,
 }: {
   totals: DisplayTotals; shippingForm: ShippingForm;
   paymentMethod: PaymentMethod | null; loading: boolean; razorpayError: string;
   serviceability: ServiceabilityResult | null;
+  /** Null until the wallet is read; the panel only shows when there is credit. */
+  walletBalance: number | null; walletBusy: boolean; walletError: string;
+  /** True when wallet credit pays for the whole order, so no payment method is needed. */
+  walletOnly: boolean;
   onSelectMethod: (m: PaymentMethod) => void;
+  onToggleWallet: (on: boolean) => void;
   onBack: () => void; onPlaceOrder: () => void;
 }) {
   return (
@@ -532,8 +564,30 @@ function PaymentStep({
         </div>
       )}
 
+      {/* Wallet credit, only for customers who have some (or have it applied) */}
+      {walletBalance !== null && (walletBalance > 0 || totals.walletCredit > 0) && (
+        <WalletPanel
+          balance={walletBalance}
+          applied={totals.walletCredit}
+          busy={walletBusy}
+          error={walletError}
+          onToggle={onToggleWallet}
+        />
+      )}
 
-      <div className="flex flex-col gap-3">
+      {walletOnly && (
+        <div className="flex items-start gap-3 p-4 bg-[#F7FFF4] border border-[#C8EEB8] rounded-2xl">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" className="mt-0.5 flex-shrink-0" aria-hidden="true">
+            <path d="M9 12l2 2 4-4" stroke="#47B10A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            <circle cx="12" cy="12" r="9" stroke="#47B10A" strokeWidth="1.5" />
+          </svg>
+          <p className="font-sans font-normal text-[13px] text-[#3D7A1A] leading-[19px]">
+            Your wallet credit covers this whole order. Nothing is left to pay.
+          </p>
+        </div>
+      )}
+
+      {!walletOnly && <div className="flex flex-col gap-3">
         {/* COD, hidden when courier doesn't support it for this pincode */}
         {(!serviceability || serviceability.availablePaymentMethods.includes("cod")) && <button
           onClick={() => onSelectMethod("cod")}
@@ -583,10 +637,10 @@ function PaymentStep({
             <span className="text-white font-bold text-[11px]">R</span>
           </div>
         </button>
-      </div>
+      </div>}
 
       {/* Security badge, shown when prepaid selected */}
-      {paymentMethod === "prepaid" && (
+      {!walletOnly && paymentMethod === "prepaid" && (
         <div className="flex items-start gap-3 p-4 bg-[#F7FFF4] border border-[#C8EEB8] rounded-2xl">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" className="mt-0.5 flex-shrink-0" aria-hidden="true">
             <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="#47B10A" strokeWidth="1.5" strokeLinejoin="round" />
@@ -599,7 +653,7 @@ function PaymentStep({
       )}
 
       {/* No method selected error */}
-      {paymentMethod === null && (
+      {!walletOnly && paymentMethod === null && (
         <p className="font-sans text-[13px] text-[#D93025]">Please select a payment method to continue.</p>
       )}
 
@@ -629,13 +683,13 @@ function PaymentStep({
         </button>
         <button
           onClick={onPlaceOrder}
-          disabled={!paymentMethod || loading}
+          disabled={(!walletOnly && !paymentMethod) || loading}
           className="flex-[2] h-[52px] bg-black text-white font-sans font-medium text-[16px] rounded-full hover:bg-[#1a1a1a] disabled:opacity-40 disabled:cursor-not-allowed transition-colors duration-200 flex items-center justify-center gap-2"
           style={{ boxShadow: "inset 0px 6px 10px rgba(211,211,211,0.3)" }}
         >
           {loading ? (
             <div className="w-5 h-5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-          ) : paymentMethod === "cod" ? (
+          ) : walletOnly || paymentMethod === "cod" ? (
             "Place Order"
           ) : (
             `Pay ₹${totals.total.toLocaleString("en-IN")}`
@@ -678,20 +732,38 @@ export function CheckoutClient() {
 
   // Server-authoritative totals from Medusa. Falls back to a client-side estimate
   // (no tax/delivery) only when the cart has not yet synced with the backend.
+  //
+  // Once the customer has toggled wallet credit, Medusa's answer to that call
+  // (which includes the credit) takes over, since the cart store's own totals
+  // do not know about the wallet.
+  const [walletTotals, setWalletTotals] = useState<WalletCartTotals | null>(null);
+
   const displayTotals = useMemo<DisplayTotals>(() => {
+    if (walletTotals) {
+      return {
+        subtotal: walletTotals.subtotal,
+        tax: walletTotals.taxTotal,
+        delivery: walletTotals.shippingTotal,
+        discount: walletTotals.discountTotal,
+        walletCredit: walletTotals.walletCredit,
+        total: walletTotals.total,
+        isEstimate: false,
+      };
+    }
     if (serverTotals) {
       return {
         subtotal: serverTotals.subtotal,
         tax: serverTotals.taxTotal,
         delivery: serverTotals.shippingTotal,
         discount: serverTotals.discountTotal,
+        walletCredit: 0,
         total: serverTotals.total,
         isEstimate: false,
       };
     }
     const subtotal = items.reduce((s, i) => s + i.product.price * i.quantity, 0);
-    return { subtotal, tax: 0, delivery: 0, discount: 0, total: subtotal, isEstimate: true };
-  }, [serverTotals, items]);
+    return { subtotal, tax: 0, delivery: 0, discount: 0, walletCredit: 0, total: subtotal, isEstimate: true };
+  }, [walletTotals, serverTotals, items]);
 
   /* Step machine */
   const [step, setStep] = useState<CheckoutStep>(1);
@@ -714,6 +786,76 @@ export function CheckoutClient() {
 
   /* Razorpay script readiness, set true by Script's onLoad callback */
   const [razorpayReady, setRazorpayReady] = useState(false);
+
+  /* Wallet credit. `walletBalance` is null until it has been read. */
+  const [walletBalance, setWalletBalance] = useState<number | null>(null);
+  const [walletBusy, setWalletBusy] = useState(false);
+  const [walletError, setWalletError] = useState("");
+
+  // Credit covers the whole order: no payment method is needed.
+  const walletOnly = displayTotals.walletCredit > 0 && displayTotals.total <= 0 && !displayTotals.isEstimate;
+
+  /* Read the wallet, and clear any credit left on the cart from an earlier
+     visit to checkout, so what is shown always matches what will be charged. */
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const res = await fetch("/api/wallet");
+        const data = (await res.json()) as { balance?: number };
+        if (!cancelled) setWalletBalance(typeof data.balance === "number" ? data.balance : 0);
+      } catch {
+        if (!cancelled) setWalletBalance(0);
+      }
+
+      if (!cartId) return;
+      try {
+        const res = await fetch("/api/wallet/apply", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ cartId, apply: false }),
+        });
+        if (res.ok && !cancelled) {
+          const data = (await res.json()) as { totals: WalletCartTotals };
+          setWalletTotals(data.totals);
+        }
+      } catch {
+        // Not fatal: the server clears unused credit again when payment starts.
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [user, cartId]);
+
+  /* Switch wallet credit on or off for this cart. */
+  async function handleToggleWallet(on: boolean) {
+    if (!cartId || walletBusy) return;
+    setWalletBusy(true);
+    setWalletError("");
+    try {
+      const res = await fetch("/api/wallet/apply", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cartId, apply: on }),
+      });
+      const data = (await res.json()) as {
+        totals?: WalletCartTotals; walletBalance?: number; message?: string;
+      };
+      if (!res.ok || !data.totals) {
+        setWalletError(data.message ?? "Could not update your wallet credit. Please try again.");
+        return;
+      }
+      setWalletTotals(data.totals);
+      if (on && typeof data.walletBalance === "number") setWalletBalance(data.walletBalance);
+    } catch (err) {
+      console.error("[EYRA/wallet] toggle failed:", err);
+      setWalletError("Could not update your wallet credit. Please try again.");
+    } finally {
+      setWalletBusy(false);
+    }
+  }
 
   /* Prefill Clerk user data into shipping form on first load */
   useEffect(() => {
@@ -786,11 +928,103 @@ export function CheckoutClient() {
     if (Object.keys(shippingErrors).length === 0) setStep(2);
   }
 
+  /* Wallet-only order: wallet credit pays for everything, nothing is charged. */
+  async function handleWalletOrder() {
+    if (!cartId) {
+      setRazorpayError("Your cart session has expired. Please refresh the page and try again.");
+      setPayLoading(false);
+      return;
+    }
+
+    const oid = generateOrderId();
+    const clerkEmail = user?.primaryEmailAddress?.emailAddress ?? "";
+    const shippingAddress = {
+      fullName: form.fullName,
+      addressLine1: form.addressLine1,
+      addressLine2: form.addressLine2,
+      city: form.city,
+      state: form.state,
+      pincode: form.pincode,
+      phone: form.phone,
+    };
+
+    let confirmedOrderId: string | null = null;
+    let failure = "";
+    try {
+      const res = await fetch("/api/wallet/pay", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cartId, email: clerkEmail, shippingAddress }),
+      });
+      const data = await res.json() as { orderId?: string | null; error?: string; message?: string };
+      confirmedOrderId = data.orderId ?? null;
+      if (!confirmedOrderId) failure = data.message ?? "";
+    } catch (err) {
+      console.error("[EYRA/wallet] wallet order request failed:", err);
+    }
+
+    if (!confirmedOrderId) {
+      setRazorpayError(failure || "Could not place your order. Please try again or contact support.");
+      setPayLoading(false);
+      return;
+    }
+
+    // Fully paid, so the courier treats it as prepaid. The declared value is
+    // the full order value, not the (zero) amount left to pay.
+    let awbCode = "";
+    let courierName = "";
+    try {
+      const sRes = await fetch("/api/shipping/create-shipment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          medusaOrderId: confirmedOrderId,
+          eyraOrderRef: oid,
+          paymentMethod: "prepaid",
+          shipping: { ...shippingAddress, email: clerkEmail },
+          items: items.map((i) => ({
+            name: i.product.name,
+            sku: i.product.id,
+            type: i.product.type,
+            quantity: i.quantity,
+            price: i.product.price,
+          })),
+          subtotal: displayTotals.total + displayTotals.walletCredit,
+        }),
+      });
+      if (sRes.ok) {
+        const sData = await sRes.json() as { awbCode?: string | null; courierName?: string | null };
+        awbCode = sData.awbCode ?? "";
+        courierName = sData.courierName ?? "";
+      }
+    } catch (err) {
+      console.error("[EYRA/shipment] Wallet order shipment creation failed for order", confirmedOrderId, ":", err);
+    }
+
+    clearCart();
+    const params = new URLSearchParams({
+      orderId: confirmedOrderId,
+      method: "wallet",
+      wallet: String(displayTotals.walletCredit),
+    });
+    if (awbCode) params.set("awb", awbCode);
+    if (courierName) params.set("courier", courierName);
+    router.push(`/orders/success?${params.toString()}`);
+  }
+
   /* Place order handler */
   async function handlePlaceOrder() {
-    if (!paymentMethod) return;
+    if (!paymentMethod && !walletOnly) return;
     setPayLoading(true);
     setRazorpayError("");
+
+    if (walletOnly) {
+      await handleWalletOrder();
+      return;
+    }
+
+    // Whether the customer chose to spend wallet credit on this order.
+    const useWallet = displayTotals.walletCredit > 0;
 
     /* ── COD ─────────────────────────────────────────────────── */
     if (paymentMethod === "cod") {
@@ -817,21 +1051,23 @@ export function CheckoutClient() {
       // "order" with no backend record means no inventory tracking and no
       // order history entry.
       let confirmedOrderId: string | null = null;
+      let codFailure = "";
       try {
         const oRes = await fetch("/api/cod/complete", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ cartId, email: clerkEmail, shippingAddress }),
+          body: JSON.stringify({ cartId, email: clerkEmail, shippingAddress, useWallet }),
         });
-        const oData = await oRes.json() as { orderId?: string | null };
+        const oData = await oRes.json() as { orderId?: string | null; message?: string };
         confirmedOrderId = oData.orderId ?? null;
+        codFailure = oData.message ?? "";
       } catch (err) {
         console.error("[EYRA] COD order completion request failed:", err);
       }
 
       if (!confirmedOrderId) {
         console.error("[EYRA] COD order completion failed for cart", cartId);
-        setRazorpayError("Could not place your order. Please try again or contact support.");
+        setRazorpayError(codFailure || "Could not place your order. Please try again or contact support.");
         setPayLoading(false);
         return;
       }
@@ -867,6 +1103,7 @@ export function CheckoutClient() {
       }
       clearCart();
       const params = new URLSearchParams({ orderId: confirmedOrderId, method: "cod" });
+      if (useWallet) params.set("wallet", String(displayTotals.walletCredit));
       if (awbCode) params.set("awb", awbCode);
       if (courierName) params.set("courier", courierName);
       router.push(`/orders/success?${params.toString()}`);
@@ -912,15 +1149,29 @@ export function CheckoutClient() {
     // This token is what makes HMAC signature verification possible,
     // Razorpay includes razorpay_signature in the response only when order_id is present.
     let razorpayOrderId: string | null = null;
+    // What Razorpay will charge, as worked out by the server after wallet credit.
+    let razorpayAmount: number | null = null;
     try {
       const res = await fetch("/api/razorpay/create-order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ cartId, email: clerkEmail, shippingAddress }),
+        body: JSON.stringify({ cartId, email: clerkEmail, shippingAddress, useWallet }),
       });
       if (res.ok) {
-        const data = await res.json() as { razorpayOrderId?: string | null };
+        const data = await res.json() as {
+          razorpayOrderId?: string | null; amount?: number | null; error?: string; message?: string;
+        };
         razorpayOrderId = data.razorpayOrderId ?? null;
+        razorpayAmount = typeof data.amount === "number" ? data.amount : null;
+        if (data.error === "wallet_unavailable" || data.error === "fully_covered_by_wallet") {
+          setRazorpayError(
+            data.error === "fully_covered_by_wallet"
+              ? "Your wallet credit now covers this order. Please place the order again."
+              : data.message || "Could not apply your wallet credit. Please try again."
+          );
+          setPayLoading(false);
+          return;
+        }
       } else {
         console.error(`[EYRA Security] create-order API returned ${res.status}, cannot proceed.`);
       }
@@ -955,7 +1206,8 @@ export function CheckoutClient() {
 
     const rzpOptions: RazorpayOptions = {
       key,
-      amount: displayTotals.total * 100, // paise, always uses Medusa server total
+      // paise, from the server's own total (net of any wallet credit)
+      amount: Math.round((razorpayAmount ?? displayTotals.total) * 100),
       currency: "INR",
       name: "EYRA",
       description: "Sterling silver jewellery order",
@@ -1035,7 +1287,8 @@ export function CheckoutClient() {
                 quantity: i.quantity,
                 price: i.product.price,
               })),
-              subtotal: displayTotals.total,
+              // Declared value is the full order, wallet credit included.
+              subtotal: displayTotals.total + displayTotals.walletCredit,
             }),
           });
           if (sRes.ok) {
@@ -1053,6 +1306,7 @@ export function CheckoutClient() {
           method: "prepaid",
           payment_id: response.razorpay_payment_id,
         });
+        if (useWallet) params.set("wallet", String(displayTotals.walletCredit));
         if (awbCode) params.set("awb", awbCode);
         if (courierName) params.set("courier", courierName);
         router.push(`/orders/success?${params.toString()}`);
@@ -1121,7 +1375,12 @@ export function CheckoutClient() {
                 loading={payLoading}
                 razorpayError={razorpayError}
                 serviceability={serviceability}
+                walletBalance={walletBalance}
+                walletBusy={walletBusy}
+                walletError={walletError}
+                walletOnly={walletOnly}
                 onSelectMethod={setPaymentMethod}
+                onToggleWallet={handleToggleWallet}
                 onBack={() => setStep(2)}
                 onPlaceOrder={handlePlaceOrder}
               />
