@@ -40,6 +40,8 @@ interface RawCart {
   shipping_total: number;
   discount_total: number;
   total: number;
+  /** Wallet credit on the cart. Medusa's `total` is already net of it. */
+  credit_line_total?: number;
   currency_code: string;
 }
 
@@ -134,7 +136,9 @@ function normalizeTotals(cart: RawCart): CartTotals {
     taxTotal: Math.round(cart.tax_total),
     shippingTotal: Math.round(cart.shipping_total),
     discountTotal: Math.round(cart.discount_total),
-    total: Math.round(cart.total),
+    // Wallet credit is a way of paying, not a price change, so the cart always
+    // shows the full total. Checkout shows the credit as its own line.
+    total: Math.round(cart.total + (cart.credit_line_total ?? 0)),
   };
 }
 

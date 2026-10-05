@@ -88,6 +88,17 @@ export default function AccountPage() {
           </svg>
           My Orders
         </Link>
+        <Link
+          href="/wallet"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-[#E1E1E1] font-sans text-[13px] text-[#626262] hover:border-[#AAAAAA] hover:text-black transition-colors duration-200"
+        >
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M3 7a2 2 0 0 1 2-2h13v4" />
+            <path d="M3 7v11a2 2 0 0 0 2 2h14a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1H5a2 2 0 0 1-2-2z" />
+            <circle cx="16" cy="14.5" r="1" />
+          </svg>
+          Wallet
+        </Link>
       </div>
 
       {/* Clerk UserProfile panel. The route is a catch-all so its sub-pages (e.g. /account/security) resolve. */}
