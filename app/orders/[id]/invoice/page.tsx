@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { currentUser } from "@clerk/nextjs/server";
 import { redirect, notFound } from "next/navigation";
+import Image from "next/image";
 import Link from "next/link";
 
 import { storeConfig } from "@/config/storeConfig";
@@ -149,7 +150,14 @@ export default async function InvoicePage({
         {/* Header */}
         <div className="flex justify-between items-start gap-6 mb-8 pb-8 border-b border-[#E1E1E1]">
           <div>
-            <h1 className="font-display font-light text-[28px] text-black mb-1">EYRA</h1>
+            <Image
+              src="/images/logo-mark-black.png"
+              alt="EYRA"
+              width={112}
+              height={65}
+              priority
+              className="mb-3 h-[65px] w-auto"
+            />
             <p className="font-sans text-[13px] text-[#626262] leading-[20px]">
               {seller.legalName}
               <br />
@@ -223,9 +231,11 @@ export default async function InvoicePage({
               </th>
               <th className="text-right font-sans font-medium text-[11px] uppercase tracking-wide text-[#909090] pb-3">
                 Unit Price
+                <span className="block normal-case tracking-normal text-[10px] font-normal">incl. all taxes</span>
               </th>
               <th className="text-right font-sans font-medium text-[11px] uppercase tracking-wide text-[#909090] pb-3">
                 Amount
+                <span className="block normal-case tracking-normal text-[10px] font-normal">incl. all taxes</span>
               </th>
             </tr>
           </thead>
@@ -281,6 +291,7 @@ export default async function InvoicePage({
               <span className="text-black">{walletCredit > 0 ? "Invoice Total" : "Total"}</span>
               <span className="text-black">{formatAmount(order.total + walletCredit)}</span>
             </div>
+            <p className="text-right font-sans text-[11px] text-[#909090] -mt-1">Inclusive of all taxes</p>
             {walletCredit > 0 && (
               <>
                 <div className="flex justify-between font-sans text-[14px]">
@@ -291,6 +302,7 @@ export default async function InvoicePage({
                   <span className="text-black">Balance payable</span>
                   <span className="text-black">{formatAmount(order.total)}</span>
                 </div>
+                <p className="text-right font-sans text-[11px] text-[#909090] -mt-1">Inclusive of all taxes</p>
               </>
             )}
           </div>
