@@ -321,6 +321,8 @@ interface WishlistStore {
   isWishlisted: (productId: string) => boolean;
   remove: (productId: string) => void;
   initWishlist: () => Promise<void>;
+  /** Forget the local list on sign-out. Does not touch the saved server copy. */
+  reset: () => void;
 }
 
 /** Push the current wishlist to Medusa. No-ops server-side for guests/unsynced customers. */
@@ -379,6 +381,10 @@ export const useWishlistStore = create<WishlistStore>()(
        * favourited before logging in aren't lost, then pushes the merged
        * result back so the server reflects it too.
        */
+      reset() {
+        set({ items: [], hasSynced: false });
+      },
+
       async initWishlist() {
         if (get().hasSynced) return;
         set({ hasSynced: true });

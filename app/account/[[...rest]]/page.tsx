@@ -2,6 +2,7 @@
 
 import { UserProfile } from "@clerk/nextjs";
 import Link from "next/link";
+import { useSignOut } from "@/components/auth/useSignOut";
 
 /*
   Clerk's `appearance` prop accepts an object with:
@@ -64,6 +65,8 @@ const clerkAppearance = {
 };
 
 export default function AccountPage() {
+  const signOut = useSignOut();
+
   return (
     <div className="max-w-screen-lg mx-auto px-6 lg:px-10 py-12">
 
@@ -99,6 +102,18 @@ export default function AccountPage() {
           </svg>
           Wallet
         </Link>
+        <button
+          type="button"
+          onClick={signOut}
+          className="ml-auto inline-flex items-center gap-2 px-4 py-2 rounded-full border border-[#E1E1E1] font-sans text-[13px] text-[#626262] hover:border-[#AAAAAA] hover:text-black transition-colors duration-200"
+        >
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+            <polyline points="16 17 21 12 16 7" />
+            <line x1="21" y1="12" x2="9" y2="12" />
+          </svg>
+          Sign out
+        </button>
       </div>
 
       {/* Clerk UserProfile panel. The route is a catch-all so its sub-pages (e.g. /account/security) resolve. */}
