@@ -4,6 +4,7 @@
  *   - credit added: staff approved a return or exchange, or credit came back
  *     after a cancelled order
  *   - request declined: a return or exchange request was not approved
+ *   - order cancelled: the customer cancelled, and what was refunded where
  *
  * The backend decides when to send these and calls /api/wallet/notify; the
  * look and the sending live here, next to the order emails.
@@ -219,5 +220,112 @@ export async function sendReturnRequestAlertEmail(alert: ReturnRequestAlert): Pr
       ${alert.deliveryUnconfirmed ? "<p><em>We could not confirm the delivery date automatically. Please check it before approving.</em></p>" : ""}
       <p><a href="${adminUrl}">Review it in the admin (Returns)</a></p>
     `,
+  });
+}
+
+/* ── Order cancelled ──────────────────────────────────────── */
+
+export interface OrderCancelledEmail {
+  email: string;
+  firstName?: string | null;
+  orderNumber: number;
+  method: "wallet" | "original" | "none";
+  paidOnline: number;
+  walletUsed: number;
+  fee: number;
+  refundAmount: number;
+  refundStatus: "not_needed" | "initiated" | "credited" | "failed" | "unverified";
+  /** How long a refund to the original payment method takes. */
+  eta: string;
+  walletExpiresAt: string | null;
+  validMonths: number;
+}
+
+function cancelledContent(params: OrderCancelledEmail): { headline: string; intro: string; rows: string } {
+  const orderRef = `#${params.orderNumber}`;
+  const walletUsedRow = params.walletUsed > 0 ? row("Wallet credit you used", `${formatRupees(params.walletUsed)} returned`) : "";
+
+  // The refund could not be completed yet; the order is still cancelled.
+  if (params.refundStatus === "failed") {
+    return {
+      headline: `Order ${orderRef} is cancelled`,
+      intro:
+        "We are finishing your refund and will email you as soon as it is done. You do not need to do anything.",
+      rows: `${row("Paid online", formatRupees(params.paidOnline))}${walletUsedRow}`,
+    };
+  }
+
+  if (params.method === "wallet") {
+    return {
+      headline: `${formatRupees(params.refundAmount)} added to your wallet`,
+      intro: `Your order ${orderRef} has been cancelled, and the full amount you paid is now in your EYRA wallet.`,
+      rows: `
+            ${row("Paid online", formatRupees(params.paidOnline))}
+            ${row("Added to your wallet", `${formatRupees(params.refundAmount)} (100%)`)}
+            ${walletUsedRow}
+            ${params.walletExpiresAt ? row("Valid until", escapeHtml(formatLongDate(params.walletExpiresAt))) : row("Valid for", `${params.validMonths} months`)}`,
+    };
+  }
+
+  if (params.method === "original") {
+    return {
+      headline: `Refund of ${formatRupees(params.refundAmount)} started`,
+      intro: `Your order ${orderRef} has been cancelled, and we have sent your refund to the payment method you used.`,
+      rows: `
+            ${row("Paid online", formatRupees(params.paidOnline))}
+            ${row("Cancellation fee", `- ${formatRupees(params.fee)}`)}
+            ${row("Refund to your original payment method", formatRupees(params.refundAmount))}
+            ${walletUsedRow}
+            ${row("Expected in", escapeHtml(params.eta))}`,
+    };
+  }
+
+  return {
+    headline: `Order ${orderRef} is cancelled`,
+    intro:
+      params.walletUsed > 0
+        ? "Your order has been cancelled, and the wallet credit you used on it has been returned to your EYRA wallet. No other payment was taken."
+        : "Your order has been cancelled. No payment was taken, so there is nothing to refund.",
+    rows: walletUsedRow,
+  };
+}
+
+export function renderOrderCancelledEmail(params: OrderCancelledEmail): string {
+  const greeting = params.firstName ? `Hi ${escapeHtml(params.firstName)},` : "Hello,";
+  const { headline, intro, rows } = cancelledContent(params);
+  // Not the wallet button while the wallet refund itself is still being finished.
+  const toWallet = (params.method === "wallet" && params.refundStatus !== "failed") || params.walletUsed > 0;
+
+  return shell(`
+      <tr>
+        <td style="padding:32px 40px 0 40px;text-align:center;">
+          <div style="font-family:${FONT};font-size:22px;font-weight:500;color:${COLOR.jet};">${escapeHtml(headline)}</div>
+          <div style="font-family:${FONT};font-size:14px;color:${COLOR.ash};margin-top:12px;line-height:22px;">
+            ${greeting}<br>${escapeHtml(intro)}
+          </div>
+        </td>
+      </tr>
+      ${
+        rows.trim()
+          ? `<tr>
+        <td style="padding:24px 40px 0 40px;">
+          <table role="presentation" width="100%" style="border-collapse:collapse;">${rows}</table>
+        </td>
+      </tr>`
+          : ""
+      }
+      <tr>
+        <td style="padding:28px 40px 0 40px;text-align:center;">
+          ${button(toWallet ? `${SITE_URL}/wallet` : `${SITE_URL}/orders`, toWallet ? "View your wallet" : "View your orders")}
+        </td>
+      </tr>`);
+}
+
+export async function sendOrderCancelledEmail(params: OrderCancelledEmail): Promise<boolean> {
+  return sendEmail({
+    to: params.email,
+    from: process.env.ORDER_EMAIL_FROM ?? "EYRA <noreply@eyra.org.in>",
+    subject: `Your EYRA order #${params.orderNumber} has been cancelled`,
+    html: renderOrderCancelledEmail(params),
   });
 }
