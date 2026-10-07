@@ -25,11 +25,14 @@ export function AppShell({
   navbar,
   footer,
   cartSyncBanner,
+  authBackdrop,
 }: {
   children: React.ReactNode;
   navbar: React.ReactNode;
   footer: React.ReactNode;
   cartSyncBanner: React.ReactNode;
+  /** What shows, dimmed, behind the sign-in and sign-up window. */
+  authBackdrop: React.ReactNode;
 }) {
   const pathname = usePathname();
   const initCart = useCartStore((s) => s.initCart);
@@ -42,7 +45,18 @@ export function AppShell({
   const isAuth =
     pathname.startsWith("/sign-in") || pathname.startsWith("/sign-up");
 
-  if (isAuth) return <>{children}</>;
+  if (isAuth) {
+    return (
+      <>
+        {/* The shop stays visible behind the window; inert so nothing in it can be reached. */}
+        <div aria-hidden="true" inert className="pointer-events-none select-none">
+          {navbar}
+          <div style={{ paddingTop: "var(--nav-height)" }}>{authBackdrop}</div>
+        </div>
+        {children}
+      </>
+    );
+  }
 
   return (
     <>

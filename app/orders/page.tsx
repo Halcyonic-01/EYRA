@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { currentUser } from "@clerk/nextjs/server";
+import { getCurrentUser } from "@/lib/current-user";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 
@@ -131,7 +131,7 @@ function FulfillmentBadge({ status }: { status: string }) {
 /* ── Page ─────────────────────────────────────────────────── */
 
 export default async function OrdersPage() {
-  const user = await currentUser();
+  const user = await getCurrentUser();
   if (!user) redirect("/sign-in");
 
   const medusaCustomerId = user.publicMetadata?.medusaCustomerId as string | undefined;
