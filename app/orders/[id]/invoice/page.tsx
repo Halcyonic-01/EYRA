@@ -151,11 +151,12 @@ export default async function InvoicePage({
         <div className="flex justify-between items-start gap-6 mb-8 pb-8 border-b border-[#E1E1E1]">
           <div>
             <Image
-              src="/images/logo-mark-black.png"
+              src="/images/logo-eyra-black.svg"
               alt="EYRA"
               width={112}
               height={65}
               priority
+              unoptimized
               className="mb-3 h-[65px] w-auto"
             />
             <p className="font-sans text-[13px] text-[#626262] leading-[20px]">
