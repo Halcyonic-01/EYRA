@@ -8,9 +8,10 @@ interface LogoProps {
 }
 
 /*
-  Wordmark source: public/images/logo-eyra-{white,black}.svg, a vector redraw
-  of the original artwork so it stays sharp at every size (viewBox 264:154,
-  the same box the earlier PNGs used). The PNGs in logo-mark-* are the old
+  Wordmark source: public/images/logo-eyra-{white,black}.svg, rebuilt as clean
+  vector strokes from the original artwork (same letter shapes and stroke
+  weights) so it stays sharp at every size (viewBox 264:154, the same box the
+  earlier PNGs used). The PNGs in logo-mark-* are the old
   low-resolution originals, kept only as a fallback. The logo is the wordmark
   alone, with no "Jewel" line.
 */
