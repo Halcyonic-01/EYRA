@@ -8,10 +8,11 @@ interface LogoProps {
 }
 
 /*
-  Wordmark source: public/images/logo-mark-{white,black}.png. Both are
-  cropped tight to just the "EYRA" wordmark and its flourish (native aspect
-  ratio 264:154), sourced from the brand's real logo artwork and keyed to
-  transparent. The logo is the wordmark alone, with no "Jewel" line.
+  Wordmark source: public/images/logo-eyra-{white,black}.svg, a vector redraw
+  of the original artwork so it stays sharp at every size (viewBox 264:154,
+  the same box the earlier PNGs used). The PNGs in logo-mark-* are the old
+  low-resolution originals, kept only as a fallback. The logo is the wordmark
+  alone, with no "Jewel" line.
 */
 const WORDMARK_ASPECT = 264 / 154;
 
@@ -33,11 +34,12 @@ export function Logo({ className = "", variant = "dark", size = "md" }: LogoProp
       className={`inline-flex items-start ${className} hover:opacity-80 transition-opacity duration-200`}
     >
       <Image
-        src={variant === "light" ? "/images/logo-mark-white.png" : "/images/logo-mark-black.png"}
+        src={variant === "light" ? "/images/logo-eyra-white.svg" : "/images/logo-eyra-black.svg"}
         alt="EYRA"
         width={markW}
         height={markH}
         priority
+        unoptimized
         className="w-auto shrink-0"
         style={{ height: markH }}
       />

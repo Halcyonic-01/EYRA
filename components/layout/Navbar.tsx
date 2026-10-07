@@ -3,9 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Menu, X, Search, ShoppingBag, User, Heart } from "lucide-react";
+import { Menu, X, Search, ShoppingBag, User, Heart, LogOut } from "lucide-react";
 import { useAuth } from "@clerk/nextjs";
 import { Logo } from "@/components/ui/Logo";
+import { useSignOut } from "@/components/auth/useSignOut";
 import { useWalletBalance } from "@/components/wallet/useWalletBalance";
 import { WalletChip } from "@/components/wallet/WalletChip";
 import { formatRupees } from "@/lib/money";
@@ -36,6 +37,7 @@ export function Navbar() {
   // server component, so a client component reads auth state via the hook.
   // Gate on isLoaded so the auth controls do not flip after hydration.
   const { isLoaded, isSignedIn } = useAuth();
+  const signOut = useSignOut();
   // Spendable wallet credit, shown next to the account icon when there is any.
   const wallet = useWalletBalance(Boolean(isLoaded && isSignedIn));
   const walletHint = wallet?.nextExpiry
@@ -148,6 +150,20 @@ export function Navbar() {
             >
               <User size={17} strokeWidth={1.5} />
             </Link>
+            {isLoaded && isSignedIn && (
+              <button
+                type="button"
+                onClick={signOut}
+                aria-label="Sign out"
+                title="Sign out"
+                className={[
+                  "hidden sm:block p-2.5 transition-colors duration-200",
+                  darkTheme ? "text-pearl hover:text-white" : "text-[#333] hover:text-black",
+                ].join(" ")}
+              >
+                <LogOut size={17} strokeWidth={1.5} />
+              </button>
+            )}
             <Link
               href="/wishlist"
               aria-label="Wishlist"
@@ -301,6 +317,16 @@ export function Navbar() {
               >
                 {wallet && wallet.balance > 0 ? `My wallet · ${formatRupees(wallet.balance)}` : "My wallet"}
               </Link>
+              <button
+                type="button"
+                onClick={() => {
+                  closeMenu();
+                  signOut();
+                }}
+                className="w-full text-center px-8 py-3.5 rounded-full text-pearl font-sans font-normal text-[0.72rem] tracking-[0.2em] uppercase underline underline-offset-4 hover:text-white transition-colors duration-200"
+              >
+                Sign out
+              </button>
             </div>
           </div>
         )}

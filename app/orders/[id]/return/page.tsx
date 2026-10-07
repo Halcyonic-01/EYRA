@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { currentUser } from "@clerk/nextjs/server";
+import { getCurrentUser } from "@/lib/current-user";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
@@ -23,7 +23,7 @@ const CLOSED_MESSAGES = {
 export default async function ReturnPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
-  const user = await currentUser();
+  const user = await getCurrentUser();
   if (!user) redirect("/sign-in");
 
   const order = await fetchOrderForReturn(id);

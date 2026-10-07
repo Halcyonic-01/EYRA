@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { formatRupees } from "@/lib/money";
-import { currentUser } from "@clerk/nextjs/server";
+import { getCurrentUser } from "@/lib/current-user";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -307,7 +307,7 @@ export default async function OrderDetailPage({
 }) {
   const { id } = await params;
 
-  const user = await currentUser();
+  const user = await getCurrentUser();
   if (!user) redirect("/sign-in");
 
   const order = await fetchOrder(id);

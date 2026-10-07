@@ -6,7 +6,7 @@
  */
 import "server-only";
 
-import { currentUser } from "@clerk/nextjs/server";
+import { getCurrentUser } from "@/lib/current-user";
 
 export interface WalletCustomer {
   /** Medusa customer id (cus_...). */
@@ -19,7 +19,7 @@ export interface WalletCustomer {
 
 /** Null for guests and for users not yet provisioned in Medusa. */
 export async function getWalletCustomer(): Promise<WalletCustomer | null> {
-  const user = await currentUser();
+  const user = await getCurrentUser();
   if (!user) return null;
 
   const customerId = user.publicMetadata?.medusaCustomerId;
