@@ -126,10 +126,11 @@ export async function syncMedusaCustomer(
   if (existingId) return existingId;
 
   // Resolve primary email
-  const primaryEmail = user.emailAddresses.find(
-    (e) => e.id === user.primaryEmailAddressId
-  )?.emailAddress;
-  if (!primaryEmail) return null;
+  const primary = user.emailAddresses.find((e) => e.id === user.primaryEmailAddressId);
+  // Only a verified address may be matched to an existing customer, or anyone
+  // could sign up with someone else's email and take over their orders.
+  if (!primary || primary.verification?.status !== "verified") return null;
+  const primaryEmail = primary.emailAddress;
 
   try {
     // Step 1: find an existing Medusa customer with this email

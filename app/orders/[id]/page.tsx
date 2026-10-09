@@ -7,6 +7,11 @@ import Image from "next/image";
 import { storeConfig } from "@/config/storeConfig";
 import { listReturnRequests } from "@/lib/medusa-returns";
 import { eligibility, reasonLabel, STATUS_LABELS, type ReturnRequestStatus } from "@/lib/return-requests";
+import { getShiprocketToken } from "@/lib/shiprocket-token";
+import CancelOrderPanel from "@/components/orders/CancelOrderPanel";
+import CancellationBanner from "@/components/orders/CancellationBanner";
+import { invoiceInfo } from "@/lib/invoice-kind";
+import { fetchCancellationPreview } from "@/lib/medusa-cancellation";
 
 /* ── Medusa types ─────────────────────────────────────────── */
 
@@ -51,6 +56,9 @@ interface MedusaOrder {
     shiprocket_shipment_id?: string;
     awb_code?: string;
     courier_name?: string;
+    dispatch_state?: string;
+    invoice_number?: string;
+    invoice_date?: string;
   };
 }
 
@@ -102,7 +110,7 @@ async function fetchOrder(orderId: string): Promise<MedusaOrder | null> {
 }
 
 async function fetchTracking(awbCode: string): Promise<TrackActivity[]> {
-  const token = process.env.SHIPROCKET_API_TOKEN;
+  const token = await getShiprocketToken();
   if (!token) return [];
   try {
     const res = await fetch(
@@ -317,6 +325,10 @@ export default async function OrderDetailPage({
   const activities = awbCode ? await fetchTracking(awbCode) : [];
 
   const requests = (await listReturnRequests(medusaCustomerId, order.id)) ?? [];
+  // What this customer can do about cancelling, and what happened if they did.
+  const preview = await fetchCancellationPreview(order.id, medusaCustomerId);
+  const isCancelled = order.status === "canceled";
+  const invoice = invoiceInfo(order.metadata);
   const requestability = eligibility(order, storeConfig.policy);
   const canRequest = !requestability.closedReason;
 
@@ -347,8 +359,13 @@ export default async function OrderDetailPage({
           <p className="font-sans font-light tracking-[0.3em] uppercase text-[0.78rem] text-[#909090] mb-0.5">
             Order
           </p>
-          <h1 className="font-sans font-medium text-[24px] text-black">
+          <h1 className="font-sans font-medium text-[24px] text-black flex items-center gap-3 flex-wrap">
             #{order.display_id}
+            {isCancelled && (
+              <span className="rounded-full border border-[#FECACA] bg-[#FFF0F0] px-3 py-1 font-sans text-[11px] font-medium uppercase tracking-wider text-[#B91C1C]">
+                Cancelled
+              </span>
+            )}
           </h1>
           <p className="font-sans text-[13px] text-[#909090] mt-0.5">
             Placed {formatDate(order.created_at)}
@@ -362,15 +379,32 @@ export default async function OrderDetailPage({
             href={`/orders/${order.id}/invoice`}
             className="font-sans text-[13px] text-black underline underline-offset-2 hover:text-[#626262] transition-colors duration-200"
           >
-            View Invoice
+            {invoice.kind === "tax_invoice" ? "View Tax Invoice" : "View Receipt"}
           </Link>
         </div>
       </div>
+
+      {isCancelled &&
+        (preview?.cancellation ? (
+          <CancellationBanner
+            summary={preview.cancellation}
+            eta={preview.eta}
+            validMonths={preview.wallet_valid_months}
+          />
+        ) : (
+          <p className="mb-6 rounded-2xl border border-[#E1E1E1] bg-[#FAFAFA] px-5 py-4 font-sans text-[14px] text-[#444]">
+            This order was cancelled. If you paid online, your refund is handled by our team and
+            reaches you within a few working days.
+          </p>
+        ))}
 
       <div className="flex flex-col lg:flex-row gap-6">
 
         {/* Left column */}
         <div className="flex-1 flex flex-col gap-6">
+
+          {/* Cancelling: the window, or why it is no longer possible */}
+          {preview && !isCancelled && <CancelOrderPanel orderId={order.id} preview={preview} />}
 
           {/* Tracking timeline, only when AWB exists */}
           {awbCode && (

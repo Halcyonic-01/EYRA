@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import Script from "next/script";
 import Image from "next/image";
 import Link from "next/link";
@@ -784,8 +784,6 @@ export function CheckoutClient() {
   const [payLoading, setPayLoading] = useState(false);
   const [razorpayError, setRazorpayError] = useState("");
 
-  /* Razorpay script readiness, set true by Script's onLoad callback */
-  const [razorpayReady, setRazorpayReady] = useState(false);
 
   /* Wallet credit. `walletBalance` is null until it has been read. */
   const [walletBalance, setWalletBalance] = useState<number | null>(null);
@@ -795,10 +793,16 @@ export function CheckoutClient() {
   // Credit covers the whole order: no payment method is needed.
   const walletOnly = displayTotals.walletCredit > 0 && displayTotals.total <= 0 && !displayTotals.isEstimate;
 
+  // The cart whose leftover credit has already been cleared. Clearing again later,
+  // for example when Clerk refreshes the user as the tab regains focus, would remove
+  // credit from a cart whose payment has already been created.
+  const walletClearedFor = useRef<string | null>(null);
+  const userId = user?.id;
+
   /* Read the wallet, and clear any credit left on the cart from an earlier
      visit to checkout, so what is shown always matches what will be charged. */
   useEffect(() => {
-    if (!user) return;
+    if (!userId) return;
     let cancelled = false;
 
     (async () => {
@@ -810,7 +814,8 @@ export function CheckoutClient() {
         if (!cancelled) setWalletBalance(0);
       }
 
-      if (!cartId) return;
+      if (!cartId || walletClearedFor.current === cartId) return;
+      walletClearedFor.current = cartId;
       try {
         const res = await fetch("/api/wallet/apply", {
           method: "POST",
@@ -827,7 +832,7 @@ export function CheckoutClient() {
     })();
 
     return () => { cancelled = true; };
-  }, [user, cartId]);
+  }, [userId, cartId]);
 
   /* Switch wallet credit on or off for this cart. */
   async function handleToggleWallet(on: boolean) {
@@ -936,7 +941,6 @@ export function CheckoutClient() {
       return;
     }
 
-    const oid = generateOrderId();
     const clerkEmail = user?.primaryEmailAddress?.emailAddress ?? "";
     const shippingAddress = {
       fullName: form.fullName,
@@ -969,46 +973,13 @@ export function CheckoutClient() {
       return;
     }
 
-    // Fully paid, so the courier treats it as prepaid. The declared value is
-    // the full order value, not the (zero) amount left to pay.
-    let awbCode = "";
-    let courierName = "";
-    try {
-      const sRes = await fetch("/api/shipping/create-shipment", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          medusaOrderId: confirmedOrderId,
-          eyraOrderRef: oid,
-          paymentMethod: "prepaid",
-          shipping: { ...shippingAddress, email: clerkEmail },
-          items: items.map((i) => ({
-            name: i.product.name,
-            sku: i.product.id,
-            type: i.product.type,
-            quantity: i.quantity,
-            price: i.product.price,
-          })),
-          subtotal: displayTotals.total + displayTotals.walletCredit,
-        }),
-      });
-      if (sRes.ok) {
-        const sData = await sRes.json() as { awbCode?: string | null; courierName?: string | null };
-        awbCode = sData.awbCode ?? "";
-        courierName = sData.courierName ?? "";
-      }
-    } catch (err) {
-      console.error("[EYRA/shipment] Wallet order shipment creation failed for order", confirmedOrderId, ":", err);
-    }
-
+    // The shipment is created by the backend once the order's cancel window closes.
     clearCart();
     const params = new URLSearchParams({
       orderId: confirmedOrderId,
       method: "wallet",
       wallet: String(displayTotals.walletCredit),
     });
-    if (awbCode) params.set("awb", awbCode);
-    if (courierName) params.set("courier", courierName);
     router.push(`/orders/success?${params.toString()}`);
   }
 
@@ -1035,7 +1006,6 @@ export function CheckoutClient() {
         return;
       }
 
-      const oid = generateOrderId();
       const clerkEmail = user?.primaryEmailAddress?.emailAddress ?? "";
       const shippingAddress = {
         fullName: form.fullName,
@@ -1072,48 +1042,18 @@ export function CheckoutClient() {
         return;
       }
 
-      let awbCode = "";
-      let courierName = "";
-      try {
-        const sRes = await fetch("/api/shipping/create-shipment", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            medusaOrderId: confirmedOrderId,
-            eyraOrderRef: oid,
-            paymentMethod: "cod",
-            shipping: { ...shippingAddress, email: clerkEmail },
-            items: items.map((i) => ({
-              name: i.product.name,
-              sku: i.product.id,
-              type: i.product.type,
-              quantity: i.quantity,
-              price: i.product.price,
-            })),
-            subtotal: displayTotals.total,
-          }),
-        });
-        if (sRes.ok) {
-          const sData = await sRes.json() as { awbCode?: string | null; courierName?: string | null };
-          awbCode = sData.awbCode ?? "";
-          courierName = sData.courierName ?? "";
-        }
-      } catch (err) {
-        console.error("[EYRA/shipment] COD shipment creation failed for order", confirmedOrderId, ":", err);
-      }
       clearCart();
       const params = new URLSearchParams({ orderId: confirmedOrderId, method: "cod" });
       if (useWallet) params.set("wallet", String(displayTotals.walletCredit));
-      if (awbCode) params.set("awb", awbCode);
-      if (courierName) params.set("courier", courierName);
       router.push(`/orders/success?${params.toString()}`);
       return;
     }
 
     /* ── Prepaid via Razorpay ───────────────────────────────────── */
 
-    // Verify the Script has loaded before proceeding
-    if (!razorpayReady || !window.Razorpay) {
+    // Ask the page itself, not a flag: the script's onLoad fires only the first time it loads,
+    // so coming back to this step later would wrongly look "still loading".
+    if (!window.Razorpay) {
       setRazorpayError("Payment gateway is still loading. Please wait a moment and try again.");
       setPayLoading(false);
       return;
@@ -1268,38 +1208,6 @@ export function CheckoutClient() {
           return;
         }
 
-        // Create Shiprocket shipment now that payment is captured.
-        let awbCode = "";
-        let courierName = "";
-        try {
-          const sRes = await fetch("/api/shipping/create-shipment", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              medusaOrderId: confirmedOrderId,
-              eyraOrderRef: oid,
-              paymentMethod: "prepaid",
-              shipping: { ...shippingAddress, email: clerkEmail },
-              items: items.map((i) => ({
-                name: i.product.name,
-                sku: i.product.id,
-                type: i.product.type,
-                quantity: i.quantity,
-                price: i.product.price,
-              })),
-              // Declared value is the full order, wallet credit included.
-              subtotal: displayTotals.total + displayTotals.walletCredit,
-            }),
-          });
-          if (sRes.ok) {
-            const sData = await sRes.json() as { awbCode?: string | null; courierName?: string | null };
-            awbCode = sData.awbCode ?? "";
-            courierName = sData.courierName ?? "";
-          }
-        } catch (err) {
-          console.error("[EYRA/shipment] Prepaid shipment creation failed for order", oid, "(medusa:", confirmedOrderId, "):", err);
-        }
-
         clearCart();
         const params = new URLSearchParams({
           orderId: confirmedOrderId,
@@ -1307,8 +1215,6 @@ export function CheckoutClient() {
           payment_id: response.razorpay_payment_id,
         });
         if (useWallet) params.set("wallet", String(displayTotals.walletCredit));
-        if (awbCode) params.set("awb", awbCode);
-        if (courierName) params.set("courier", courierName);
         router.push(`/orders/success?${params.toString()}`);
       },
       modal: {
@@ -1327,12 +1233,11 @@ export function CheckoutClient() {
 
   return (
     <>
-      {/* Razorpay SDK, loaded lazily, fires setRazorpayReady on success */}
+      {/* Razorpay SDK, loaded lazily */}
       <Script
         id="razorpay-checkout"
         src="https://checkout.razorpay.com/v1/checkout.js"
         strategy="lazyOnload"
-        onLoad={() => setRazorpayReady(true)}
         onError={() =>
           setRazorpayError(
             "Could not load payment gateway. Please check your connection."

@@ -1,7 +1,7 @@
 import { timingSafeEqual } from "crypto";
 import { NextRequest } from "next/server";
 
-import { sendRequestRejectedEmail, sendWalletCreditEmail } from "@/lib/wallet-email";
+import { sendOrderCancelledEmail, sendRequestRejectedEmail, sendWalletCreditEmail } from "@/lib/wallet-email";
 
 function safeEqual(a: string, b: string): boolean {
   const bufA = Buffer.from(a);
@@ -23,6 +23,16 @@ interface NotifyBody {
   // request_rejected
   request_type?: "return" | "exchange";
   order_number?: number | null;
+  // order_cancelled
+  method?: "wallet" | "original" | "none";
+  paid_online?: number;
+  wallet_used?: number;
+  fee?: number;
+  refund_amount?: number;
+  refund_status?: "not_needed" | "initiated" | "credited" | "failed" | "unverified";
+  eta?: string;
+  wallet_expires_at?: string | null;
+  valid_months?: number;
 }
 
 /**
@@ -85,6 +95,31 @@ export async function POST(req: NextRequest) {
       requestType: body.request_type,
       orderNumber: body.order_number ?? null,
       note: body.note,
+    });
+    return Response.json({ sent });
+  }
+
+  if (body.type === "order_cancelled") {
+    if (
+      typeof body.order_number !== "number" ||
+      (body.method !== "wallet" && body.method !== "original" && body.method !== "none") ||
+      typeof body.refund_amount !== "number"
+    ) {
+      return Response.json({ error: "order_number, method and refund_amount are required." }, { status: 400 });
+    }
+    const sent = await sendOrderCancelledEmail({
+      email: body.email,
+      firstName: body.first_name,
+      orderNumber: body.order_number,
+      method: body.method,
+      paidOnline: body.paid_online ?? 0,
+      walletUsed: body.wallet_used ?? 0,
+      fee: body.fee ?? 0,
+      refundAmount: body.refund_amount,
+      refundStatus: body.refund_status ?? "not_needed",
+      eta: body.eta ?? "5 to 7 working days",
+      walletExpiresAt: body.wallet_expires_at ?? null,
+      validMonths: body.valid_months ?? 6,
     });
     return Response.json({ sent });
   }

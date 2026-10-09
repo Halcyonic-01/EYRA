@@ -90,6 +90,8 @@ export const storeConfig = {
    */
   contact: {
     supportEmail: envString("SUPPORT_PUBLIC_EMAIL", "support@eyra.org.in"),
+    /** Where customers write about an order: cancelling, shipping, returns and refunds. */
+    ordersEmail: envString("ORDERS_PUBLIC_EMAIL", "query-orders@eyra.org.in"),
     /** Statutory / corporate mailbox used for legal and data requests. */
     adminEmail: envString("ADMIN_PUBLIC_EMAIL", "admin@eyra.org.in"),
     pressEmail: envString("PRESS_PUBLIC_EMAIL", "press@eyra.org.in"),
@@ -129,6 +131,14 @@ export const storeConfig = {
      * dates, so set it to the same value in both places.
      */
     walletCreditMonths: envFloat("WALLET_CREDIT_VALIDITY_MONTHS", 6),
+    /**
+     * Minutes after ordering that a customer can cancel the order themselves;
+     * 0 means they cannot. The backend holds the shipment for the same time and
+     * reads the same ORDER_CANCEL_WINDOW_MINUTES, so set both to the same value.
+     */
+    cancelWindowMinutes: envFloat("ORDER_CANCEL_WINDOW_MINUTES", 0),
+    /** What is kept when a cancellation refund goes to the original payment method. Same ORDER_CANCEL_FEE as the backend. */
+    cancelFee: envFloat("ORDER_CANCEL_FEE", 100),
     /** Hours to pack and hand an in-stock order to the courier. */
     dispatchHoursMin: envFloat("POLICY_DISPATCH_HOURS_MIN", 24),
     dispatchHoursMax: envFloat("POLICY_DISPATCH_HOURS_MAX", 48),

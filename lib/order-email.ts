@@ -57,7 +57,9 @@ async function fetchOrderForEmail(orderId: string): Promise<OrderForEmail | null
   try {
     const fields = [
       "id", "display_id", "email", "total", "credit_line_total", "metadata",
-      "items.title", "items.quantity", "items.unit_price", "items.thumbnail",
+      // "*items" on purpose: asking for items.quantity by name returns no
+      // quantity, and Medusa then computes every price and total as zero.
+      "*items",
       "*shipping_address",
     ].join(",");
     const res = await fetch(
