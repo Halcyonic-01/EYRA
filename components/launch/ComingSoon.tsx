@@ -18,10 +18,7 @@ export function ComingSoon() {
           priority
           className="h-auto w-44 sm:w-60"
         />
-        <p className="mt-6 text-sm sm:text-base font-medium uppercase tracking-[0.3em] sm:tracking-[0.4em] text-mist">
-          Fine 925 Sterling Silver
-        </p>
-        <p className="mt-4 text-3xl sm:text-4xl text-pearl [font-family:var(--font-alex-brush),cursive]">
+        <p className="mt-6 text-3xl sm:text-4xl text-pearl [font-family:var(--font-alex-brush),cursive]">
           Reflecting Your Essence.
         </p>
       </header>
