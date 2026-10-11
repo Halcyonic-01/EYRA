@@ -45,7 +45,7 @@ export function Countdown({ target }: { target: string }) {
       {units.map(([label, value], i) => (
         <div key={label} className="flex items-start gap-2 sm:gap-6">
           <div className="flex flex-col items-center min-w-[3.75rem] sm:min-w-[6rem]">
-            <span className="font-display text-5xl sm:text-7xl font-medium tabular-nums leading-none text-white">
+            <span className="font-display text-5xl sm:text-7xl font-medium lining-nums tabular-nums leading-none text-white">
               {value === undefined ? "--" : pad(value)}
             </span>
             <span className="mt-3 text-[11px] sm:text-sm font-medium uppercase tracking-[0.15em] sm:tracking-[0.2em] text-pearl">
