@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Poppins, Cormorant_Garamond } from "next/font/google";
+import { headers } from "next/headers";
 import { ClerkProvider } from "@clerk/nextjs";
 import { currentUser } from "@clerk/nextjs/server";
 import "./globals.css";
@@ -8,6 +9,7 @@ import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { CartSyncBanner } from "@/components/layout/CartSyncBanner";
 import { syncMedusaCustomer } from "@/lib/medusa-customer";
+import { LAUNCH_HEADER } from "@/lib/launch-mode";
 
 /* Poppins, UI / body font (replaces Inter; matches Figma Poppins usage) */
 const poppins = Poppins({
@@ -45,6 +47,18 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  // Launch mode (set by proxy.ts): bare shell, no navbar/footer, no Clerk or
+  // Medusa calls, so the launch page has no backend dependencies.
+  if ((await headers()).has(LAUNCH_HEADER)) {
+    return (
+      <html lang="en" className={`${poppins.variable} ${cormorant.variable}`}>
+        <body className="bg-jet text-ivory font-sans min-h-screen antialiased">
+          {children}
+        </body>
+      </html>
+    );
+  }
+
   // Provision or re-bind the Medusa customer profile for authenticated users.
   // Short-circuits on repeat visits once publicMetadata.medusaCustomerId is set.
   const user = await currentUser();
