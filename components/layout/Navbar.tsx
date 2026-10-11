@@ -3,9 +3,13 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Menu, X, Search, ShoppingBag, User, Heart } from "lucide-react";
+import { Menu, X, Search, ShoppingBag, User, Heart, LogOut } from "lucide-react";
 import { useAuth } from "@clerk/nextjs";
 import { Logo } from "@/components/ui/Logo";
+import { useSignOut } from "@/components/auth/useSignOut";
+import { useWalletBalance } from "@/components/wallet/useWalletBalance";
+import { WalletChip } from "@/components/wallet/WalletChip";
+import { formatRupees } from "@/lib/money";
 import { useCartStore } from "@/store/useStore";
 import { useWishlistStore } from "@/store/useStore";
 
@@ -33,6 +37,12 @@ export function Navbar() {
   // server component, so a client component reads auth state via the hook.
   // Gate on isLoaded so the auth controls do not flip after hydration.
   const { isLoaded, isSignedIn } = useAuth();
+  const signOut = useSignOut();
+  // Spendable wallet credit, shown next to the account icon when there is any.
+  const wallet = useWalletBalance(Boolean(isLoaded && isSignedIn));
+  const walletHint = wallet?.nextExpiry
+    ? `${formatRupees(wallet.nextExpiry.amount)} expires on ${new Date(wallet.nextExpiry.expiresAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}`
+    : "Your wallet credit";
 
   useEffect(() => {
     if (searchOpen) searchInputRef.current?.focus();
@@ -85,7 +95,7 @@ export function Navbar() {
           darkTheme ? "text-white" : "text-black",
         ].join(" ")}>
           {/* Logo */}
-          <Logo variant={darkTheme ? "light" : "dark"} size="md" />
+          <Logo variant={darkTheme ? "light" : "dark"} size="xl" />
 
           {/* Desktop nav */}
           <nav
@@ -127,6 +137,9 @@ export function Navbar() {
             {/* Account: signed-in users go to their profile, guests to sign-in.
                 This is deliberately the sole account entry point in the header,
                 no separate text "Sign in" / "Sign up" links. */}
+            {wallet && wallet.balance > 0 && (
+              <WalletChip balance={wallet.balance} hint={walletHint} dark={darkTheme} />
+            )}
             <Link
               href={isSignedIn ? "/account" : "/sign-in"}
               aria-label={isSignedIn ? "Your account" : "Sign in"}
@@ -137,6 +150,20 @@ export function Navbar() {
             >
               <User size={17} strokeWidth={1.5} />
             </Link>
+            {isLoaded && isSignedIn && (
+              <button
+                type="button"
+                onClick={signOut}
+                aria-label="Sign out"
+                title="Sign out"
+                className={[
+                  "hidden sm:block p-2.5 transition-colors duration-200",
+                  darkTheme ? "text-pearl hover:text-white" : "text-[#333] hover:text-black",
+                ].join(" ")}
+              >
+                <LogOut size={17} strokeWidth={1.5} />
+              </button>
+            )}
             <Link
               href="/wishlist"
               aria-label="Wishlist"
@@ -217,7 +244,7 @@ export function Navbar() {
                 type="search"
                 value={searchValue}
                 onChange={(e) => setSearchValue(e.target.value)}
-                placeholder="Search rings, chains, earrings…"
+                placeholder="Search rings, chains, anklets…"
                 aria-label="Search products"
                 className="flex-1 bg-transparent font-sans font-light text-[16px] text-black placeholder:text-[#909090] focus:outline-none"
               />
@@ -283,6 +310,23 @@ export function Navbar() {
               >
                 My orders
               </Link>
+              <Link
+                href="/wallet"
+                onClick={closeMenu}
+                className="w-full text-center px-8 py-3.5 rounded-full border border-white/50 text-white font-sans font-normal text-[0.72rem] tracking-[0.2em] uppercase hover:border-white transition-colors duration-200"
+              >
+                {wallet && wallet.balance > 0 ? `My wallet · ${formatRupees(wallet.balance)}` : "My wallet"}
+              </Link>
+              <button
+                type="button"
+                onClick={() => {
+                  closeMenu();
+                  signOut();
+                }}
+                className="w-full text-center px-8 py-3.5 rounded-full text-pearl font-sans font-normal text-[0.72rem] tracking-[0.2em] uppercase underline underline-offset-4 hover:text-white transition-colors duration-200"
+              >
+                Sign out
+              </button>
             </div>
           </div>
         )}

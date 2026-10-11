@@ -43,7 +43,7 @@ export function BrandStory() {
 
           {/* Text */}
           <FadeIn delay={120} className="max-w-xl text-center lg:text-left flex flex-col gap-6">
-            <Logo variant="dark" size="sm" />
+            <Logo variant="dark" size="lg" />
 
             <p className="font-display font-light leading-[1.15] text-[clamp(1.8rem,3.2vw,2.8rem)] text-jet">
               Silver Jewellery Designed for Every Style &amp; Moment

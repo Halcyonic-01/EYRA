@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { formatRupees } from "@/lib/money";
+
 export const metadata: Metadata = {
   title: "Order Confirmed",
   description: "Your EYRA order has been placed successfully.",
@@ -12,13 +14,17 @@ export default async function OrderSuccessPage({
   searchParams: Promise<{
     orderId?: string;
     method?: string;
+    wallet?: string;
     payment_id?: string;
     awb?: string;
     courier?: string;
   }>;
 }) {
-  const { orderId, method, payment_id, awb, courier } = await searchParams;
+  const { orderId, method, wallet, payment_id, awb, courier } = await searchParams;
   const isPrepaid = method === "prepaid";
+  const isWalletOnly = method === "wallet";
+  // Wallet credit used, when any. Display only: the order itself is the record.
+  const walletCredit = Number(wallet) > 0 ? Number(wallet) : 0;
 
   if (!orderId) {
     return (
@@ -62,7 +68,9 @@ export default async function OrderSuccessPage({
           Order Confirmed!
         </h1>
         <p className="font-sans font-normal text-[16px] text-[#626262] max-w-[440px]">
-          {isPrepaid
+          {isWalletOnly
+            ? "Paid in full with your wallet credit. Your order is now queued for crafting."
+            : isPrepaid
             ? "Payment received. Your order is now queued for crafting."
             : "We'll collect payment when your order arrives at your door."}
         </p>
@@ -80,9 +88,27 @@ export default async function OrderSuccessPage({
         <div className="flex flex-col gap-1">
           <span className="font-sans font-normal text-[12px] text-[#909090] uppercase tracking-wide">Payment</span>
           <span className="font-sans font-medium text-[15px] text-black">
-            {isPrepaid ? "Prepaid via Razorpay" : "Cash on Delivery"}
+            {isWalletOnly
+              ? "Paid with wallet credit"
+              : isPrepaid
+              ? "Prepaid via Razorpay"
+              : "Cash on Delivery"}
           </span>
         </div>
+
+        {walletCredit > 0 && !isWalletOnly && (
+          <>
+            <div className="h-px bg-[#E8E8E8]" />
+            <div className="flex flex-col gap-1">
+              <span className="font-sans font-normal text-[12px] text-[#909090] uppercase tracking-wide">
+                Wallet credit used
+              </span>
+              <span className="font-sans font-medium text-[15px] text-black">
+                {formatRupees(walletCredit)}
+              </span>
+            </div>
+          </>
+        )}
 
         {isPrepaid && payment_id && (
           <>

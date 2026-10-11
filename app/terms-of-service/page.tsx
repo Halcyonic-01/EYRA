@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { LegalDocument } from "@/components/layout/LegalDocument";
 import { storeConfig } from "@/config/storeConfig";
+import { describeWindow } from "@/lib/cancellation";
 
 export const metadata: Metadata = {
   title: "Terms of Service",
@@ -16,7 +17,7 @@ export default function TermsOfServicePage() {
       eyebrow="Legal"
       title="Terms of Service"
       standfirst="These terms apply every time you browse eyra.org.in or place an order with us. Please read them before you buy."
-      updated="August 2026"
+      updated="October 2026"
       sections={[
         {
           heading: "1. Legal entity",
@@ -58,6 +59,11 @@ export default function TermsOfServicePage() {
           heading: "6. Shipping, returns, and refunds",
           body: [
             `Delivery timelines, charges, and the free-shipping threshold are set out in our Shipping and Delivery Policy. Returns and exchanges are accepted within ${policy.returnDays} days of delivery on the conditions set out in our Returns, Exchanges and Refunds policy.`,
+            ...(policy.cancelWindowMinutes > 0
+              ? [
+                  `You can cancel an order yourself from your account for ${describeWindow(policy.cancelWindowMinutes)} after you place it, until its shipment is created. How cancellations, returns, and exchanges are refunded, including through EYRA wallet credit, is set out in our Returns, Exchanges and Refunds policy.`,
+                ]
+              : []),
             "Both policies form part of these terms.",
           ],
         },
@@ -95,7 +101,7 @@ export default function TermsOfServicePage() {
         {
           heading: "12. Grievances and contact",
           body: [
-            `For general queries write to ${contact.supportEmail}. For formal grievances, our designated officer and the applicable service levels are set out on our Grievance Redressal page, and can be reached at ${contact.adminEmail}.`,
+            `For questions about an order, write to ${contact.ordersEmail}. For general queries write to ${contact.supportEmail}. For formal grievances, our designated officer and the applicable service levels are set out on our Grievance Redressal page, and can be reached at ${contact.adminEmail}.`,
           ],
         },
       ]}

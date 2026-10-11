@@ -68,7 +68,6 @@ test.describe("mobile viewport", () => {
     expect(titles.length).toBeGreaterThan(0);
     for (const title of titles) {
       expect(title.toLowerCase()).not.toContain("chain");
-      expect(title.toLowerCase()).not.toContain("earring");
     }
   });
 

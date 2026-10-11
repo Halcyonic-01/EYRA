@@ -32,6 +32,7 @@ export interface SupportCopy {
   freeShippingAbove: number;
   warrantyMonths: number;
   supportEmail: string;
+  ordersEmail: string;
 }
 
 /* ── FAQ data ─────────────────────────────────────────────── */
@@ -47,7 +48,7 @@ function buildFaqItems(c: SupportCopy) {
   },
   {
     q: "What is your return and exchange policy?",
-    a: `We accept returns within ${c.returnDays} days of delivery, and exchanges within ${c.exchangeDays} days, for unworn, undamaged items in original packaging. Customised or engraved pieces are non-returnable. Raise a return request via your account or email ${c.supportEmail}.`,
+    a: `We accept returns within ${c.returnDays} days of delivery, and exchanges within ${c.exchangeDays} days, for unworn, undamaged items in original packaging. Customised or engraved pieces are non-returnable. Approved returns and exchanges are paid back as EYRA wallet credit, which you can use on your next order. Raise a return request via your account or email ${c.ordersEmail}.`,
   },
   {
     q: "How do I care for my silver jewellery?",

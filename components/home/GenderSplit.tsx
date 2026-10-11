@@ -10,7 +10,7 @@ const PANELS = [
     href: "/collections/for-her",
   },
   {
-    src: "/images/for-him.png",
+    src: "/images/for-him.jpg",
     tag: "FOR HIM",
     description:
       "Crafted with clean lines and structured silhouettes, making every look feel bold, modern, and effortlessly timeless.",

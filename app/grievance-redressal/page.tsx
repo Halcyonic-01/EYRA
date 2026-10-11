@@ -16,7 +16,7 @@ export default function GrievanceRedressalPage() {
       eyebrow="Legal"
       title="Grievance Redressal"
       standfirst="Published under the Consumer Protection (E-Commerce) Rules, 2020 and the Information Technology Act, 2000."
-      updated="August 2026"
+      updated="October 2026"
       sections={[
         {
           heading: "Designated Grievance and Nodal Officer",
@@ -54,7 +54,7 @@ export default function GrievanceRedressalPage() {
         {
           heading: "Before escalating",
           body: [
-            `Most issues are resolved fastest through our support desk at ${contact.supportEmail}, which is staffed ${contact.hours}. The grievance channel is for complaints that channel has not resolved.`,
+            `Most issues are resolved fastest by writing to ${contact.ordersEmail} about an order, or to our support desk at ${contact.supportEmail} for anything else. The support desk is staffed ${contact.hours}. The grievance channel is for complaints that those channels have not resolved.`,
           ],
         },
       ]}

@@ -11,7 +11,7 @@ const { contact, company, seller } = storeConfig;
 // collection that does not exist.
 const SHOP_LINKS = [
   ...COLLECTIONS.filter((c) =>
-    ["rings", "necklaces", "earrings", "bracelets"].includes(c.slug)
+    ["rings", "necklaces", "anklets", "bracelets"].includes(c.slug)
   ).map((c) => ({ label: c.label, href: `/collections/${c.slug}` })),
   { label: "New Arrivals", href: "/new-arrivals" },
   { label: "Best Sellers", href: "/best-sellers" },
@@ -110,7 +110,7 @@ export function Footer() {
             {/* Social links. lucide-react v1.16 omits brand icons; using SVG paths */}
             <div className="flex items-center gap-5 mt-6">
               <a
-                href="https://instagram.com/eyrajewelry"
+                href="https://www.instagram.com/eyra.org.in?stkn=MTFiZXYzazFzamJvYQ%3D%3D&utm_source=qr"
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="EYRA on Instagram"
@@ -123,7 +123,7 @@ export function Footer() {
                 </svg>
               </a>
               <a
-                href="https://www.linkedin.com/company/eyrajewelry"
+                href="https://www.linkedin.com/company/eyrajewels"
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="EYRA on LinkedIn"

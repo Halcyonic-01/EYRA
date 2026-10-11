@@ -20,7 +20,6 @@ export interface DetailProduct extends Product {
 const RING_SIZES = [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20];
 const RING_SPECS = ["925 Sterling", "Hallmarked", "BIS Certified", "Anti-tarnish"];
 const CHAIN_SPECS = ["925 Sterling", "Nickel Free", "Hallmarked", "Anti-tarnish"];
-const EARRING_SPECS = ["925 Sterling", "Anti-tarnish", "Hypoallergenic", "Hallmarked"];
 
 export const PRODUCTS: DetailProduct[] = [
   {
@@ -64,34 +63,6 @@ export const PRODUCTS: DetailProduct[] = [
     sizes: [],
     rating: 4.6,
     reviewCount: 210,
-  },
-  {
-    id: "4",
-    name: "Halo Drop Earrings",
-    price: 1299,
-    originalPrice: 2499,
-    description: "Lightweight sterling silver drop earrings with a polished halo frame, perfect for day to evening.",
-    images: ["/images/product-4.jpg", "/images/product-5.jpg", "/images/collection-1.jpg", "/images/product-2.jpg"],
-    inStock: 20,
-    type: "earring",
-    specs: EARRING_SPECS,
-    sizes: [],
-    rating: 4.5,
-    reviewCount: 176,
-  },
-  {
-    id: "5",
-    name: "Crescent Stud Earrings",
-    price: 2199,
-    originalPrice: 3999,
-    description: "Minimalist crescent-shaped studs in 925 sterling silver, effortlessly chic for any occasion.",
-    images: ["/images/product-5.jpg", "/images/product-4.jpg", "/images/collection-2.jpg", "/images/product-1.jpg"],
-    inStock: 18,
-    type: "earring",
-    specs: EARRING_SPECS,
-    sizes: [],
-    rating: 4.3,
-    reviewCount: 99,
   },
   {
     id: "6",
@@ -148,20 +119,6 @@ export const PRODUCTS: DetailProduct[] = [
     sizes: RING_SIZES,
     rating: 4.8,
     reviewCount: 203,
-  },
-  {
-    id: "10",
-    name: "Luna Ear Cuff",
-    price: 1199,
-    originalPrice: 2199,
-    description: "An adjustable ear cuff in sterling silver that adds edge and dimension without a piercing.",
-    images: ["/images/product-5.jpg", "/images/product-4.jpg", "/images/collection-1.jpg", "/images/product-1.jpg"],
-    inStock: 25,
-    type: "earring",
-    specs: EARRING_SPECS,
-    sizes: [],
-    rating: 4.0,
-    reviewCount: 57,
   },
   {
     id: "11",

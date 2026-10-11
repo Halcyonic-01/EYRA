@@ -9,9 +9,9 @@
  *   JEWELRY_HSN_CODE          BIS HSN code (default: "7113")
  *   JEWELRY_GST_RATE          GST % as a number (default: 3)
  *   SHIP_WEIGHT_RING_G        Ring weight in grams (default: 6)
- *   SHIP_WEIGHT_EARRING_G     Earring weight in grams (default: 6)
  *   SHIP_WEIGHT_CHAIN_G       Chain/necklace weight in grams (default: 15)
  *   SHIP_WEIGHT_BRACELET_G    Bracelet weight in grams (default: 12)
+ *   SHIP_WEIGHT_ANKLET_G      Anklet weight in grams (default: 10)
  *   SHIP_DEFAULT_WEIGHT_G     Fallback per-item weight in grams (default: 10)
  *   SHIP_MIN_WEIGHT_KG        Shiprocket minimum chargeable slab in kg (default: 0.5)
  *   SHIP_BOX_LENGTH_CM        Jewellery box length in cm (default: 10)
@@ -53,9 +53,9 @@ export const storeConfig = {
     /** Per-product-type manufacturing weights (g). */
     itemWeightsG: {
       ring: envFloat("SHIP_WEIGHT_RING_G", 6),
-      earring: envFloat("SHIP_WEIGHT_EARRING_G", 6),
       chain: envFloat("SHIP_WEIGHT_CHAIN_G", 15),
       bracelet: envFloat("SHIP_WEIGHT_BRACELET_G", 12),
+      anklet: envFloat("SHIP_WEIGHT_ANKLET_G", 10),
     } as Record<string, number>,
     /** Standard jewellery box dimensions (cm) sent to Shiprocket. */
     box: {
@@ -90,6 +90,8 @@ export const storeConfig = {
    */
   contact: {
     supportEmail: envString("SUPPORT_PUBLIC_EMAIL", "support@eyra.org.in"),
+    /** Where customers write about an order: cancelling, shipping, returns and refunds. */
+    ordersEmail: envString("ORDERS_PUBLIC_EMAIL", "query-orders@eyra.org.in"),
     /** Statutory / corporate mailbox used for legal and data requests. */
     adminEmail: envString("ADMIN_PUBLIC_EMAIL", "admin@eyra.org.in"),
     pressEmail: envString("PRESS_PUBLIC_EMAIL", "press@eyra.org.in"),
@@ -123,6 +125,20 @@ export const storeConfig = {
     returnDays: envFloat("POLICY_RETURN_DAYS", 15),
     /** Exchange window, in days from delivery. */
     exchangeDays: envFloat("POLICY_EXCHANGE_DAYS", 15),
+    /**
+     * Months wallet credit stays usable after it is issued; 0 means never.
+     * The backend reads the same WALLET_CREDIT_VALIDITY_MONTHS to set expiry
+     * dates, so set it to the same value in both places.
+     */
+    walletCreditMonths: envFloat("WALLET_CREDIT_VALIDITY_MONTHS", 6),
+    /**
+     * Minutes after ordering that a customer can cancel the order themselves;
+     * 0 means they cannot. The backend holds the shipment for the same time and
+     * reads the same ORDER_CANCEL_WINDOW_MINUTES, so set both to the same value.
+     */
+    cancelWindowMinutes: envFloat("ORDER_CANCEL_WINDOW_MINUTES", 0),
+    /** What is kept when a cancellation refund goes to the original payment method. Same ORDER_CANCEL_FEE as the backend. */
+    cancelFee: envFloat("ORDER_CANCEL_FEE", 100),
     /** Hours to pack and hand an in-stock order to the courier. */
     dispatchHoursMin: envFloat("POLICY_DISPATCH_HOURS_MIN", 24),
     dispatchHoursMax: envFloat("POLICY_DISPATCH_HOURS_MAX", 48),

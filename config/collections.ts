@@ -38,12 +38,12 @@ export const COLLECTIONS: readonly Collection[] = [
     image: "/images/collection-2.jpg",
   },
   {
-    slug: "earrings",
-    label: "Earrings",
+    slug: "anklets",
+    label: "Anklets",
     description:
-      "Cuffs, hoops, and drops finished to sit light and stay tarnish free.",
-    types: ["earring"],
-    image: "/images/collection-3.jpg",
+      "Fine chains and delicate charms in 925 sterling silver, light enough for every day.",
+    types: ["anklet"],
+    image: "/images/collection-anklets.jpg",
   },
   {
     slug: "bracelets",
@@ -57,8 +57,8 @@ export const COLLECTIONS: readonly Collection[] = [
     slug: "for-her",
     label: "For Her",
     description:
-      "Delicate rings and sculpted earrings designed for effortless everyday wear.",
-    types: ["ring", "earring"],
+      "Delicate rings and fine anklets designed for effortless everyday wear.",
+    types: ["ring", "anklet"],
     image: "/images/for-her.jpg",
   },
   {
@@ -67,7 +67,7 @@ export const COLLECTIONS: readonly Collection[] = [
     description:
       "Clean lines and structured weight, cut for a bold and modern look.",
     types: ["chain", "ring"],
-    image: "/images/for-him.png",
+    image: "/images/for-him.jpg",
   },
 ] as const;
 
@@ -82,7 +82,7 @@ const SLUG_ALIASES: Record<string, string> = {
   necklace: "necklaces",
   pendants: "necklaces",
   ring: "rings",
-  earring: "earrings",
+  anklet: "anklets",
   bracelet: "bracelets",
   her: "for-her",
   him: "for-him",

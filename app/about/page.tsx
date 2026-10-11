@@ -88,8 +88,8 @@ export default function AboutPage() {
                   </p>
                   <p className="font-sans font-light text-[16px] leading-[26px] text-[#505050]">
                     The pieces that survived were the quiet ones. Bands you forget
-                    you are wearing. Chains that layer without tangling. Earrings
-                    light enough to keep in through a long day. That is the shape
+                    you are wearing. Chains that layer without tangling. Anklets
+                    light enough to keep on through a long day. That is the shape
                     the brand took, and we have not drifted from it.
                   </p>
                   <p className="font-sans font-light text-[16px] leading-[26px] text-[#505050]">

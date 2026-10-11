@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { currentUser } from "@clerk/nextjs/server";
+import { getCurrentUser } from "@/lib/current-user";
 
 import { getWishlistEntries, setWishlistEntries, type WishlistEntry } from "@/lib/medusa-wishlist";
 import { getProductByHandle } from "@/lib/medusa";
@@ -13,7 +13,7 @@ interface HydratedWishlistItem {
 }
 
 async function resolveMedusaCustomerId(): Promise<string | null> {
-  const user = await currentUser();
+  const user = await getCurrentUser();
   const id = user?.publicMetadata?.medusaCustomerId;
   return typeof id === "string" ? id : null;
 }

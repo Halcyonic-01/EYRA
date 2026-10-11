@@ -6,7 +6,7 @@ import { COLLECTIONS as ALL_COLLECTIONS } from "@/config/collections";
 // The product-type collections, taken from the shared config so the homepage
 // and the footer always offer the same categories.
 const COLLECTIONS = ALL_COLLECTIONS.filter((c) =>
-  ["rings", "necklaces", "earrings", "bracelets"].includes(c.slug)
+  ["rings", "necklaces", "anklets", "bracelets"].includes(c.slug)
 ).map((c) => ({
   src: c.image,
   label: c.label,

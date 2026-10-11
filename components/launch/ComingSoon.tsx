@@ -9,13 +9,14 @@ export function ComingSoon() {
   return (
     <main className="min-h-screen flex flex-col items-center justify-center bg-jet text-ivory px-6 py-12 sm:py-16 text-center">
       <header className="flex flex-col items-center">
-        {/* Original EYRA wordmark, same artwork as the site logo */}
+        {/* Same vector EYRA wordmark as the site logo */}
         <Image
-          src="/images/logo-mark-white.png"
+          src="/images/logo-eyra-white.svg"
           alt="EYRA"
           width={254}
           height={148}
           priority
+          unoptimized
           className="h-auto w-44 sm:w-60"
         />
         <p className="mt-6 text-3xl sm:text-4xl text-pearl [font-family:var(--font-alex-brush),cursive]">

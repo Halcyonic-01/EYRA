@@ -19,6 +19,7 @@ export default function SupportPage() {
         freeShippingAbove: policy.freeShippingAbove,
         warrantyMonths: policy.warrantyMonths,
         supportEmail: contact.supportEmail,
+        ordersEmail: contact.ordersEmail,
       }}
     />
   );

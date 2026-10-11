@@ -63,3 +63,13 @@ body {
 /* ── Carousel scrollbar hide ───────────────────────────── */
 .hide-scrollbar { scrollbar-width: none; }
 .hide-scrollbar::-webkit-scrollbar { display: none; }
+
+
+/* Sign-in and sign-up window: a short rise-in, skipped for reduced motion. */
+@keyframes auth-rise {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .auth-rise { animation: auth-rise 260ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+}

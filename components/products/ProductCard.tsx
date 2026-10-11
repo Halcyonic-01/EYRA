@@ -10,7 +10,7 @@ export function ProductCard({ product }: { product: Product }) {
   const router = useRouter();
   const addToCart = useCartStore((s) => s.addToCart);
   // Rings have one variant per size (checked live: every ring in the
-  // catalogue has 15 size variants, every chain/earring has exactly 1), so
+  // catalogue has 15 size variants, every chain has exactly 1), so
   // "in cart" can't just mean "any variant of this product" for rings, or
   // adding a different size would read as a no-op. Non-ring products are
   // single-variant, so the broader check is accurate for them.
