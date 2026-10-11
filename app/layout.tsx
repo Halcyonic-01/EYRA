@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Poppins, Cormorant_Garamond } from "next/font/google";
+import { Poppins, Cormorant_Garamond, Alex_Brush } from "next/font/google";
 import { headers } from "next/headers";
 import { ClerkProvider } from "@clerk/nextjs";
 import { currentUser } from "@clerk/nextjs/server";
@@ -28,6 +28,15 @@ const cormorant = Cormorant_Garamond({
   variable: "--font-cormorant",
 });
 
+/* Alex Brush, script font for the "Reflecting Your Essence." tagline on the
+   launch page */
+const alexBrush = Alex_Brush({
+  subsets: ["latin"],
+  weight: "400",
+  display: "swap",
+  variable: "--font-alex-brush",
+});
+
 export const metadata: Metadata = {
   title: {
     default: "EYRA Silver Jewelry",
@@ -51,7 +60,10 @@ export default async function RootLayout({
   // Medusa calls, so the launch page has no backend dependencies.
   if ((await headers()).has(LAUNCH_HEADER)) {
     return (
-      <html lang="en" className={`${poppins.variable} ${cormorant.variable}`}>
+      <html
+        lang="en"
+        className={`${poppins.variable} ${cormorant.variable} ${alexBrush.variable}`}
+      >
         <body className="bg-jet text-ivory font-sans min-h-screen antialiased">
           {children}
         </body>

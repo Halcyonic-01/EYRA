@@ -21,7 +21,7 @@ export function ComingSoon() {
         <p className="mt-6 text-sm sm:text-base font-medium uppercase tracking-[0.3em] sm:tracking-[0.4em] text-mist">
           Fine 925 Sterling Silver
         </p>
-        <p className="mt-3 font-display italic text-xl sm:text-2xl text-pearl">
+        <p className="mt-4 text-3xl sm:text-4xl text-pearl [font-family:var(--font-alex-brush),cursive]">
           Reflecting Your Essence.
         </p>
       </header>
@@ -29,7 +29,7 @@ export function ComingSoon() {
       <div className="my-10 sm:my-14 h-px w-20 bg-pewter/60" aria-hidden />
 
       <section className="flex flex-col items-center gap-8 sm:gap-10">
-        <h2 className="font-display text-3xl sm:text-5xl font-medium uppercase tracking-[0.25em] sm:tracking-[0.3em] pl-[0.25em] text-white">
+        <h2 className="text-2xl sm:text-4xl font-light uppercase tracking-[0.2em] sm:tracking-[0.25em] pl-[0.2em] sm:pl-[0.25em] text-white">
           Launching Soon
         </h2>
         <Countdown target={LAUNCH_DATE_ISO} />
