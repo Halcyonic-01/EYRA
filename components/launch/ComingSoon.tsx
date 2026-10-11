@@ -1,31 +1,39 @@
+import Image from "next/image";
 import { Countdown } from "./Countdown";
 import { LAUNCH_DATE_ISO } from "@/lib/launch-mode";
 
-const INSTAGRAM_URL = "https://www.instagram.com/eyra.org.in/";
+const INSTAGRAM_URL =
+  "https://www.instagram.com/eyra.org.in?cplk=MXhteDI2YmRpcG1jaQ==";
 
 export function ComingSoon() {
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center bg-jet text-ivory px-6 py-16 text-center">
-      <header>
-        <h1 className="font-display text-6xl sm:text-8xl font-light tracking-[0.35em] pl-[0.35em]">
-          EYRA
-        </h1>
-        <p className="mt-4 text-[11px] sm:text-xs uppercase tracking-[0.4em] text-pearl">
+    <main className="min-h-screen flex flex-col items-center justify-center bg-jet text-ivory px-6 py-12 sm:py-16 text-center">
+      <header className="flex flex-col items-center">
+        {/* Original EYRA wordmark, same artwork as the site logo */}
+        <Image
+          src="/images/logo-mark-white.png"
+          alt="EYRA"
+          width={254}
+          height={148}
+          priority
+          className="h-auto w-44 sm:w-60"
+        />
+        <p className="mt-6 text-sm sm:text-base font-medium uppercase tracking-[0.3em] sm:tracking-[0.4em] text-mist">
           Fine 925 Sterling Silver
         </p>
-        <p className="mt-2 font-display italic text-lg sm:text-xl text-stone">
+        <p className="mt-3 font-display italic text-xl sm:text-2xl text-pearl">
           Reflecting Your Essence.
         </p>
       </header>
 
-      <div className="my-14 h-px w-16 bg-stone/50" aria-hidden />
+      <div className="my-10 sm:my-14 h-px w-20 bg-pewter/60" aria-hidden />
 
-      <section className="flex flex-col items-center gap-10">
-        <h2 className="text-sm sm:text-base font-light uppercase tracking-[0.5em] pl-[0.5em] text-mist">
+      <section className="flex flex-col items-center gap-8 sm:gap-10">
+        <h2 className="font-display text-3xl sm:text-5xl font-medium uppercase tracking-[0.25em] sm:tracking-[0.3em] pl-[0.25em] text-white">
           Launching Soon
         </h2>
         <Countdown target={LAUNCH_DATE_ISO} />
-        <p className="text-xs sm:text-sm uppercase tracking-[0.3em] text-stone">
+        <p className="text-base sm:text-lg font-medium tracking-[0.25em] text-mist">
           08 / 11 / 2026
         </p>
       </section>
@@ -34,7 +42,7 @@ export function ComingSoon() {
         href={INSTAGRAM_URL}
         target="_blank"
         rel="noopener noreferrer"
-        className="mt-14 inline-block rounded-full border border-pearl px-8 py-3.5 text-sm font-light tracking-wide text-ivory transition-colors hover:bg-ivory hover:text-jet focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ivory"
+        className="mt-10 sm:mt-14 inline-block rounded-full bg-ivory px-8 sm:px-10 py-4 text-sm sm:text-base font-medium tracking-wide text-jet transition-colors hover:bg-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ivory"
       >
         Follow Our Journey on Instagram
       </a>
