@@ -2,7 +2,7 @@ import type { NextRequest } from "next/server";
 import { storeConfig } from "@/config/storeConfig";
 import { rememberOrderForShipment } from "@/lib/shiprocket-store";
 import { splitName } from "@/lib/medusa-order";
-import { checkInternalRequest } from "@/lib/internal-auth";
+import { checkShipmentRequest } from "@/lib/internal-auth";
 import { getShiprocketToken, hasShiprocketLogin } from "@/lib/shiprocket-token";
 import { sendOpsAlert, sendOrderPlacedNotification } from "@/lib/ops-alert";
 
@@ -454,10 +454,10 @@ const failure = (error: string): CreateShipmentResult => ({
  *
  * Called only by the Medusa backend's dispatcher, which decides when an order
  * ships (after the customer's cancel window), so it is authenticated with the
- * shared backend secret and is not callable from a browser.
+ * shipment secret (see checkShipmentRequest) and is not callable from a browser.
  */
 export async function POST(request: NextRequest) {
-  const auth = checkInternalRequest(request);
+  const auth = checkShipmentRequest(request);
   if (auth === "unconfigured") {
     return Response.json({ error: "Shipping is not configured." }, { status: 503 });
   }

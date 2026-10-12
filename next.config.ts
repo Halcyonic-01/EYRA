@@ -1,6 +1,31 @@
 import type { NextConfig } from "next";
 
+/**
+ * Browser security headers for every response. The CSP only covers framing,
+ * plugins and <base>; a script allowlist would need nonces for Clerk,
+ * Razorpay and Sentry, so it is left for a report-only rollout.
+ */
+const securityHeaders = [
+  {
+    key: "Content-Security-Policy",
+    value: "frame-ancestors 'none'; object-src 'none'; base-uri 'self'",
+  },
+  // Older browsers that ignore frame-ancestors.
+  { key: "X-Frame-Options", value: "DENY" },
+  { key: "Strict-Transport-Security", value: "max-age=31536000" },
+  { key: "X-Content-Type-Options", value: "nosniff" },
+  { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+  {
+    key: "Permissions-Policy",
+    value: "camera=(), microphone=(), geolocation=(), usb=()",
+  },
+];
+
 const nextConfig: NextConfig = {
+  async headers() {
+    return [{ source: "/(.*)", headers: securityHeaders }];
+  },
+
   // Policy pages briefly lived under /legal/* before the final URL scheme was
   // settled. These keep any saved or shared link resolving.
   async redirects() {

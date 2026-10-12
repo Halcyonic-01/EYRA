@@ -941,7 +941,6 @@ export function CheckoutClient() {
       return;
     }
 
-    const clerkEmail = user?.primaryEmailAddress?.emailAddress ?? "";
     const shippingAddress = {
       fullName: form.fullName,
       addressLine1: form.addressLine1,
@@ -958,7 +957,7 @@ export function CheckoutClient() {
       const res = await fetch("/api/wallet/pay", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ cartId, email: clerkEmail, shippingAddress }),
+        body: JSON.stringify({ cartId, shippingAddress }),
       });
       const data = await res.json() as { orderId?: string | null; error?: string; message?: string };
       confirmedOrderId = data.orderId ?? null;
@@ -1006,7 +1005,6 @@ export function CheckoutClient() {
         return;
       }
 
-      const clerkEmail = user?.primaryEmailAddress?.emailAddress ?? "";
       const shippingAddress = {
         fullName: form.fullName,
         addressLine1: form.addressLine1,
@@ -1026,7 +1024,7 @@ export function CheckoutClient() {
         const oRes = await fetch("/api/cod/complete", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ cartId, email: clerkEmail, shippingAddress, useWallet }),
+          body: JSON.stringify({ cartId, shippingAddress, useWallet }),
         });
         const oData = await oRes.json() as { orderId?: string | null; message?: string };
         confirmedOrderId = oData.orderId ?? null;
@@ -1095,8 +1093,14 @@ export function CheckoutClient() {
       const res = await fetch("/api/razorpay/create-order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ cartId, email: clerkEmail, shippingAddress, useWallet }),
+        body: JSON.stringify({ cartId, shippingAddress, useWallet }),
       });
+      if (res.status === 401) {
+        const data = await res.json() as { message?: string };
+        setRazorpayError(data.message || "Please sign in again to place your order.");
+        setPayLoading(false);
+        return;
+      }
       if (res.ok) {
         const data = await res.json() as {
           razorpayOrderId?: string | null; amount?: number | null; error?: string; message?: string;

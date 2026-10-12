@@ -28,15 +28,22 @@ const VALID_CATEGORIES = new Set([
 function validateTicket(body: Partial<TicketBody>): TicketError[] {
   const errors: TicketError[] = [];
 
+  // Anything that is not a string is treated as missing.
+  for (const key of ["name", "email", "category", "message"] as const) {
+    if (typeof body[key] !== "string") delete body[key];
+  }
+
   if (!body.name?.trim()) {
     errors.push({ field: "name", message: "Name is required." });
   } else if (body.name.trim().length < 2) {
     errors.push({ field: "name", message: "Name must be at least 2 characters." });
+  } else if (body.name.trim().length > 100) {
+    errors.push({ field: "name", message: "Name must be under 100 characters." });
   }
 
   if (!body.email?.trim()) {
     errors.push({ field: "email", message: "Email address is required." });
-  } else if (!EMAIL_RE.test(body.email.trim().toLowerCase())) {
+  } else if (body.email.trim().length > 254 || !EMAIL_RE.test(body.email.trim().toLowerCase())) {
     errors.push({ field: "email", message: "Please enter a valid email address." });
   }
 
@@ -62,22 +69,33 @@ function validateTicket(body: Partial<TicketBody>): TicketError[] {
 
 /* ── Delivery adapters ────────────────────────────────────── */
 
+/** Customer text goes into the email as text, never as HTML. */
+function esc(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 async function sendViaResend(ticket: TicketBody): Promise<void> {
   const recipient =
     process.env.SUPPORT_EMAIL_RECIPIENT ?? storeConfig.contact.supportEmail;
+  const name = ticket.name.trim();
 
   const sent = await sendEmail({
     to: recipient,
-    replyTo: ticket.email,
+    replyTo: ticket.email.trim(),
     from: process.env.SUPPORT_EMAIL_FROM,
-    subject: `[Support] ${ticket.category.toUpperCase()}: ${ticket.name}`,
+    subject: `[Support] ${ticket.category.toUpperCase()}: ${name.replace(/[\r\n]+/g, " ")}`,
     html: `
       <h2>New Support Request</h2>
-      <p><strong>Name:</strong> ${ticket.name}</p>
-      <p><strong>Email:</strong> ${ticket.email}</p>
-      <p><strong>Category:</strong> ${ticket.category}</p>
+      <p><strong>Name:</strong> ${esc(name)}</p>
+      <p><strong>Email:</strong> ${esc(ticket.email.trim())}</p>
+      <p><strong>Category:</strong> ${esc(ticket.category)}</p>
       <hr />
-      <p>${ticket.message.replace(/\n/g, "<br>")}</p>
+      <p>${esc(ticket.message.trim()).replace(/\n/g, "<br>")}</p>
     `,
   });
 
