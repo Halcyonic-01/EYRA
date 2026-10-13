@@ -9,6 +9,8 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://www.eyra.org.in"),
   title: { absolute: TITLE },
   description: DESCRIPTION,
+  // Every URL is rewritten to this page in launch mode; keep them out of search.
+  robots: { index: false, follow: false },
   openGraph: {
     title: TITLE,
     description: DESCRIPTION,
