@@ -18,3 +18,16 @@ export function checkInternalRequest(req: Request): "ok" | "unauthorized" | "unc
   const received = req.headers.get("x-revalidate-secret");
   return received && safeEqual(received, secret) ? "ok" : "unauthorized";
 }
+
+/**
+ * Checks a shipment request from the backend. Creating a shipment spends
+ * Shiprocket wallet money, so it has its own secret (STOREFRONT_SHIPMENT_SECRET)
+ * and falls back to the shared one only while that is not set.
+ */
+export function checkShipmentRequest(req: Request): "ok" | "unauthorized" | "unconfigured" {
+  const secret = process.env.STOREFRONT_SHIPMENT_SECRET;
+  if (!secret) return checkInternalRequest(req);
+
+  const received = req.headers.get("x-shipment-secret");
+  return received && safeEqual(received, secret) ? "ok" : "unauthorized";
+}

@@ -11,6 +11,7 @@ import {
 import { syncWalletForCheckout } from "@/lib/medusa-wallet";
 import { sendOrderConfirmationEmail } from "@/lib/order-email";
 import { applyRateLimit } from "@/lib/rateLimit";
+import { getCheckoutEmail, SIGN_IN_REQUIRED } from "@/lib/checkout-customer";
 
 /**
  * Place an order that wallet credit pays for in full.
@@ -25,15 +26,18 @@ export async function POST(req: NextRequest) {
   if (rateLimitResponse) return rateLimitResponse;
 
   try {
-    const { cartId, email, shippingAddress } = (await req.json()) as {
+    // The order's email comes from the signed-in user, never from the request.
+    const email = await getCheckoutEmail();
+    if (!email) return NextResponse.json(SIGN_IN_REQUIRED, { status: 401 });
+
+    const { cartId, shippingAddress } = (await req.json()) as {
       cartId?: string;
-      email?: string;
       shippingAddress?: CheckoutShippingAddress;
     };
 
-    if (!cartId || !email || !shippingAddress) {
+    if (!cartId || !shippingAddress) {
       return NextResponse.json(
-        { error: "cartId, email, and shippingAddress are required" },
+        { error: "cartId and shippingAddress are required" },
         { status: 400 }
       );
     }
