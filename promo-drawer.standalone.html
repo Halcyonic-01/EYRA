@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Promo Code Drawer</title>
+<style>
+  :root { --jet:#020202; --ivory:#f9f9f9; --cloud:#ebebeb; --smoke:#5f5f5f; --accent:#020202; --ok:#047857; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: system-ui, sans-serif; color: var(--jet); }
+
+  .promo { position: relative; border-bottom: 1px solid var(--cloud); background: #fff; }
+  .promo__trigger {
+    display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 12px;
+    width: 100%; max-width: 1280px; margin: 0 auto; padding: 10px 16px;
+    background: none; border: 0; cursor: pointer; color: inherit;
+    font: 500 11px/1 inherit; letter-spacing: .18em; text-transform: uppercase;
+  }
+  .promo__badge { margin-left: 12px; padding: 3px 8px; border: 1px solid var(--jet); border-radius: 100px; font-size: 10px; letter-spacing: .1em; }
+  .promo__chevron { transition: transform .3s; }
+  .promo__trigger[aria-expanded="true"] .promo__chevron { transform: rotate(180deg); }
+
+  /* Desktop: slide-down via grid-template-rows 0fr -> 1fr */
+  .promo__panel { display: grid; grid-template-rows: 0fr; background: var(--ivory); transition: grid-template-rows .3s ease-out, visibility .3s; visibility: hidden; }
+  .promo__panel.is-open { grid-template-rows: 1fr; visibility: visible; }
+  .promo__inner { min-height: 0; overflow: hidden; }
+  .promo__list { list-style: none; margin: 0 auto; padding: 20px 16px; max-width: 1280px; display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+  .promo__card { display: flex; flex-direction: column; gap: 12px; padding: 16px; background: #fff; border: 1px solid var(--cloud); }
+  .promo__code { align-self: flex-start; padding: 4px 10px; border: 1px dashed var(--jet); font: 700 13px ui-monospace, monospace; letter-spacing: .12em; }
+  .promo__title { margin: 0; font-size: 14px; font-weight: 500; }
+  .promo__terms { margin: 4px 0 0; font-size: 12px; color: var(--smoke); line-height: 1.4; }
+  .promo__card > div { flex: 1; }
+  .promo__copy { align-self: flex-start; padding: 8px 16px; border: 0; border-radius: 100px; background: var(--accent); color: #fff; cursor: pointer; font: 500 11px/1 inherit; letter-spacing: .14em; text-transform: uppercase; transition: background .2s; }
+  .promo__copy.is-copied { background: var(--ok); }
+  .promo__backdrop { display: none; }
+
+  /* Mobile: bottom sheet */
+  @media (max-width: 639px) {
+    .promo__backdrop { display: block; position: fixed; inset: 0; z-index: 40; background: rgba(0,0,0,.4); opacity: 0; pointer-events: none; transition: opacity .3s; }
+    .promo__backdrop.is-open { opacity: 1; pointer-events: auto; }
+    .promo__panel { position: fixed; left: 0; right: 0; bottom: 0; z-index: 50; max-height: 85vh; grid-template-rows: 1fr; border-radius: 16px 16px 0 0; transform: translateY(100%); transition: transform .3s ease-out, visibility .3s; }
+    .promo__panel.is-open { transform: translateY(0); }
+    .promo__inner { overflow-y: auto; }
+  }
+  @media (prefers-reduced-motion: reduce) { .promo * { transition: none !important; } }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+</style>
+</head>
+<body>
+
+<div class="promo" id="promo">
+  <button class="promo__trigger" id="promo-trigger" type="button" aria-expanded="false" aria-controls="promo-panel">
+    <span>Available offers &amp; promo codes <span class="promo__badge">3 Offers Available</span></span>
+    <svg class="promo__chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+  </button>
+
+  <div class="promo__backdrop" id="promo-backdrop" aria-hidden="true"></div>
+
+  <div class="promo__panel" id="promo-panel" role="region" aria-label="Available offers and promo codes">
+    <div class="promo__inner">
+      <ul class="promo__list">
+        <li class="promo__card">
+          <span class="promo__code">WELCOME10</span>
+          <div><p class="promo__title">Get 10% OFF on your first order</p><p class="promo__terms">Valid on orders above ₹1,500 • For new customers</p></div>
+          <button class="promo__copy" type="button" data-code="WELCOME10">Copy code</button>
+        </li>
+        <li class="promo__card">
+          <span class="promo__code">LAUNCH20</span>
+          <div><p class="promo__title">Launch sale: flat 20% OFF on silver rings</p><p class="promo__terms">Valid on orders above ₹3,000 • Limited period</p></div>
+          <button class="promo__copy" type="button" data-code="LAUNCH20">Copy code</button>
+        </li>
+        <li class="promo__card">
+          <span class="promo__code">FREESHIP</span>
+          <div><p class="promo__title">Free shipping on every prepaid order</p><p class="promo__terms">No minimum order value • Prepaid orders only</p></div>
+          <button class="promo__copy" type="button" data-code="FREESHIP">Copy code</button>
+        </li>
+      </ul>
+    </div>
+  </div>
+  <span class="sr-only" role="status" aria-live="polite" id="promo-status"></span>
+</div>
+
+<script>
+(() => {
+  const root = document.getElementById('promo');
+  const trigger = document.getElementById('promo-trigger');
+  const panel = document.getElementById('promo-panel');
+  const backdrop = document.getElementById('promo-backdrop');
+  const status = document.getElementById('promo-status');
+
+  function setOpen(open) {
+    trigger.setAttribute('aria-expanded', String(open));
+    panel.classList.toggle('is-open', open);
+    backdrop.classList.toggle('is-open', open);
+  }
+  const isOpen = () => trigger.getAttribute('aria-expanded') === 'true';
+
+  trigger.addEventListener('click', () => setOpen(!isOpen()));
+  document.addEventListener('pointerdown', (e) => { if (isOpen() && !root.contains(e.target)) setOpen(false); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && isOpen()) { setOpen(false); trigger.focus(); } });
+
+  async function copyText(text) {
+    try { await navigator.clipboard.writeText(text); return true; }
+    catch {
+      const t = document.createElement('textarea');
+      t.value = text; t.style.cssText = 'position:fixed;opacity:0';
+      document.body.appendChild(t); t.select();
+      try { return document.execCommand('copy'); } finally { t.remove(); }
+    }
+  }
+
+  panel.addEventListener('click', async (e) => {
+    const btn = e.target.closest('.promo__copy');
+    if (!btn || !(await copyText(btn.dataset.code))) return;
+    btn.textContent = 'Copied! ✓';
+    btn.classList.add('is-copied');
+    status.textContent = btn.dataset.code + ' copied to clipboard';
+    setTimeout(() => { btn.textContent = 'Copy code'; btn.classList.remove('is-copied'); status.textContent = ''; }, 2000);
+  });
+})();
+</script>
+</body>
+</html>

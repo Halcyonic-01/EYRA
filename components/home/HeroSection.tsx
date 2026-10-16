@@ -1,6 +1,7 @@
 "use client";
 
 import { DeliveryCheckWidget } from "./DeliveryCheckWidget";
+import { PromoCodeDrawer } from "./PromoCodeDrawer";
 
 export function HeroSection() {
   return (
@@ -14,6 +15,8 @@ export function HeroSection() {
           <DeliveryCheckWidget />
         </div>
       </div>
+
+      <PromoCodeDrawer />
 
       {/* ── Display heading ──────────────────────────── */}
       <div className="max-w-screen-xl mx-auto px-6 lg:px-16 pt-14 pb-4 text-center">
