@@ -214,7 +214,7 @@ export function CartClient() {
         {/* Right: Order Summary */}
         <div
           className="w-full lg:w-[380px] flex-shrink-0 rounded-2xl p-6 flex flex-col gap-4 lg:sticky lg:self-start"
-          style={{ background: "#F7F7F7", top: "calc(var(--nav-height) + 2rem)" }}
+          style={{ background: "#F7F7F7", top: "calc(var(--header-offset) + 2rem)" }}
         >
           <div className="flex items-center justify-between">
             <h2 className="font-sans font-medium text-[18px] leading-[27px] text-black">

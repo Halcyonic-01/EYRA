@@ -314,7 +314,7 @@ export function ProductDetailClient({
             </div>
 
             {/* Right: Sticky product info */}
-            <div className="w-full lg:flex-1 lg:sticky lg:self-start flex flex-col gap-6" style={{ top: "calc(var(--nav-height) + 2rem)" }}>
+            <div className="w-full lg:flex-1 lg:sticky lg:self-start flex flex-col gap-6" style={{ top: "calc(var(--header-offset) + 2rem)" }}>
 
               {/* Identity: name, subtitle, rating, price */}
               <div className="flex flex-col gap-[7px]">

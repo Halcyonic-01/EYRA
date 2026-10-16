@@ -157,7 +157,7 @@ function OrderSidebar({ items, totals }: { items: CartItem[]; totals: DisplayTot
   return (
     <div
       className="w-full lg:w-[360px] flex-shrink-0 rounded-2xl p-6 flex flex-col gap-5 lg:sticky lg:self-start"
-      style={{ background: "#F7F7F7", top: "calc(var(--nav-height) + 2rem)" }}
+      style={{ background: "#F7F7F7", top: "calc(var(--header-offset) + 2rem)" }}
     >
       <h2 className="font-sans font-medium text-[16px] text-black">Order Summary</h2>
 
