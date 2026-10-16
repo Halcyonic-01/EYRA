@@ -129,7 +129,7 @@ export function CartClient() {
                 // qty-stepper/remove group drops to its own row underneath
                 // instead of squeezing beside the product info.
                 <div key={key} className="flex flex-col sm:flex-row gap-3 sm:gap-4 p-4 bg-white border border-[#E1E1E1] rounded-2xl">
-                  <div className="flex gap-4">
+                  <div className="flex gap-4 flex-1 min-w-0">
                     {/* Product image */}
                     <div
                       className="relative w-[79px] h-[79px] flex-shrink-0 rounded-2xl overflow-hidden bg-[#F9F9F9]"
@@ -243,13 +243,6 @@ export function CartClient() {
             )}
 
             <div className="flex items-center justify-between">
-              <span className="text-[#626262]">Tax (GST)</span>
-              <span className="text-black">
-                {totals.isEstimate ? "-" : `₹${totals.tax.toLocaleString("en-IN")}`}
-              </span>
-            </div>
-
-            <div className="flex items-center justify-between">
               <span className="text-[#626262]">Delivery</span>
               {totals.isEstimate ? (
                 <span className="text-black">-</span>
@@ -263,7 +256,7 @@ export function CartClient() {
 
           {totals.isEstimate && (
             <p className="font-sans text-[11px] text-[#909090]">
-              Tax and delivery calculated at checkout.
+              Delivery calculated at checkout.
             </p>
           )}
 
@@ -277,6 +270,9 @@ export function CartClient() {
               ₹{totals.total.toLocaleString("en-IN")}
             </span>
           </div>
+          <p className="font-sans text-[12px] text-[#909090] -mt-2 text-right">
+            Inclusive of all taxes
+          </p>
 
           <Link
             href="/checkout"
