@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useCartStore } from "@/store/useStore";
+import { useCartStore, useWishlistStore } from "@/store/useStore";
 
 function TrashIcon() {
   return (
@@ -12,6 +12,14 @@ function TrashIcon() {
       <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
       <path d="M10 11v6M14 11v6" />
       <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+    </svg>
+  );
+}
+
+function HeartIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
     </svg>
   );
 }
@@ -39,6 +47,16 @@ export function CartClient() {
   const syncStatus = useCartStore((s) => s.syncStatus);
   const updateQuantity = useCartStore((s) => s.updateQuantity);
   const removeFromCart = useCartStore((s) => s.removeFromCart);
+  const toggleWishlist = useWishlistStore((s) => s.toggle);
+  const wishlistItems = useWishlistStore((s) => s.items);
+
+  function moveToWishlist(item: (typeof items)[number]) {
+    // toggle() un-hearts an existing entry, so only add when it isn't there yet.
+    if (!wishlistItems.some((w) => w.product.id === item.product.id)) {
+      toggleWishlist(item.product, item.variantId, item.size);
+    }
+    removeFromCart(item.product.id, item.size);
+  }
 
   function itemKey(productId: string, size: number | null) {
     return `${productId}-${size ?? "null"}`;
@@ -204,6 +222,14 @@ export function CartClient() {
                         <PlusIcon />
                       </button>
                     </div>
+
+                    <button
+                      onClick={() => moveToWishlist(item)}
+                      className="order-first sm:order-none flex items-center gap-1.5 font-sans font-normal text-[13px] text-[#626262] hover:text-black transition-colors duration-200"
+                    >
+                      <HeartIcon />
+                      Move to wishlist
+                    </button>
                   </div>
                 </div>
               );
