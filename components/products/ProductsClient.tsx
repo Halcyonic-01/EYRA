@@ -293,9 +293,9 @@ export function ProductsClient({
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 border-t border-l border-[#CFCFCF]">
+          <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
             {filtered.map((product) => (
-              <div key={product.id} className="border-b border-r border-[#CFCFCF]">
+              <div key={product.id}>
                 <ProductCard product={product} />
               </div>
             ))}

@@ -77,8 +77,8 @@ test.describe("mobile viewport", () => {
     await page.getByRole("menu").getByText("Rings", { exact: true }).click();
 
     const firstCard = page.locator("article").first();
-    await expect(firstCard.getByRole("button", { name: "Select size" })).toBeVisible();
-    await firstCard.getByRole("button", { name: "Select size" }).click();
+    await expect(firstCard.getByRole("button", { name: "Add to cart" })).toBeVisible();
+    await firstCard.getByRole("button", { name: "Add to cart" }).click();
     await expect(page).toHaveURL(/\/products\/[^/]+$/);
   });
 
