@@ -19,6 +19,8 @@ const ADMIN_KEY = process.env.MEDUSA_ADMIN_API_KEY ?? "";
 
 interface OrderItemForEmail {
   title: string;
+  /** For example "Pair" or "With silver chain". */
+  variant_title?: string | null;
   quantity: number;
   unit_price: number;
   thumbnail: string | null;
@@ -39,6 +41,11 @@ interface OrderForEmail {
   display_id: number;
   email: string | null;
   total: number;
+  /** Price of the items before any discount, without shipping. */
+  item_subtotal?: number;
+  discount_total?: number;
+  /** The Cash on Delivery charge, or zero for prepaid orders. */
+  shipping_total?: number;
   /** Wallet credit used; `total` is already net of it. */
   credit_line_total?: number;
   metadata: Record<string, unknown> | null;
@@ -57,6 +64,7 @@ async function fetchOrderForEmail(orderId: string): Promise<OrderForEmail | null
   try {
     const fields = [
       "id", "display_id", "email", "total", "credit_line_total", "metadata",
+      "item_subtotal", "discount_total", "shipping_total",
       // "*items" on purpose: asking for items.quantity by name returns no
       // quantity, and Medusa then computes every price and total as zero.
       "*items",
@@ -112,6 +120,14 @@ function formatAddress(addr: OrderShippingAddress | null): string {
   return [name, addr.address_1, addr.address_2, line2].filter(Boolean).join("<br>");
 }
 
+/** One label-and-amount line in the email's totals. */
+function row(label: string, amount: string): string {
+  return `<tr>
+              <td style="font-size:14px;color:${COLOR.ash};padding-bottom:6px;">${label}</td>
+              <td style="font-size:14px;color:${COLOR.ash};text-align:right;padding-bottom:6px;">${amount}</td>
+            </tr>`;
+}
+
 function renderOrderEmail(order: OrderForEmail): string {
   const rows = order.items
     .map(
@@ -126,10 +142,15 @@ function renderOrderEmail(order: OrderForEmail): string {
           </td>
           <td style="padding:16px 0 16px 16px;border-bottom:1px solid ${COLOR.cloud};font-family:Poppins,Helvetica,Arial,sans-serif;font-size:14px;color:${COLOR.jet};vertical-align:top;">
             ${item.title}
+            ${
+              item.variant_title && item.variant_title !== "Default Title" && item.variant_title !== item.title
+                ? `<div style="color:${COLOR.stone};font-size:13px;margin-top:2px;">${item.variant_title}</div>`
+                : ""
+            }
             <div style="color:${COLOR.stone};font-size:13px;margin-top:2px;">Qty ${item.quantity}</div>
           </td>
           <td style="padding:16px 0;border-bottom:1px solid ${COLOR.cloud};font-family:Poppins,Helvetica,Arial,sans-serif;font-size:14px;color:${COLOR.jet};text-align:right;vertical-align:top;white-space:nowrap;">
-            ₹${Math.round(item.unit_price * item.quantity).toLocaleString("en-IN")}
+            ${item.unit_price === 0 ? "Free" : `₹${Math.round(item.unit_price * item.quantity).toLocaleString("en-IN")}`}
           </td>
         </tr>`
     )
@@ -162,12 +183,20 @@ function renderOrderEmail(order: OrderForEmail): string {
             ${rows}
           </table>
           <table role="presentation" width="100%" style="margin-top:16px;font-family:Poppins,Helvetica,Arial,sans-serif;">
+            ${row("Subtotal", `₹${Math.round(order.item_subtotal ?? order.total).toLocaleString("en-IN")}`)}
+            ${
+              (order.discount_total ?? 0) > 0
+                ? row("Discount", `- ₹${Math.round(order.discount_total ?? 0).toLocaleString("en-IN")}`)
+                : ""
+            }
+            ${
+              (order.shipping_total ?? 0) > 0
+                ? row("Cash on Delivery charge", `₹${Math.round(order.shipping_total ?? 0).toLocaleString("en-IN")}`)
+                : row("Shipping", "Free")
+            }
             ${
               (order.credit_line_total ?? 0) > 0
-                ? `<tr>
-              <td style="font-size:14px;color:${COLOR.ash};padding-bottom:6px;">Wallet credit</td>
-              <td style="font-size:14px;color:${COLOR.ash};text-align:right;padding-bottom:6px;">- ₹${Math.round(order.credit_line_total ?? 0).toLocaleString("en-IN")}</td>
-            </tr>`
+                ? row("Wallet credit", `- ₹${Math.round(order.credit_line_total ?? 0).toLocaleString("en-IN")}`)
                 : ""
             }
             <tr>

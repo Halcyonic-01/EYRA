@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 
-import { CANCEL_REASONS, type CancelReason, type CancellationPreview, type RefundMethod } from "@/lib/cancellation";
+import { CANCEL_REASONS, type CancelReason, type CancellationPreview } from "@/lib/cancellation";
 import { formatRupees } from "@/lib/money";
 
 interface Props {
@@ -79,7 +79,6 @@ export default function CancelOrderPanel({ orderId, preview }: Props) {
 
   const [open, setOpen] = useState(false);
   const [now, setNow] = useState<number | null>(null);
-  const [method, setMethod] = useState<RefundMethod>("wallet");
   const [reason, setReason] = useState<CancelReason | "">("");
   const [note, setNote] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -115,13 +114,10 @@ export default function CancelOrderPanel({ orderId, preview }: Props) {
     if (done) router.refresh();
   }, [submitting, done, router]);
 
-  const chosen = preview.requires_choice
-    ? method === "wallet"
-      ? preview.options.wallet
-      : preview.options.original
-    : null;
-  const refundAmount = chosen?.amount ?? 0;
-  const fee = preview.requires_choice && method === "original" ? preview.options.original?.fee ?? 0 : 0;
+  // An order cancelled before it ships is refunded in full to the payment method it was paid with.
+  const original = preview.options.original;
+  const refundsOnline = preview.paid_online > 0 && Boolean(original);
+  const refundAmount = refundsOnline ? original?.amount ?? 0 : 0;
 
   async function submit() {
     if (!reason) {
@@ -137,7 +133,6 @@ export default function CancelOrderPanel({ orderId, preview }: Props) {
         body: JSON.stringify({
           reason,
           note: note.trim() || undefined,
-          refundMethod: preview.requires_choice ? method : undefined,
         }),
       });
       const data = (await res.json().catch(() => ({}))) as {
@@ -177,7 +172,7 @@ export default function CancelOrderPanel({ orderId, preview }: Props) {
             <p className="font-sans text-[14px] text-black">{preview.message}</p>
             {preview.code === "shipment_created" && (
               <p className="mt-1 font-sans text-[12px] text-[#909090]">
-                After it is delivered, you can ask for a return or exchange from this page.
+                Returns and exchanges open for 7 days once it is delivered, from this page.
               </p>
             )}
           </div>
@@ -185,9 +180,6 @@ export default function CancelOrderPanel({ orderId, preview }: Props) {
       </div>
     );
   }
-
-  const wallet = preview.options.wallet;
-  const original = preview.options.original;
 
   return (
     <>
@@ -275,68 +267,14 @@ export default function CancelOrderPanel({ orderId, preview }: Props) {
                   Cancelling stops your order before we start preparing it. This cannot be undone.
                 </p>
 
-                {preview.requires_choice && wallet && original && (
-                  <fieldset className="flex flex-col gap-3">
-                    <legend className="mb-2 font-sans text-[12px] font-medium uppercase tracking-wider text-[#626262]">
-                      Where should your refund go?
-                    </legend>
-
-                    <label
-                      className={`flex cursor-pointer gap-3 rounded-2xl border p-4 transition-colors duration-200 ${
-                        method === "wallet" ? "border-black bg-[#FAFAFA]" : "border-[#E1E1E1] hover:border-[#AAAAAA]"
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name="refund"
-                        value="wallet"
-                        checked={method === "wallet"}
-                        onChange={() => setMethod("wallet")}
-                        className="mt-1 h-4 w-4 accent-black"
-                      />
-                      <span className="flex-1">
-                        <span className="flex items-center justify-between gap-3">
-                          <span className="font-sans text-[15px] font-bold text-black">Refund to your EYRA wallet</span>
-                          <span className="font-sans text-[15px] font-bold text-black">{formatRupees(wallet.amount)}</span>
-                        </span>
-                        <span className="mt-1 block font-sans text-[12px] font-bold text-black">100% refund, added instantly</span>
-                        <span className="mt-0.5 block font-sans text-[12px] text-[#626262]">
-                          Use it on your next order. Valid for {preview.wallet_valid_months} months.
-                        </span>
-                      </span>
-                    </label>
-
-                    <label
-                      className={`flex gap-3 rounded-2xl border p-4 transition-colors duration-200 ${
-                        !original.available
-                          ? "cursor-not-allowed border-[#EEEEEE] opacity-60"
-                          : method === "original"
-                          ? "cursor-pointer border-black bg-[#FAFAFA]"
-                          : "cursor-pointer border-[#E1E1E1] hover:border-[#AAAAAA]"
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name="refund"
-                        value="original"
-                        checked={method === "original"}
-                        disabled={!original.available}
-                        onChange={() => setMethod("original")}
-                        className="mt-1 h-4 w-4 accent-black"
-                      />
-                      <span className="flex-1">
-                        <span className="flex items-center justify-between gap-3">
-                          <span className="font-sans text-[15px] font-normal text-black">Refund to your original payment method</span>
-                          <span className="font-sans text-[15px] font-normal text-black">{formatRupees(original.amount)}</span>
-                        </span>
-                        <span className="mt-1 block font-sans text-[12px] text-[#626262]">
-                          {original.available
-                            ? `A ${formatRupees(original.fee)} cancellation fee is kept. Takes ${preview.eta} to reach your account or card.`
-                            : original.unavailable_reason}
-                        </span>
-                      </span>
-                    </label>
-                  </fieldset>
+                {refundsOnline && (
+                  <div className="rounded-2xl border border-[#E1E1E1] bg-[#FAFAFA] p-4">
+                    <p className="font-sans text-[14px] font-medium text-black">100% refund, nothing deducted</p>
+                    <p className="mt-1 font-sans text-[12px] text-[#626262]">
+                      Your {formatRupees(refundAmount)} goes back to the payment method you paid with. It takes{" "}
+                      {preview.eta} to reach your account or card.
+                    </p>
+                  </div>
                 )}
 
                 <div className="flex flex-col gap-2">
@@ -361,20 +299,14 @@ export default function CancelOrderPanel({ orderId, preview }: Props) {
                 </div>
 
                 <div className="rounded-2xl bg-[#F7F7F7] px-4 py-3 font-sans text-[13px]">
-                  {preview.requires_choice ? (
+                  {refundsOnline ? (
                     <>
                       <div className="flex justify-between py-1 text-[#626262]">
                         <span>You paid online</span>
                         <span>{formatRupees(preview.paid_online)}</span>
                       </div>
-                      {fee > 0 && (
-                        <div className="flex justify-between py-1 text-[#626262]">
-                          <span>Cancellation fee</span>
-                          <span>- {formatRupees(fee)}</span>
-                        </div>
-                      )}
                       <div className="flex justify-between border-t border-[#E6E6E6] pt-2 text-[14px] font-semibold text-black">
-                        <span>{method === "wallet" ? "Added to your wallet" : "Refund to original payment method"}</span>
+                        <span>Refund to your original payment method</span>
                         <span>{formatRupees(refundAmount)}</span>
                       </div>
                     </>
@@ -412,7 +344,7 @@ export default function CancelOrderPanel({ orderId, preview }: Props) {
                 >
                   {submitting
                     ? "Cancelling…"
-                    : preview.requires_choice
+                    : refundsOnline
                     ? `Cancel order and refund ${formatRupees(refundAmount)}`
                     : "Cancel order"}
                 </button>

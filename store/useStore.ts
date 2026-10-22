@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import type { Product } from "@/components/products/types";
-import type { CartTotals } from "@/lib/medusa-cart";
+import type { Product, ProductVariant } from "@/components/products/types";
+import type { CartSummary, CartTotals } from "@/lib/medusa-cart";
 
 export interface CartItem {
   product: Product;
@@ -11,6 +11,31 @@ export interface CartItem {
   variantId?: string;
   /** Medusa line item ID, set after the first successful backend sync */
   lineItemId?: string;
+  /** What distinguishes this variant, for example "Pair" or "With silver chain". */
+  variantLabel?: string | null;
+  /** Price of one unit at the chosen variant, as Medusa charges it. */
+  unitPrice: number;
+  /** Compare-at price of one unit, for the strikethrough. */
+  originalUnitPrice: number;
+}
+
+/**
+ * One cart line is one variant. Rings and every other product are keyed by the
+ * variant Medusa sells, so two variants of one product (a single anklet and a
+ * pair) are two lines, each at its own price. Items without a variant (mock
+ * data) fall back to product and size.
+ */
+export function lineKey(item: { product: { id: string }; size: number | null; variantId?: string }): string {
+  return item.variantId ?? `${item.product.id}-${item.size ?? "null"}`;
+}
+
+/** The part of a variant that is not ring size, for example "Pair". Null when there is nothing to say. */
+export function variantLabelFor(variant: ProductVariant | undefined): string | null {
+  if (!variant) return null;
+  const parts = Object.entries(variant.options)
+    .filter(([title, value]) => !/size/i.test(title) && !(title === "Title" && value === "Default Title"))
+    .map(([, value]) => value);
+  return parts.length ? parts.join(" · ") : null;
 }
 
 interface CartStore {
@@ -19,19 +44,20 @@ interface CartStore {
   syncStatus: "idle" | "syncing" | "error";
   syncError: string | null;
   serverTotals: CartTotals | null;
+  /** Set when a discount code stopped applying because the cart changed. */
+  promoNotice: string | null;
 
   addToCart: (product: Product, size?: number | null, variantId?: string) => void;
-  removeFromCart: (productId: string, size: number | null) => void;
-  updateQuantity: (productId: string, size: number | null, qty: number) => void;
+  removeFromCart: (key: string) => void;
+  updateQuantity: (key: string, qty: number) => void;
   clearCart: () => void;
   cartTotal: () => number;
   clearSyncError: () => void;
+  clearPromoNotice: () => void;
   setCartId: (id: string) => void;
+  /** Take the backend's cart summary as the truth for prices and totals. */
+  applySummary: (summary: CartSummary) => void;
   initCart: () => Promise<void>;
-}
-
-function itemKey(productId: string, size: number | null): string {
-  return `${productId}-${size ?? "null"}`;
 }
 
 /** Module-level debounce map for updateQuantity syncs. */
@@ -45,6 +71,7 @@ export const useCartStore = create<CartStore>()(
   syncStatus: "idle",
   syncError: null,
   serverTotals: null,
+  promoNotice: null,
 
   setCartId(id) {
     set({ cartId: id });
@@ -54,27 +81,80 @@ export const useCartStore = create<CartStore>()(
     set({ syncError: null, syncStatus: "idle" });
   },
 
+  clearPromoNotice() {
+    set({ promoNotice: null });
+  },
+
+  applySummary(summary) {
+    set((state) => {
+      const paid = summary.items;
+      const items = state.items.map((item) => {
+        const match =
+          paid.find((line) => line.id === item.lineItemId) ??
+          paid.find((line) => line.variant_id && line.variant_id === item.variantId);
+        return match ? { ...item, lineItemId: match.id, unitPrice: match.unit_price } : item;
+      });
+
+      const before = state.serverTotals;
+      const lost =
+        before && before.promoCodes.length > 0 && summary.promo_codes.length === 0
+          ? `${before.promoCodes[0]} no longer applies to your order.`
+          : state.promoNotice;
+
+      return {
+        items,
+        serverTotals: {
+          subtotal: Math.round(summary.totals.items_subtotal),
+          taxTotal: Math.round(summary.totals.tax_total),
+          shippingTotal: Math.round(summary.totals.shipping_total),
+          discountTotal: Math.round(summary.totals.discount_total),
+          walletCredit: Math.round(summary.totals.wallet_credit),
+          // Wallet credit is a way of paying, not a price change, so the cart
+          // always shows the full total. Checkout shows the credit as its own line.
+          total: Math.round(summary.totals.total + summary.totals.wallet_credit),
+          promoCodes: summary.promo_codes,
+          paymentMode: summary.payment_mode,
+          tote: { qualifies: summary.tote.qualifies, inCart: summary.tote.in_cart },
+        },
+        promoNotice: lost,
+      };
+    });
+  },
+
   addToCart(product, size = null, variantId) {
-    const key = itemKey(product.id, size);
+    const variant = product.variants?.find((v) => v.id === variantId);
+    const unitPrice = variant?.price ?? product.price;
+    const originalUnitPrice = variant?.originalPrice ?? product.originalPrice;
+    const candidate = { product, size, variantId };
+    const key = lineKey(candidate);
     // Captured before the optimistic mutation so a failed sync can undo
     // exactly what this call did, rather than wiping the whole line.
-    const existedBefore = get().items.some((i) => itemKey(i.product.id, i.size) === key);
+    const existedBefore = get().items.some((i) => lineKey(i) === key);
 
     // Optimistic update
     set((state) => {
-      const existing = state.items.find((i) => itemKey(i.product.id, i.size) === key);
+      const existing = state.items.find((i) => lineKey(i) === key);
       if (existing) {
         return {
           items: state.items.map((i) =>
-            itemKey(i.product.id, i.size) === key
-              ? { ...i, quantity: i.quantity + 1 }
-              : i
+            lineKey(i) === key ? { ...i, quantity: i.quantity + 1 } : i
           ),
           syncStatus: "syncing" as const,
         };
       }
       return {
-        items: [...state.items, { product, size, quantity: 1, variantId }],
+        items: [
+          ...state.items,
+          {
+            product,
+            size,
+            quantity: 1,
+            variantId,
+            variantLabel: variantLabelFor(variant),
+            unitPrice,
+            originalUnitPrice,
+          },
+        ],
         syncStatus: "syncing" as const,
       };
     });
@@ -95,12 +175,10 @@ export const useCartStore = create<CartStore>()(
         items: existedBefore
           ? state.items
               .map((i) =>
-                itemKey(i.product.id, i.size) === key
-                  ? { ...i, quantity: i.quantity - 1 }
-                  : i
+                lineKey(i) === key ? { ...i, quantity: i.quantity - 1 } : i
               )
               .filter((i) => i.quantity > 0)
-          : state.items.filter((i) => itemKey(i.product.id, i.size) !== key),
+          : state.items.filter((i) => lineKey(i) !== key),
       }));
     }
 
@@ -142,13 +220,11 @@ export const useCartStore = create<CartStore>()(
           cartId,
           syncStatus: "idle",
           syncError: null,
-          serverTotals: result.totals,
           items: state.items.map((i) =>
-            itemKey(i.product.id, i.size) === key
-              ? { ...i, lineItemId: result.lineItemId }
-              : i
+            lineKey(i) === key ? { ...i, lineItemId: result.lineItemId } : i
           ),
         }));
+        get().applySummary(result.summary);
       } catch (err) {
         console.error("[cart] addToCart sync failed:", err);
         // Only a definitive server rejection (Medusa actually responded "no",
@@ -158,7 +234,7 @@ export const useCartStore = create<CartStore>()(
         // shouldn't erase state the customer already saw confirmed.
         if (err instanceof CartRequestRejected) {
           rollback();
-          set({ syncStatus: "error", syncError: "This item is no longer available in that size." });
+          set({ syncStatus: "error", syncError: "This item is no longer available in that option." });
         } else {
           set({ syncStatus: "error", syncError: "Cart sync failed. Please try again." });
         }
@@ -166,17 +242,15 @@ export const useCartStore = create<CartStore>()(
     })();
   },
 
-  removeFromCart(productId, size) {
-    const key = itemKey(productId, size);
-
+  removeFromCart(key) {
     // Capture lineItemId before optimistic remove
-    const item = get().items.find((i) => itemKey(i.product.id, i.size) === key);
+    const item = get().items.find((i) => lineKey(i) === key);
     const { lineItemId } = item ?? {};
     const cartId = get().cartId;
 
     // Optimistic update
     set((state) => ({
-      items: state.items.filter((i) => itemKey(i.product.id, i.size) !== key),
+      items: state.items.filter((i) => lineKey(i) !== key),
       syncStatus: lineItemId ? ("syncing" as const) : ("idle" as const),
     }));
 
@@ -185,8 +259,9 @@ export const useCartStore = create<CartStore>()(
     (async () => {
       try {
         const { removeCartLineItem } = await import("@/lib/medusa-cart");
-        const totals = await removeCartLineItem(cartId, lineItemId);
-        set({ syncStatus: "idle", syncError: null, serverTotals: totals ?? get().serverTotals });
+        const summary = await removeCartLineItem(cartId, lineItemId);
+        set({ syncStatus: "idle", syncError: null });
+        if (summary) get().applySummary(summary);
       } catch (err) {
         console.error("[cart] removeFromCart sync failed:", err);
         set({ syncStatus: "error", syncError: "Could not remove item from the server cart. It has been removed locally." });
@@ -194,18 +269,15 @@ export const useCartStore = create<CartStore>()(
     })();
   },
 
-  updateQuantity(productId, size, qty) {
+  updateQuantity(key, qty) {
     if (qty < 1) {
-      get().removeFromCart(productId, size);
+      get().removeFromCart(key);
       return;
     }
-    const key = itemKey(productId, size);
 
     // Optimistic update
     set((state) => ({
-      items: state.items.map((i) =>
-        itemKey(i.product.id, i.size) === key ? { ...i, quantity: qty } : i
-      ),
+      items: state.items.map((i) => (lineKey(i) === key ? { ...i, quantity: qty } : i)),
     }));
 
     // Debounced sync
@@ -218,14 +290,17 @@ export const useCartStore = create<CartStore>()(
         debounceTimers.delete(key);
 
         const cartId = get().cartId;
-        const item = get().items.find((i) => itemKey(i.product.id, i.size) === key);
+        const item = get().items.find((i) => lineKey(i) === key);
         const lineItemId = item?.lineItemId;
         if (!cartId || !lineItemId) return;
 
         try {
           const { updateCartLineItem } = await import("@/lib/medusa-cart");
-          const totals = await updateCartLineItem(cartId, lineItemId, qty);
-          if (totals) set({ serverTotals: totals, syncStatus: "idle", syncError: null });
+          const summary = await updateCartLineItem(cartId, lineItemId, qty);
+          if (summary) {
+            set({ syncStatus: "idle", syncError: null });
+            get().applySummary(summary);
+          }
         } catch (err) {
           console.error("[cart] updateQuantity sync failed:", err);
           set({ syncStatus: "error", syncError: "Quantity updated locally but could not sync to server." });
@@ -239,7 +314,14 @@ export const useCartStore = create<CartStore>()(
     debounceTimers.forEach((timer) => clearTimeout(timer));
     debounceTimers.clear();
 
-    set({ items: [], cartId: null, serverTotals: null, syncStatus: "idle", syncError: null });
+    set({
+      items: [],
+      cartId: null,
+      serverTotals: null,
+      promoNotice: null,
+      syncStatus: "idle",
+      syncError: null,
+    });
 
     // Fire-and-forget localStorage cleanup (client-only)
     if (typeof window !== "undefined") {
@@ -248,7 +330,7 @@ export const useCartStore = create<CartStore>()(
   },
 
   cartTotal() {
-    return get().items.reduce((sum, i) => sum + i.product.price * i.quantity, 0);
+    return get().items.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0);
   },
 
   async initCart() {
@@ -260,33 +342,55 @@ export const useCartStore = create<CartStore>()(
     if (!cartId) return;
 
     const { fetchCart, clearStoredCartId } = await import("@/lib/medusa-cart");
-    const fetched = await fetchCart(cartId);
+    let fetched: CartSummary | null;
+    try {
+      fetched = await fetchCart(cartId);
+    } catch (err) {
+      // The backend could not be reached just now: keep what the customer has.
+      console.error("[cart] initCart could not reach the backend:", err);
+      return;
+    }
 
-    if (!fetched) {
-      // Cart expired on the server, clear stale state so the next addToCart
-      // creates a fresh cart rather than retrying a dead cartId.
+    if (!fetched || fetched.completed) {
+      // Cart expired on the server or already became an order, clear stale
+      // state so the next addToCart creates a fresh cart rather than retrying
+      // a dead cartId.
       clearStoredCartId();
       set({ cartId: null, items: [], serverTotals: null });
       return;
     }
 
-    // Reconnect server lineItemIds to the persisted items array.
-    // Items already in state (from localStorage) are preserved; we only
-    // patch in the lineItemId so subsequent quantity/remove syncs work.
+    // Reconnect server lines to the persisted items array, and take the
+    // server's quantity and price as the truth.
+    const paid = fetched.items;
     set((state) => ({
-      serverTotals: fetched.totals,
       items: state.items.map((item) => {
-        const serverItem = fetched.lineItems.find(
-          (li) => li.variantId === item.variantId
-        );
-        return serverItem ? { ...item, lineItemId: serverItem.id } : item;
+        const serverItem = paid.find((line) => line.variant_id && line.variant_id === item.variantId);
+        return serverItem
+          ? { ...item, lineItemId: serverItem.id, quantity: serverItem.quantity, unitPrice: serverItem.unit_price }
+          : item;
       }),
     }));
+    get().applySummary(fetched);
   },
 }),
     {
       name: "eyra-cart-storage",
+      version: 2,
       storage: createJSONStorage(() => localStorage),
+      // Carts saved before variant pricing have no unit price: use the product's.
+      migrate: (persisted) => {
+        const state = persisted as { items?: Partial<CartItem>[]; cartId?: string | null };
+        return {
+          cartId: state.cartId ?? null,
+          items: (state.items ?? []).map((item) => ({
+            ...item,
+            unitPrice: item.unitPrice ?? item.product?.price ?? 0,
+            originalUnitPrice: item.originalUnitPrice ?? item.product?.originalPrice ?? 0,
+            variantLabel: item.variantLabel ?? null,
+          })),
+        } as unknown as CartStore;
+      },
       // Only persist the cart contents and backend cart ID.
       // UI flags and server-computed totals are always derived fresh.
       partialize: (state) => ({

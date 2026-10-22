@@ -26,6 +26,10 @@ export interface ShipmentItem {
   type: string;       // "ring" | "chain" | "bracelet" | "anklet"
   quantity: number;
   price: number;      // unit price in rupees
+  /** Pieces in one unit: 2 for a pair of anklets. Counts toward weight only. */
+  packSize?: number;
+  /** The free tote bag: on the packing list at a price of zero, never charged for. */
+  complimentary?: boolean;
 }
 
 export interface ShipmentAddress {
@@ -46,6 +50,10 @@ export interface CreateShipmentBody {
   shipping: ShipmentAddress;
   items: ShipmentItem[];
   subtotal: number;   // in rupees
+  /** Order-level discount, in rupees. Sent to Shiprocket so the items, discount and charge add up to `subtotal`. */
+  discount?: number;
+  /** What the customer paid for shipping, in rupees: the Cash on Delivery charge, or zero. */
+  shippingCharge?: number;
 }
 
 export interface CreateShipmentResult {
@@ -123,7 +131,8 @@ function itemWeightKg(type: string): number {
 
 function totalParcelWeightKg(items: ShipmentItem[]): number {
   const raw = items.reduce(
-    (sum, item) => sum + itemWeightKg(item.type) * item.quantity,
+    (sum, item) =>
+      sum + itemWeightKg(item.complimentary ? "tote" : item.type) * item.quantity * Math.max(1, item.packSize ?? 1),
     0
   );
   return Math.max(storeConfig.shipping.minChargeableWeightKg, parseFloat(raw.toFixed(3)));
@@ -131,11 +140,41 @@ function totalParcelWeightKg(items: ShipmentItem[]): number {
 
 /* ── Shiprocket order creation ────────────────────────────── */
 
+/**
+ * One line of the packing list. The free tote goes in at a price of zero so the
+ * packing list stays automatic. If Shiprocket turns a zero price away, set
+ * SHIPROCKET_FREE_GIFT_PRICE=one_rupee: the tote is then sent at ₹1 with a ₹1
+ * line discount, which nets to zero.
+ */
+function shiprocketItem(item: ShipmentItem) {
+  if (item.complimentary) {
+    const oneRupee = process.env.SHIPROCKET_FREE_GIFT_PRICE === "one_rupee";
+    return {
+      name: item.name,
+      sku: item.sku,
+      units: item.quantity,
+      selling_price: oneRupee ? 1 : 0,
+      discount: oneRupee ? 1 : 0,
+      tax: 0,
+      hsn: "",
+    };
+  }
+  return {
+    name: item.name,
+    sku: item.sku,
+    units: item.quantity,
+    selling_price: item.price,
+    discount: 0,
+    tax: storeConfig.jewelry.gstRate,
+    hsn: storeConfig.jewelry.hsnCode,
+  };
+}
+
 async function createShiprocketOrder(
   body: CreateShipmentBody,
   token: string
 ): Promise<ShiprocketOrderResponse | null> {
-  const { shipping, items, eyraOrderRef, paymentMethod, subtotal } = body;
+  const { shipping, items, eyraOrderRef, paymentMethod, subtotal, discount, shippingCharge } = body;
   const { first_name, last_name } = splitName(shipping.fullName);
 
   const payload = {
@@ -155,18 +194,13 @@ async function createShiprocketOrder(
     billing_phone: shipping.phone,
     shipping_is_billing: true,
 
-    order_items: items.map((item) => ({
-      name: item.name,
-      sku: item.sku,
-      units: item.quantity,
-      selling_price: item.price,
-      discount: 0,
-      tax: storeConfig.jewelry.gstRate,
-      hsn: storeConfig.jewelry.hsnCode,
-    })),
+    order_items: items.map(shiprocketItem),
 
     payment_method: paymentMethod === "cod" ? "COD" : "Prepaid",
     sub_total: subtotal,
+    // So the items, less the discount, plus the Cash on Delivery charge, add up to sub_total.
+    total_discount: Math.max(0, Number(discount) || 0),
+    shipping_charges: Math.max(0, Number(shippingCharge) || 0),
 
     ...storeConfig.shipping.box,
     weight: totalParcelWeightKg(items),

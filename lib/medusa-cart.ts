@@ -2,8 +2,11 @@
  * Medusa Store Cart API v2, client-only helpers.
  *
  * Import only from Zustand store actions or client components.
- * All cart mutations return the server-confirmed totals so the store
- * can reflect Medusa's tax and regional pricing rules immediately.
+ *
+ * Every mutation is followed by the backend's reconcile call, which keeps the
+ * complimentary tote bag right and answers with the cart as the storefront
+ * shows it: each line at the price Medusa charges, and the discount, shipping
+ * and total worked out by the backend. Nothing here adds up a price itself.
  */
 
 const BASE_URL = (
@@ -20,54 +23,83 @@ export const CART_ID_KEY = "eyra_cart_id";
  * unit, ₹2,499 is `2499`, not `249900`.
  */
 
-/* ── Raw Medusa cart types ────────────────────────────────── */
+/* ── The backend's cart summary ───────────────────────────── */
 
-interface RawLineItem {
+export type PaymentMode = "prepaid" | "cod";
+
+/** One line of the cart, as the backend reports it (amounts in rupees). */
+export interface SummaryLine {
   id: string;
-  variant_id: string;
+  variant_id: string | null;
+  product_id: string | null;
+  product_handle: string | null;
+  title: string;
+  product_title: string | null;
+  variant_title: string | null;
   quantity: number;
   unit_price: number;
   subtotal: number;
-  title: string;
   thumbnail: string | null;
+  /** True for the free tote bag: not for the customer to change or remove. */
+  complimentary: boolean;
 }
 
-interface RawCart {
+export interface CartSummary {
   id: string;
-  items: RawLineItem[];
-  subtotal: number;
-  tax_total: number;
-  shipping_total: number;
-  discount_total: number;
-  total: number;
-  /** Wallet credit on the cart. Medusa's `total` is already net of it. */
-  credit_line_total?: number;
-  currency_code: string;
-}
-
-interface CartResponse {
-  cart: RawCart;
+  email: string | null;
+  customer_id: string | null;
+  /** True once the cart has become an order. */
+  completed: boolean;
+  items: SummaryLine[];
+  totals: {
+    /** Price of the items before any discount, without shipping. */
+    items_subtotal: number;
+    discount_total: number;
+    tax_total: number;
+    /** 0 for prepaid, the Cash on Delivery charge for COD. */
+    shipping_total: number;
+    wallet_credit: number;
+    /** What is left to pay, after wallet credit. */
+    total: number;
+  };
+  promo_codes: string[];
+  payment_mode: PaymentMode | null;
+  /** Whether the items qualify for the complimentary tote, and whether it is in the cart. */
+  tote: { qualifies: boolean; in_cart: boolean };
 }
 
 /* ── Public types ─────────────────────────────────────────── */
 
-export interface CartLineItemSummary {
-  id: string;
-  variantId: string;
-  quantity: number;
-  unitPrice: number;    // in rupees
-  subtotal: number;     // in rupees
-  title: string;
-  thumbnail: string | null;
-}
-
-/** Server-confirmed totals, rupees, as returned by Medusa. */
+/** Server-confirmed totals, rupees. */
 export interface CartTotals {
+  /** Price of the items before any discount, without shipping. */
   subtotal: number;
   taxTotal: number;
   shippingTotal: number;
   discountTotal: number;
+  /** Wallet credit on the cart, which `total` is already net of. */
+  walletCredit: number;
+  /** What is left to pay. */
   total: number;
+  promoCodes: string[];
+  paymentMode: PaymentMode | null;
+  /** The complimentary tote: whether the order qualifies, and whether it is in the cart. */
+  tote: { qualifies: boolean; inCart: boolean };
+}
+
+export function totalsFromSummary(summary: CartSummary): CartTotals {
+  const t = summary.totals;
+  return {
+    subtotal: Math.round(t.items_subtotal),
+    taxTotal: Math.round(t.tax_total),
+    shippingTotal: Math.round(t.shipping_total),
+    discountTotal: Math.round(t.discount_total),
+    walletCredit: Math.round(t.wallet_credit),
+    total: Math.round(t.total),
+    promoCodes: summary.promo_codes,
+    paymentMode: summary.payment_mode,
+    tote: { qualifies: summary.tote.qualifies, inCart: summary.tote.in_cart },
+  };
 }
 
 /* ── localStorage helpers ─────────────────────────────────── */
@@ -128,37 +160,11 @@ async function cartFetch<T>(path: string, init?: RequestInit): Promise<T | null>
   return (await res.json()) as T;
 }
 
-/* ── Normalizers ──────────────────────────────────────────── */
-
-function normalizeTotals(cart: RawCart): CartTotals {
-  return {
-    subtotal: Math.round(cart.subtotal),
-    taxTotal: Math.round(cart.tax_total),
-    shippingTotal: Math.round(cart.shipping_total),
-    discountTotal: Math.round(cart.discount_total),
-    // Wallet credit is a way of paying, not a price change, so the cart always
-    // shows the full total. Checkout shows the credit as its own line.
-    total: Math.round(cart.total + (cart.credit_line_total ?? 0)),
-  };
-}
-
-function normalizeLineItems(items: RawLineItem[]): CartLineItemSummary[] {
-  return items.map((i) => ({
-    id: i.id,
-    variantId: i.variant_id,
-    quantity: i.quantity,
-    unitPrice: Math.round(i.unit_price),
-    subtotal: Math.round(i.subtotal),
-    title: i.title,
-    thumbnail: i.thumbnail,
-  }));
-}
-
 /* ── Cart session ─────────────────────────────────────────── */
 
 /** Create a new cart on the Medusa backend and persist its ID. */
 export async function createCart(): Promise<string | null> {
-  const data = await cartFetch<CartResponse>("/store/carts", {
+  const data = await cartFetch<{ cart: { id: string } }>("/store/carts", {
     method: "POST",
     body: JSON.stringify({ currency_code: "inr" }),
   });
@@ -177,24 +183,49 @@ export async function getOrCreateCartId(): Promise<string | null> {
   return createCart();
 }
 
+/* ── Cart summary ─────────────────────────────────────────── */
+
+/**
+ * Read the cart as the storefront shows it, from the backend. Read only. Null
+ * when the request never completed.
+ */
+export async function fetchCartSummary(cartId: string): Promise<CartSummary | null> {
+  const data = await cartFetch<{ cart: CartSummary }>(`/store/carts/${cartId}/summary`);
+  return data?.cart ?? null;
+}
+
+/**
+ * Ask the backend to bring the complimentary tote in line with the items (added
+ * above ₹1,499 while in stock, taken off otherwise), and read the cart back.
+ * Null when the request never completed.
+ */
+export async function reconcileCart(cartId: string): Promise<CartSummary | null> {
+  const data = await cartFetch<{ cart: CartSummary }>(`/store/carts/${cartId}/reconcile`, { method: "POST" });
+  return data?.cart ?? null;
+}
+
 /* ── Line item mutations ──────────────────────────────────── */
 
 export interface AddLineItemResult {
   lineItemId: string;
-  totals: CartTotals;
+  summary: CartSummary;
+}
+
+interface RawCartResponse {
+  cart: { items: { id: string; variant_id: string }[] };
 }
 
 /**
  * Add a variant to the cart.
  * Returns the new line item ID (needed for future updateQuantity / remove calls)
- * and the server-confirmed cart totals with regional taxes applied.
+ * and the cart summary, with the price Medusa charges for every line.
  */
 export async function addCartLineItem(
   cartId: string,
   variantId: string,
   quantity: number
 ): Promise<AddLineItemResult | null> {
-  const data = await cartFetch<CartResponse>(
+  const data = await cartFetch<RawCartResponse>(
     `/store/carts/${cartId}/line-items`,
     {
       method: "POST",
@@ -207,7 +238,10 @@ export async function addCartLineItem(
   const lineItem = data.cart.items.find((i) => i.variant_id === variantId);
   if (!lineItem) return null;
 
-  return { lineItemId: lineItem.id, totals: normalizeTotals(data.cart) };
+  const summary = await reconcileCart(cartId);
+  if (!summary) return null;
+
+  return { lineItemId: lineItem.id, summary };
 }
 
 /**
@@ -218,45 +252,46 @@ export async function updateCartLineItem(
   cartId: string,
   lineItemId: string,
   quantity: number
-): Promise<CartTotals | null> {
-  const data = await cartFetch<CartResponse>(
+): Promise<CartSummary | null> {
+  const data = await cartFetch<RawCartResponse>(
     `/store/carts/${cartId}/line-items/${lineItemId}`,
     {
       method: "POST",
       body: JSON.stringify({ quantity }),
     }
   );
-  return data?.cart ? normalizeTotals(data.cart) : null;
+  if (!data?.cart) return null;
+  return reconcileCart(cartId);
 }
 
-/** Remove a line item and return the updated cart totals. */
+/** Remove a line item and return the cart summary. */
 export async function removeCartLineItem(
   cartId: string,
   lineItemId: string
-): Promise<CartTotals | null> {
-  const data = await cartFetch<CartResponse>(
+): Promise<CartSummary | null> {
+  const data = await cartFetch<RawCartResponse>(
     `/store/carts/${cartId}/line-items/${lineItemId}`,
     { method: "DELETE" }
   );
-  return data?.cart ? normalizeTotals(data.cart) : null;
+  if (!data?.cart) return null;
+  return reconcileCart(cartId);
 }
 
 /* ── Cart recovery ────────────────────────────────────────── */
-
-export interface FetchedCart {
-  lineItems: CartLineItemSummary[];
-  totals: CartTotals;
-}
 
 /**
  * Fetch a full cart by ID, used on app startup to reconnect a persisted session.
  * Returns null if the cart has expired or the backend is unreachable.
  */
-export async function fetchCart(cartId: string): Promise<FetchedCart | null> {
-  const data = await cartFetch<CartResponse>(`/store/carts/${cartId}`);
-  if (!data?.cart) return null;
-  return {
-    lineItems: normalizeLineItems(data.cart.items),
-    totals: normalizeTotals(data.cart),
-  };
+export async function fetchCart(cartId: string): Promise<CartSummary | null> {
+  try {
+    return await fetchCartSummary(cartId);
+  } catch (err) {
+    // The cart is gone (expired or already an order). Anything else is a
+    // temporary failure and must not wipe the customer's cart.
+    if (err instanceof CartRequestRejected && (err.status === 404 || err.status === 400)) {
+      return null;
+    }
+    throw err;
+  }
 }

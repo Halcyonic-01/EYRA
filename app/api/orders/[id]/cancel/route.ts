@@ -27,8 +27,9 @@ export async function GET(_req: NextRequest, { params }: Context) {
 /**
  * Cancel one of the signed-in customer's orders.
  *
- * Body: { reason, refundMethod?, note? }. Amounts are never taken from the
- * browser: the backend works out exactly what is refunded.
+ * Body: { reason, note? }. What is paid online is refunded in full to the payment
+ * method it came from. Amounts are never taken from the browser: the backend
+ * works out exactly what is refunded.
  */
 export async function POST(req: NextRequest, { params }: Context) {
   const rateLimitResponse = await applyRateLimit(req, "order_cancel", 10);

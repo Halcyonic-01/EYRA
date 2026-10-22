@@ -5,30 +5,57 @@
 
 export type ReturnRequestType = "return" | "exchange";
 
+/** The four reasons on offer. Older requests may carry the earlier values, which still read fine. */
 export type ReturnRequestReason =
+  | "SIZE_ISSUE"
+  | "DESIGN_PREFERENCE"
+  | "DAMAGED_IN_TRANSIT"
+  | "DEFECTIVE"
   | "wrong_size"
   | "damaged_or_defective"
   | "not_as_described"
   | "changed_mind"
   | "other";
 
-export type ReturnRequestStatus = "pending" | "approved" | "rejected";
+export type ReturnRequestStatus =
+  | "pending"
+  | "pending_fee"
+  | "reverse_pickup_scheduled"
+  | "awaiting_inspection"
+  | "approved"
+  | "rejected";
 
+/** What a customer can choose. The codes are the ones the backend accepts. */
 export const REQUEST_REASONS: { value: ReturnRequestReason; label: string }[] = [
-  { value: "wrong_size", label: "Wrong size" },
-  { value: "damaged_or_defective", label: "Damaged or defective" },
-  { value: "not_as_described", label: "Not as described" },
-  { value: "changed_mind", label: "Changed my mind" },
-  { value: "other", label: "Something else" },
+  { value: "SIZE_ISSUE", label: "Size issue" },
+  { value: "DESIGN_PREFERENCE", label: "Design preference" },
+  { value: "DAMAGED_IN_TRANSIT", label: "Damaged in transit" },
+  { value: "DEFECTIVE", label: "Defective item" },
 ];
 
+const LEGACY_LABELS: Record<string, string> = {
+  wrong_size: "Wrong size",
+  damaged_or_defective: "Damaged or defective",
+  not_as_described: "Not as described",
+  changed_mind: "Changed my mind",
+  other: "Something else",
+};
+
 export function reasonLabel(reason: string): string {
-  return REQUEST_REASONS.find((r) => r.value === reason)?.label ?? reason;
+  return REQUEST_REASONS.find((r) => r.value === reason)?.label ?? LEGACY_LABELS[reason] ?? reason;
+}
+
+/** Reasons that need the unboxing video to be looked at. */
+export function needsUnboxingVideo(reason: string): boolean {
+  return reason === "DAMAGED_IN_TRANSIT" || reason === "DEFECTIVE" || reason === "damaged_or_defective";
 }
 
 export const STATUS_LABELS: Record<ReturnRequestStatus, string> = {
   pending: "Under review",
-  approved: "Approved",
+  pending_fee: "Waiting for payment",
+  reverse_pickup_scheduled: "Pickup booked",
+  awaiting_inspection: "Received, being checked",
+  approved: "Completed",
   rejected: "Not approved",
 };
 

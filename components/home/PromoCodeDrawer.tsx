@@ -2,30 +2,9 @@
 
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { Check, ChevronDown, Copy } from "lucide-react";
+import { AUTOMATIC_BENEFITS, DISCOUNT_OFFERS } from "@/config/offers";
 
-type Offer = {
-  code: string;
-  title: string;
-  terms: string;
-};
-
-const OFFERS: Offer[] = [
-  {
-    code: "WELCOME10",
-    title: "Get 10% OFF on your first order",
-    terms: "Valid on orders above ₹1,500 • For new customers",
-  },
-  {
-    code: "LAUNCH20",
-    title: "Launch sale: flat 20% OFF on silver rings",
-    terms: "Valid on orders above ₹3,000 • Limited period",
-  },
-  {
-    code: "FREESHIP",
-    title: "Free shipping on every prepaid order",
-    terms: "No minimum order value • Prepaid orders only",
-  },
-];
+const OFFERS = DISCOUNT_OFFERS;
 
 async function writeToClipboard(text: string): Promise<boolean> {
   try {
@@ -105,7 +84,7 @@ export function PromoCodeDrawer() {
         <span className="flex items-center gap-3">
           Available offers &amp; promo codes
           <span className="rounded-full border border-jet px-2 py-0.5 text-[0.62rem] tracking-[0.1em]">
-            {OFFERS.length} Offers Available
+            {OFFERS.length + AUTOMATIC_BENEFITS.length} Offers Available
           </span>
         </span>
         <ChevronDown
@@ -173,6 +152,20 @@ export function PromoCodeDrawer() {
                 </li>
               );
             })}
+          </ul>
+          <ul
+            aria-label="Applied automatically"
+            className="mx-auto grid max-w-screen-xl gap-3 px-4 pb-5 sm:grid-cols-2 sm:px-6 lg:px-16"
+          >
+            {AUTOMATIC_BENEFITS.map((benefit) => (
+              <li key={benefit.title} className="flex flex-col gap-1 border border-cloud bg-white p-4">
+                <p className="font-sans text-[0.9rem] font-medium text-jet">{benefit.title}</p>
+                <p className="font-sans text-[0.72rem] leading-snug text-smoke">{benefit.terms}</p>
+                <p className="mt-1 font-sans text-[0.68rem] uppercase tracking-[0.14em] text-smoke">
+                  Applied automatically, no code needed
+                </p>
+              </li>
+            ))}
           </ul>
         </div>
       </div>

@@ -13,6 +13,8 @@ export const metadata: Metadata = {
 interface MedusaOrderItem {
   id: string;
   title: string;
+  /** For example "Pair" or "With silver chain". */
+  variant_title?: string | null;
   quantity: number;
   unit_price: number;
   thumbnail: string | null;
@@ -211,7 +213,12 @@ export default async function OrdersPage() {
                 {/* Items preview */}
                 <div className="px-6 py-4 flex items-center justify-between gap-4">
                   <p className="font-sans font-normal text-[13px] text-[#626262] truncate">
-                    {order.items?.map((i) => `${i.title} ×${i.quantity}`).join(", ")}
+                    {order.items
+                      ?.map((i) => {
+                        const variant = i.variant_title && i.variant_title !== "Default Title" && i.variant_title !== i.title ? ` (${i.variant_title})` : "";
+                        return `${i.title}${variant} ×${i.quantity}`;
+                      })
+                      .join(", ")}
                   </p>
                   {hasTracking && (
                     <span className="flex-shrink-0 inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#F0FBE8] border border-[#C8EEB8] font-sans text-[11px] text-[#3D7A1A] font-medium">

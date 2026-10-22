@@ -1,3 +1,4 @@
+import { storeConfig } from "@/config/storeConfig";
 /* ── Inline icons ─────────────────────────────────────────
    lucide-react v1.16 omits brand and seal icons, so these are hand-drawn
    paths sized to match the footer's existing 18px social icons. */
@@ -36,7 +37,7 @@ const BADGES = [
   {
     icon: <HallmarkIcon />,
     title: "Certified 925 Sterling Silver",
-    detail: "BIS hallmarked",
+    detail: `BIS hallmarked, Reg. No. ${storeConfig.company.bisRegistration}`,
   },
   {
     icon: <LockIcon />,

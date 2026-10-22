@@ -10,6 +10,9 @@
  */
 import "server-only";
 
+import { setCartPaymentMode } from "@/lib/medusa-commerce";
+import type { PaymentMode } from "@/lib/medusa-cart";
+
 const BASE_URL = (
   process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL ?? "http://localhost:9000"
 ).replace(/\/$/, "");
@@ -100,10 +103,12 @@ export function splitName(fullName: string): { first_name: string; last_name: st
 }
 
 /**
- * Push the shipping address/email onto the cart and select a shipping
- * method, both are required before Medusa will allow the cart to
- * complete. Call this once, before creating a payment collection, on
- * every checkout path (COD and prepaid alike).
+ * Push the shipping address/email onto the cart and set the shipping charge for
+ * how it will be paid, both are required before Medusa will allow the cart to
+ * complete. Call this once, before creating a payment collection, on every
+ * checkout path. The mode comes from which route is calling, never from the
+ * browser: prepaid orders ship free, Cash on Delivery orders carry the COD
+ * charge, and the backend replaces any earlier charge so it is counted once.
  *
  * Returns false on failure; the caller should treat that as fatal for
  * this checkout attempt (completion will fail regardless).
@@ -111,7 +116,8 @@ export function splitName(fullName: string): { first_name: string; last_name: st
 export async function prepareCartForCheckout(
   cartId: string,
   email: string,
-  address: CheckoutShippingAddress
+  address: CheckoutShippingAddress,
+  mode: PaymentMode
 ): Promise<boolean> {
   const { first_name, last_name } = splitName(address.fullName);
 
@@ -145,39 +151,11 @@ export async function prepareCartForCheckout(
     return false;
   }
 
-  try {
-    const optionsRes = await fetch(
-      `${BASE_URL}/store/shipping-options?cart_id=${cartId}`,
-      { headers: storeHeaders(), cache: "no-store" }
+  const priced = await setCartPaymentMode(cartId, mode);
+  if (!priced.ok) {
+    console.error(
+      `[medusa-order] could not set the ${mode} shipping charge on cart ${cartId}: ${priced.message}`
     );
-    if (!optionsRes.ok) {
-      console.error(
-        `[medusa-order] shipping options fetch ${optionsRes.status} ${optionsRes.statusText}, cart ${cartId}`
-      );
-      return false;
-    }
-    const optionsData = (await optionsRes.json()) as {
-      shipping_options?: { id: string }[];
-    };
-    const optionId = optionsData.shipping_options?.[0]?.id;
-    if (!optionId) {
-      console.error(`[medusa-order] no shipping options available for cart ${cartId}`);
-      return false;
-    }
-
-    const methodRes = await fetch(`${BASE_URL}/store/carts/${cartId}/shipping-methods`, {
-      method: "POST",
-      headers: storeHeaders(),
-      body: JSON.stringify({ option_id: optionId }),
-    });
-    if (!methodRes.ok) {
-      console.error(
-        `[medusa-order] shipping method set ${methodRes.status} ${methodRes.statusText}, cart ${cartId}`
-      );
-      return false;
-    }
-  } catch (err) {
-    console.error("[medusa-order] shipping method error for", cartId, ":", err);
     return false;
   }
 

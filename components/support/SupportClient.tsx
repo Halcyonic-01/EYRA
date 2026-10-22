@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { COD_CHARGE } from "@/config/offers";
 
 /* ── Types ────────────────────────────────────────────────── */
 interface FormFields {
@@ -29,7 +30,6 @@ export interface SupportCopy {
   exchangeDays: number;
   deliveryDaysMin: number;
   deliveryDaysMax: number;
-  freeShippingAbove: number;
   warrantyMonths: number;
   supportEmail: string;
   ordersEmail: string;
@@ -44,11 +44,11 @@ function buildFaqItems(c: SupportCopy) {
   },
   {
     q: "How long does shipping take?",
-    a: `Each piece is made to order and crafted within 7 to 10 business days. Standard shipping takes a further ${c.deliveryDaysMin} to ${c.deliveryDaysMax} working days and is free on prepaid orders above ₹${c.freeShippingAbove.toLocaleString("en-IN")}.`,
+    a: `Each piece is made to order and crafted within 7 to 10 business days. Standard shipping takes a further ${c.deliveryDaysMin} to ${c.deliveryDaysMax} working days and is free on every prepaid order. Cash on Delivery adds a ₹${COD_CHARGE} charge.`,
   },
   {
     q: "What is your return and exchange policy?",
-    a: `We accept returns within ${c.returnDays} days of delivery, and exchanges within ${c.exchangeDays} days, for unworn, undamaged items in original packaging. Customised or engraved pieces are non-returnable. Approved returns and exchanges are paid back as EYRA wallet credit, which you can use on your next order. Raise a return request via your account or email ${c.ordersEmail}.`,
+    a: `We accept returns within ${c.returnDays} days of delivery, and exchanges within ${c.exchangeDays} days, for unworn, undamaged items in original packaging. Customised or engraved pieces are non-returnable. Approved returns are paid back as EYRA store credit (the amount you paid, less a flat ₹99 reverse logistics fee, GST included, and no fee for a damaged or defective item), valid for 12 months. Exchanges have no fee: you only pay the difference if the new piece costs more. There are no cash refunds on delivered items; orders that have not shipped are refunded in full. Raise a return request via your account or email ${c.ordersEmail}.`,
   },
   {
     q: "How do I care for my silver jewellery?",
@@ -434,7 +434,7 @@ export function SupportClient({ copy }: { copy: SupportCopy }) {
                 Call Us
               </span>
               <span className="font-sans font-normal text-[20px] leading-[30px] text-[#000000] text-center">
-                +91 87927 67878
+                +91 94711 76507
               </span>
             </div>
 

@@ -70,7 +70,7 @@ function row(label: string, value: string): string {
 export interface WalletCreditEmail {
   email: string;
   firstName?: string | null;
-  /** "issued" for an approved return or exchange, "refunded" after a cancelled order. */
+  /** "issued" for a return or exchange that passed the quality check, "refunded" after a cancelled order. */
   kind: "issued" | "refunded";
   amount: number;
   /** Spendable balance after this credit. */
@@ -84,8 +84,10 @@ function creditSentence(params: WalletCreditEmail): string {
   if (params.kind === "refunded") {
     return "Your order was cancelled, so the wallet credit you used on it has been returned.";
   }
-  const what = params.reason === "exchange" ? "exchange" : "return";
-  return `We have approved your ${what}, and the credit is now in your EYRA wallet.`;
+  if (params.reason === "exchange") {
+    return "Your exchange item passed our quality check and your replacement is on its way. Your replacement cost less, so the difference is now in your EYRA wallet as store credit.";
+  }
+  return "Your returned item passed our quality check, and the store credit is now in your EYRA wallet.";
 }
 
 export function renderWalletCreditEmail(params: WalletCreditEmail): string {

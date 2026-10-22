@@ -46,6 +46,13 @@ interface NotifyBody {
   refund_status?: string;
   status?: string;
   refund_error?: string | null;
+  // returns, exchanges, credit notes and returned parcels
+  return_request_id?: string;
+  credit_note_number?: string | null;
+  refund_online?: number;
+  refund_wallet?: number;
+  asked?: number;
+  paid?: number;
 }
 
 interface RawOrder {
@@ -255,6 +262,17 @@ export async function POST(req: NextRequest) {
     return Response.json({ received: true });
   }
 
+  if (body.type === "invoice_pdf_failed") {
+    const ref = describeOrder(null, body.order_ref, orderId);
+    await sendOpsAlert(`Invoice PDF could not be created: order ${ref}`, [
+      `Medusa order: ${orderId}`,
+      `Tried ${Number(body.attempts) || 0} times. Last error: ${String(body.error ?? "unknown error").slice(0, 300)}`,
+      "The parcel has shipped and the invoice number is issued. Only the PDF file is missing; the invoice page on the site still shows the invoice.",
+      "Most often the seller GSTIN (SELLER_GSTIN) is not set on the storefront, or file storage (S3) is not set up on the backend. Fix that, then open the order in Medusa admin and press View PDF to create it.",
+    ]);
+    return Response.json({ received: true });
+  }
+
   if (body.type === "dispatch_not_started") {
     await sendOpsAlert(`Shipping could not be started for order ${orderId}`, [
       `Medusa order: ${orderId}`,
@@ -274,6 +292,99 @@ export async function POST(req: NextRequest) {
         ? `The customer can still cancel until ${until.toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })}; it ships after that.`
         : "Its shipment is being created now.",
     ]);
+    return Response.json({ received: true });
+  }
+
+  const adminLink = `${MEDUSA_BASE}/app/return-requests`;
+  const requestLine = body.return_request_id ? `Return request: ${body.return_request_id} (${adminLink})` : null;
+  const errorLine = body.error ? `Error: ${String(body.error).slice(0, 300)}` : null;
+
+  if (body.type === "rto_received") {
+    const ref = describeOrder(null, body.order_ref, orderId);
+    await sendOpsAlert(
+      body.status === "refunded" || body.status === "nothing_to_refund"
+        ? `Parcel returned to us: order ${ref}`
+        : `Parcel returned to us, and the refund needs a person: order ${ref}`,
+      [
+        `Medusa order: ${orderId}`,
+        "The courier brought the parcel back after a failed or refused delivery. The sale was reversed with a credit note, keeping the Cash on Delivery charge when delivery was attempted and the reverse logistics fee.",
+        `Credit note: ${body.credit_note_number ?? "none issued"}`,
+        `Refunded to the original payment: ₹${Number(body.refund_online) || 0}. Returned to the wallet: ₹${Number(body.refund_wallet) || 0}.`,
+        ...(body.status === "needs_attention" ? [errorLine ?? "A step did not finish.", "Fix what is described above, then refund the customer in Razorpay or the wallet by hand."] : []),
+        "Check the parcel into stock when it arrives.",
+      ].filter((line): line is string => Boolean(line))
+    );
+    return Response.json({ received: true });
+  }
+
+  if (body.type === "return_parcel_arrived") {
+    await sendOpsAlert(`A return parcel reached us: order ${orderId}`, [
+      `Medusa order: ${orderId}`,
+      requestLine,
+      "Inspect it. If it passes, open the request in Medusa admin and press Mark received: that issues the credit note and the store credit (or sends the replacement for an exchange). If it fails, decline the request with the reason.",
+    ].filter((line): line is string => Boolean(line)));
+    return Response.json({ received: true });
+  }
+
+  if (body.type === "reverse_pickup_problem") {
+    await sendOpsAlert(`A return pickup needs attention: order ${orderId}`, [
+      `Medusa order: ${orderId}`,
+      requestLine,
+      errorLine ?? `The courier reported: ${body.status ?? "a problem"}`,
+      "The customer's request is saved and waiting. Fix the cause (often the pickup address, or the return warehouse phone number SHIPROCKET_RETURN_PHONE), then open the request in Medusa admin and press Retry pickup, or book it in the Shiprocket dashboard.",
+    ].filter((line): line is string => Boolean(line)));
+    return Response.json({ received: true });
+  }
+
+  if (body.type === "credit_note_failed" || body.type === "credit_note_pdf_failed") {
+    await sendOpsAlert(
+      body.type === "credit_note_failed"
+        ? `A credit note could not be issued: order ${orderId}`
+        : `A credit note PDF could not be created: ${body.credit_note_number ?? orderId}`,
+      [
+        `Medusa order: ${orderId}`,
+        body.credit_note_number ? `Credit note: ${body.credit_note_number}` : null,
+        errorLine,
+        body.type === "credit_note_failed"
+          ? "Nothing was numbered. Most often the seller GSTIN (SELLER_GSTIN) is not set on the backend. Fix that, then cancel or return the order again, or press Mark received again."
+          : "The credit note and its number exist; only the PDF file is missing. Most often file storage (S3) is not set up on the backend, or the storefront was down. The job retries on its own; once fixed, open the credit note's PDF in Medusa admin to create it.",
+      ].filter((line): line is string => Boolean(line))
+    );
+    return Response.json({ received: true });
+  }
+
+  if (body.type === "return_not_finished") {
+    await sendOpsAlert(`A received return could not be completed: order ${orderId}`, [
+      `Medusa order: ${orderId}`,
+      requestLine,
+      errorLine,
+      "The item was marked received but the credit note, store credit or replacement did not all go through. Nothing is ever issued twice, so it is safe to retry: the backend tries again every few minutes, or press Mark received again.",
+    ].filter((line): line is string => Boolean(line)));
+    return Response.json({ received: true });
+  }
+
+  if (body.type === "return_completed") {
+    // Good news, nothing to do: not worth an email.
+    return Response.json({ received: true });
+  }
+
+  if (body.type === "exchange_payment_short") {
+    await sendOpsAlert(`An exchange payment was paid short: order ${orderId}`, [
+      `Medusa order: ${orderId}`,
+      requestLine,
+      `Asked for ₹${Number(body.asked) || 0}, paid ₹${Number(body.paid) || 0}.`,
+      "The exchange was not started. Ask the customer to pay the rest, or decline the request and refund what they paid in Razorpay.",
+    ].filter((line): line is string => Boolean(line)));
+    return Response.json({ received: true });
+  }
+
+  if (body.type === "replacement_stock_not_reserved") {
+    await sendOpsAlert(`A replacement order has no stock reserved: ${orderId}`, [
+      `Replacement order: ${orderId}`,
+      requestLine,
+      errorLine,
+      "The replacement was created and is being shipped, but its stock was not set aside, so the count may be off. Check the inventory for that item.",
+    ].filter((line): line is string => Boolean(line)));
     return Response.json({ received: true });
   }
 

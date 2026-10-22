@@ -40,7 +40,8 @@ export default async function ReturnPage({ params }: { params: Promise<{ id: str
     if (request.status === "rejected") continue;
     for (const item of request.items) taken.set(item.itemId, (taken.get(item.itemId) ?? 0) + item.quantity);
   }
-  const items: RequestableItem[] = order.items.map((item) => ({
+  // The free tote bag is a gift with the order: it cannot be returned or exchanged.
+  const items: RequestableItem[] = order.items.filter((item) => item.unitPrice > 0).map((item) => ({
     id: item.id,
     title: item.title,
     unitPrice: item.unitPrice,
@@ -67,7 +68,7 @@ export default async function ReturnPage({ params }: { params: Promise<{ id: str
 
       <h1 className="mb-2 font-sans text-[24px] font-medium text-black">Return or exchange</h1>
       <p className="mb-8 font-sans text-[14px] text-[#626262]">
-        Returns are accepted within {returnDays} days and exchanges within {exchangeDays} days of delivery.
+        Returns and exchanges are open for {Math.min(returnDays, exchangeDays)} days after delivery.
         {e.returnUntil && open && (
           <>
             {" "}
@@ -91,6 +92,7 @@ export default async function ReturnPage({ params }: { params: Promise<{ id: str
           items={items}
           canReturn={e.canReturn}
           canExchange={e.canExchange}
+          walletCreditMonths={storeConfig.policy.walletCreditMonths}
         />
       )}
     </div>

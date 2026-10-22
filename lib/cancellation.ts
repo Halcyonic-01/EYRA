@@ -80,6 +80,7 @@ export interface CancellationPreview {
 /* ── Request checking and error mapping (pure, so it can be tested alone) ── */
 
 export interface CancelRequest {
+  /** Only "wallet" is ever refused: refunds go back to the payment method used. */
   refundMethod?: RefundMethod;
   reason: CancelReason;
   note?: string;

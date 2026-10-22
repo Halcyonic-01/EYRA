@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useMemo, useState, useRef } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import type { DetailProduct } from "@/lib/products";
@@ -8,6 +8,15 @@ import { useCartStore, useWishlistStore } from "@/store/useStore";
 import { SIZE_CHART } from "@/lib/sizing";
 import { usePincodeServiceability } from "@/lib/hooks/usePincodeServiceability";
 import { formatDeliveryRange } from "@/lib/delivery-date";
+import {
+  choiceOptions,
+  defaultSelection,
+  isInCart,
+  resolveVariant,
+  type Selection,
+} from "@/lib/variant-selection";
+import { COD_CHARGE, TOTE_MIN_SUBTOTAL, rupees } from "@/config/offers";
+import { PolicyBadge } from "@/components/products/PolicyBadge";
 
 /* ── Inline SVG icons ────────────────────────────── */
 
@@ -125,26 +134,38 @@ export function ProductDetailClient({
   const cartItems = useCartStore((s) => s.items);
   const toggleWishlist = useWishlistStore((s) => s.toggle);
   const wishlist = useWishlistStore((s) => s.items.some((i) => i.product.id === product.id));
-  const inCart = cartItems.some(
-    (i) => i.product.id === product.id && i.size === (product.type === "ring" ? selectedSize : null)
+  // Choices besides ring size (single or pair, with or without a chain). The
+  // page opens on the cheapest option; Medusa's own variant prices decide the rest.
+  const variants = useMemo(() => product.variants ?? [], [product.variants]);
+  const choices = useMemo(() => product.choices ?? [], [product.choices]);
+  const [selection, setSelection] = useState<Selection>(() => defaultSelection(variants, choices));
+
+  const resolved = useMemo(
+    () => resolveVariant(variants, selection, product.sizeOptionTitle, product.type === "ring" ? selectedSize : null),
+    [variants, selection, product.sizeOptionTitle, product.type, selectedSize]
   );
+  // The variant to sell. Products Medusa has no variant list for (mock data)
+  // fall back to the product's own variant.
+  const variantId = variants.length > 0 ? resolved.variant?.id : product.variantId;
+  const shownPrice = variants.length > 0 ? resolved.price : product.price;
+  const shownOriginal = variants.length > 0 ? resolved.originalPrice : product.originalPrice;
+  const inCart = isInCart(cartItems, variantId) ||
+    (variants.length === 0 &&
+      cartItems.some((i) => i.product.id === product.id && i.size === (product.type === "ring" ? selectedSize : null)));
 
   /**
    * Resolves which variant an add-to-cart/buy-now action should use.
    *
-   * Rings previously fell back to product.variantId (the "cheapest" variant,
-   * arbitrary among same-priced sizes) whenever no size was selected, so a
-   * customer who never picked a size would silently get whatever size Medusa
-   * happened to list first. Returns null and flags the size picker instead of
-   * guessing.
+   * A ring with no size picked has no single variant, and guessing one used to
+   * hand customers whatever size Medusa listed first. Returns null and flags
+   * the size picker instead of guessing.
    */
   function resolveVariantId(): string | undefined | null {
-    if (product.type !== "ring") return product.variantId;
-    if (!selectedSize) {
+    if (product.type === "ring" && !selectedSize) {
       setSizeRequiredError(true);
       return null;
     }
-    return product.sizeVariantMap?.[String(selectedSize)] ?? product.variantId;
+    return variantId;
   }
 
   /**
@@ -188,7 +209,7 @@ export function ProductDetailClient({
   const serviceItems = [
     { icon: <ReturnIcon />, label: `${policy.returnDays} Days Return` },
     { icon: <ExchangeIcon />, label: `${policy.exchangeDays} Days Exchange` },
-    { icon: <CodIcon />, label: "Cash On Delivery" },
+    { icon: <CodIcon />, label: `Cash On Delivery (+${rupees(COD_CHARGE)})` },
   ];
 
   return (
@@ -234,17 +255,13 @@ export function ProductDetailClient({
                         // size picked is fine, WishlistClient shows a "pick a
                         // size" prompt for that case. What it must not do is
                         // silently store an arbitrary size as if chosen.
-                        const variantId =
-                          product.type === "ring"
-                            ? selectedSize
-                              ? product.sizeVariantMap?.[String(selectedSize)]
-                              : undefined
-                            : product.variantId;
+                        const wishlistVariantId =
+                          product.type === "ring" && !selectedSize ? undefined : variantId;
                         // Save the size alongside the variant so moving this
                         // to the cart later can label the line with it.
                         toggleWishlist(
                           product,
-                          variantId,
+                          wishlistVariantId,
                           product.type === "ring" ? selectedSize : null
                         );
                       }}
@@ -316,6 +333,8 @@ export function ProductDetailClient({
             {/* Right: Sticky product info */}
             <div className="w-full lg:flex-1 lg:sticky lg:self-start flex flex-col gap-6" style={{ top: "calc(var(--header-offset) + 2rem)" }}>
 
+              <PolicyBadge />
+
               {/* Identity: name, subtitle, rating, price */}
               <div className="flex flex-col gap-[7px]">
                 <h1 className="font-sans font-medium text-[20px] leading-[30px] text-black">
@@ -341,10 +360,10 @@ export function ProductDetailClient({
                 {/* Price row */}
                 <div className="flex items-center flex-wrap gap-3 mt-2">
                   <span className="font-sans font-medium text-[24px] leading-[36px] text-black">
-                    ₹{product.price.toLocaleString("en-IN")}
+                    ₹{shownPrice.toLocaleString("en-IN")}
                   </span>
                   <span className="font-sans font-normal text-[20px] leading-[30px] text-[#AAAAAA] line-through">
-                    ₹{product.originalPrice.toLocaleString("en-IN")}
+                    ₹{shownOriginal.toLocaleString("en-IN")}
                   </span>
                   {/* Promo badge */}
                   <div
@@ -352,7 +371,7 @@ export function ProductDetailClient({
                     style={{ background: "linear-gradient(90deg, rgba(228,194,60,0.14) 0%, rgba(255,255,255,0) 100%)" }}
                   >
                     <span className="font-sans font-normal text-[14px] leading-[21px] text-black">
-                      Get flat ₹500/- off on your first order.
+                      Free shipping on prepaid orders. A complimentary tote bag above {rupees(TOTE_MIN_SUBTOTAL)}, subject to stock availability.
                     </span>
                   </div>
                 </div>
@@ -372,6 +391,50 @@ export function ProductDetailClient({
                   </span>
                 ))}
               </div>
+
+              {/* Choices besides ring size: single or pair, with or without a chain */}
+              {choices.map((choice) => {
+                const options = choiceOptions(
+                  variants,
+                  choice,
+                  selection,
+                  product.sizeOptionTitle,
+                  product.type === "ring" ? selectedSize : null
+                );
+                return (
+                  <div key={choice.title} className="flex flex-col gap-3">
+                    <span className="font-sans font-medium text-[14px] leading-[21px] text-black">
+                      {choice.title}
+                      {selection[choice.title] ? `: ${selection[choice.title]}` : ""}
+                    </span>
+                    <div className="flex flex-wrap gap-2" role="radiogroup" aria-label={choice.title}>
+                      {options.map((option) => {
+                        const active = selection[choice.title] === option.value;
+                        return (
+                          <button
+                            key={option.value}
+                            type="button"
+                            role="radio"
+                            aria-checked={active}
+                            disabled={!option.inStock}
+                            onClick={() => setSelection((prev) => ({ ...prev, [choice.title]: option.value }))}
+                            className={`flex flex-col items-start gap-0.5 rounded-xl border px-4 py-2.5 text-left font-sans transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-40 ${
+                              active
+                                ? "border-black bg-black text-white"
+                                : "border-[#CFCFCF] bg-white text-[#626262] hover:border-black hover:text-black"
+                            }`}
+                          >
+                            <span className="text-[14px] font-medium">{option.value}</span>
+                            <span className={`text-[13px] ${active ? "text-[#E5E5E5]" : "text-[#909090]"}`}>
+                              {option.inStock ? `₹${option.price.toLocaleString("en-IN")}` : "Sold out"}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
 
               {/* Ring size picker, rings only */}
               {product.type === "ring" && (
@@ -419,10 +482,10 @@ export function ProductDetailClient({
               <div className="flex gap-3">
                 <button
                   onClick={() => {
-                    const variantId = resolveVariantId();
-                    if (variantId === null) return; // ring with no size picked
+                    const chosen = resolveVariantId();
+                    if (chosen === null) return; // ring with no size picked
                     if (!inCart) {
-                      addToCart(product, product.type === "ring" ? selectedSize : null, variantId);
+                      addToCart(product, product.type === "ring" ? selectedSize : null, chosen);
                     }
                     router.push("/checkout");
                   }}
@@ -434,9 +497,9 @@ export function ProductDetailClient({
                 <button
                   onClick={() => {
                     if (inCart) return;
-                    const variantId = resolveVariantId();
-                    if (variantId === null) return; // ring with no size picked
-                    addToCart(product, product.type === "ring" ? selectedSize : null, variantId);
+                    const chosen = resolveVariantId();
+                    if (chosen === null) return; // ring with no size picked
+                    addToCart(product, product.type === "ring" ? selectedSize : null, chosen);
                   }}
                   className={`flex-1 flex items-center justify-center px-4 sm:px-8 py-3 sm:py-[14px] font-sans font-medium text-[15px] sm:text-[18px] leading-[20px] whitespace-nowrap rounded-full border transition-colors duration-200 ${
                     inCart

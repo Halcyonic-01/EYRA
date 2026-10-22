@@ -16,7 +16,6 @@ export default function SupportPage() {
         exchangeDays: policy.exchangeDays,
         deliveryDaysMin: policy.metroDaysMin,
         deliveryDaysMax: policy.indiaDaysMax,
-        freeShippingAbove: policy.freeShippingAbove,
         warrantyMonths: policy.warrantyMonths,
         supportEmail: contact.supportEmail,
         ordersEmail: contact.ordersEmail,

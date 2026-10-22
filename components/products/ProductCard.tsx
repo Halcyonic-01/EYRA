@@ -9,15 +9,12 @@ import { useCartStore, useWishlistStore } from "@/store/useStore";
 export function ProductCard({ product }: { product: Product }) {
   const router = useRouter();
   const addToCart = useCartStore((s) => s.addToCart);
-  // Rings have one variant per size (checked live: every ring in the
-  // catalogue has 15 size variants, every chain has exactly 1), so
-  // "in cart" can't just mean "any variant of this product" for rings, or
-  // adding a different size would read as a no-op. Non-ring products are
-  // single-variant, so the broader check is accurate for them.
+  // A product with several variants (a ring's sizes, an anklet's single or
+  // pair) can't say "in cart" for the product as a whole, or adding a
+  // different variant would read as a no-op. Single-variant products can.
+  const needsChoice = product.type === "ring" || product.needsChoice === true;
   const inCart = useCartStore((s) =>
-    product.type === "ring"
-      ? false
-      : s.items.some((i) => i.product.id === product.id)
+    needsChoice ? false : s.items.some((i) => i.product.id === product.id)
   );
   const wishlisted = useWishlistStore((s) =>
     s.items.some((i) => i.product.id === product.id)
@@ -29,7 +26,7 @@ export function ProductCard({ product }: { product: Product }) {
       <div className="relative w-full aspect-square flex items-center justify-center overflow-hidden">
         <button
           type="button"
-          onClick={() => toggleWishlist(product, product.type === "ring" ? undefined : product.variantId)}
+          onClick={() => toggleWishlist(product, needsChoice ? undefined : product.variantId)}
           aria-label={wishlisted ? "Remove from wishlist" : "Add to wishlist"}
           aria-pressed={wishlisted}
           className="absolute top-0 left-0 p-1 flex items-center justify-center z-10"
@@ -78,7 +75,7 @@ export function ProductCard({ product }: { product: Product }) {
         </h3>
         <div className="flex items-center gap-[13px] mt-1">
           <span className="font-sans font-medium text-[18px] leading-[28px] text-black">
-            ₹{product.price.toLocaleString("en-IN")}
+            {product.hasPriceRange ? "From " : ""}₹{product.price.toLocaleString("en-IN")}
           </span>
           <span className="font-sans font-normal text-[15px] leading-[22px] text-[#AAAAAA] line-through">
             ₹{product.originalPrice.toLocaleString("en-IN")}
@@ -91,10 +88,11 @@ export function ProductCard({ product }: { product: Product }) {
         <button
           onClick={(e) => {
             e.preventDefault();
-            if (product.type === "ring") {
-              // Rings need a size, and this card has no size picker. Sending
-              // customers to the PDP to choose one beats silently adding
-              // whichever size Medusa happens to list first.
+            if (needsChoice) {
+              // The customer has a choice to make (a ring size, single or
+              // pair, with or without a chain) and this card has no picker.
+              // Sending them to the product page beats silently adding
+              // whichever variant Medusa happens to list first.
               router.push(`/products/${product.id}`);
               return;
             }

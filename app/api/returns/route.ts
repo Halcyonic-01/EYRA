@@ -21,6 +21,7 @@ interface Body {
   type?: unknown;
   reason?: unknown;
   note?: unknown;
+  replacementVariantId?: unknown;
   items?: unknown;
 }
 
@@ -43,7 +44,12 @@ export async function GET(req: NextRequest) {
 /**
  * Ask to return or exchange items from one of the customer's own orders.
  *
- * Body: { orderId, type, reason, note?, items: [{ itemId, quantity }] }
+ * Body: { orderId, type, reason, note?, replacementVariantId?, items: [{ itemId, quantity }] }
+ *
+ * A return books the courier at once. An exchange names one item and the size or
+ * design wanted instead. There is no fee: the pickup is booked at once, unless the
+ * replacement costs more, when it comes back with a payment link for the difference.
+ * Every amount is the backend's: nothing is priced here.
  */
 export async function POST(req: NextRequest) {
   const rateLimitResponse = await applyRateLimit(req, "return_request", 8);
@@ -59,7 +65,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
   }
 
-  const { orderId, type, reason, note, items } = body;
+  const { orderId, type, reason, note, items, replacementVariantId } = body;
   if (typeof orderId !== "string" || !orderId.startsWith("order_")) {
     return NextResponse.json({ error: "orderId is required." }, { status: 400 });
   }
@@ -68,6 +74,13 @@ export async function POST(req: NextRequest) {
   }
   if (!REASONS.includes(reason as ReturnRequestReason)) {
     return NextResponse.json({ error: "Choose a reason." }, { status: 400 });
+  }
+  if (type === "exchange") {
+    if (typeof replacementVariantId !== "string" || !replacementVariantId.startsWith("variant_")) {
+      return NextResponse.json({ error: "Choose the size or design you want instead." }, { status: 400 });
+    }
+  } else if (replacementVariantId !== undefined) {
+    return NextResponse.json({ error: "A replacement is only for an exchange." }, { status: 400 });
   }
   if (note !== undefined && (typeof note !== "string" || note.length > 1000)) {
     return NextResponse.json({ error: "Your note is too long." }, { status: 400 });
@@ -114,6 +127,7 @@ export async function POST(req: NextRequest) {
     type: kind,
     reason: reason as ReturnRequestReason,
     note: typeof note === "string" && note.trim() ? note.trim() : undefined,
+    replacementVariantId: typeof replacementVariantId === "string" ? replacementVariantId : undefined,
     items: cleanItems,
   });
   if (!result.ok) {

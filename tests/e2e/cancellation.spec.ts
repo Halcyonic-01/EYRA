@@ -1,7 +1,8 @@
 import { test, expect } from "@playwright/test";
 
 // Cancelling an order is for the signed-in owner only. The rules themselves
-// (window, fee, amounts) are the backend's and are tested there.
+// (window, amounts) are the backend's and are tested there: an order cancelled
+// before it ships is refunded in full to the original payment, with no fee.
 
 test.describe("order cancellation access", () => {
   test("a guest cannot see what can be cancelled", async ({ request }) => {
@@ -11,7 +12,7 @@ test.describe("order cancellation access", () => {
 
   test("a guest cannot cancel an order", async ({ request }) => {
     const res = await request.post("/api/orders/order_does_not_matter/cancel", {
-      data: { reason: "changed_mind", refundMethod: "wallet" },
+      data: { reason: "changed_mind" },
     });
     expect(res.status()).toBe(401);
   });
