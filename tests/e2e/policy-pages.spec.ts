@@ -60,6 +60,32 @@ test.describe("policy pages", () => {
   }
 });
 
+test.describe("the return and exchange windows", () => {
+  test("every policy page says 15 days for a return and 7 days for an exchange", async ({ page }) => {
+    const refund = await pageText(page, "/refund-policy");
+    expect(refund).toContain("Returns within 15 days, exchanges within 7 days");
+    expect(refund).toContain("returned within 15 days of delivery and exchanged within 7 days of delivery");
+    const terms = await pageText(page, "/terms-of-service");
+    expect(terms).toContain("Returns are accepted within 15 days of delivery and exchanges within 7 days");
+  });
+
+  test("the product page badges say 15 Days Return and 7 Days Exchange", async ({ page }) => {
+    await page.goto("/products/luna-anklet");
+    const body = page.locator("main");
+    await expect(body).toContainText("15 Days Return");
+    await expect(body).toContainText("7 Days Exchange");
+    await expect(page.getByTestId("policy-badge")).toHaveText("Free 7-Day Easy Exchanges & 15-Day Store Credit Returns. No Cash Refunds.");
+  });
+});
+
+test.describe("no postage reimbursement promise", () => {
+  test("the refund policy no longer offers to reimburse return postage", async ({ page }) => {
+    const text = await pageText(page, "/refund-policy");
+    expect(text).not.toMatch(/reimburs|Speed Post|₹\s?70\b/i);
+    expect(text).toContain("If a pickup cannot be arranged from your PIN code");
+  });
+});
+
 test.describe("every policy agrees on the return, exchange and cancellation rules", () => {
   test("the terms of service state them", async ({ page }) => {
     const text = await pageText(page, "/terms-of-service");
@@ -70,7 +96,7 @@ test.describe("every policy agrees on the return, exchange and cancellation rule
     expect(text).toContain("100% refundable");
     expect(text).toContain("GST credit note");
     expect(text).toContain("Cash on Delivery charge includes 18% GST");
-    expect(text).not.toContain("15 days");
+    expect(text).toContain("within 15 days of delivery and exchanges within 7 days");
   });
 
   test("the shipping policy covers the COD GST, credit notes, and a refused delivery", async ({ page }) => {
@@ -87,11 +113,11 @@ test.describe("every policy agrees on the return, exchange and cancellation rule
     expect(text).toContain("tax invoices and credit notes");
   });
 
-  test("no page still talks of a cancellation fee, a wallet refund choice, 15 days or an exchange handling fee", async ({ page }) => {
+  test("no page still talks of a cancellation fee, a wallet refund choice, a 7-day return or an exchange handling fee", async ({ page }) => {
     for (const path of ["/refund-policy", "/terms-of-service", "/shipping-policy", "/support", "/authenticity-and-care", "/contact"]) {
       const text = await pageText(page, path);
       expect(text, path).not.toMatch(/cancellation fee/i);
-      expect(text, path).not.toMatch(/15[- ]day/i);
+      expect(text, path).not.toMatch(/7[- ]day returns?\b/i);
       expect(text, path).not.toMatch(/handling fee/i);
       expect(text, path).not.toContain("only the wallet option is offered");
     }

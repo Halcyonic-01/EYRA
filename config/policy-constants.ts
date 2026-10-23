@@ -5,8 +5,11 @@
  * the rest of the store configuration.
  */
 
-/** Days after delivery within which a return or exchange can be asked for. */
-export const RETURN_WINDOW_DAYS = 7;
+/** Days after delivery within which a return can be asked for. */
+export const RETURN_WINDOW_DAYS = 15;
+
+/** Days after delivery within which an exchange can be asked for. */
+export const EXCHANGE_WINDOW_DAYS = 7;
 
 /** Kept from a returned item's store credit, and from the refund of a refused parcel. */
 export const REVERSE_LOGISTICS_FEE = 99;

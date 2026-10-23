@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 
 import { CANCEL_REASONS, type CancelReason, type CancellationPreview } from "@/lib/cancellation";
+import { EXCHANGE_WINDOW_DAYS, RETURN_WINDOW_DAYS } from "@/config/policy-constants";
 import { formatRupees } from "@/lib/money";
 
 interface Props {
@@ -172,7 +173,7 @@ export default function CancelOrderPanel({ orderId, preview }: Props) {
             <p className="font-sans text-[14px] text-black">{preview.message}</p>
             {preview.code === "shipment_created" && (
               <p className="mt-1 font-sans text-[12px] text-[#909090]">
-                Returns and exchanges open for 7 days once it is delivered, from this page.
+                Once it is delivered, returns are open for {RETURN_WINDOW_DAYS} days and exchanges for {EXCHANGE_WINDOW_DAYS} days, from this page.
               </p>
             )}
           </div>

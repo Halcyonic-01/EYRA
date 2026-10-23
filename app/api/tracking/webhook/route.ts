@@ -67,7 +67,7 @@ async function updateOrderShipmentStatus(
 }
 
 /**
- * The Medusa backend runs the returns side of tracking: the 7-day window after
+ * The Medusa backend runs the returns side of tracking: the return and exchange windows after
  * delivery, a parcel coming back to us, and reverse pickups for returns and
  * exchanges. It hears about every update from here, with the same secret.
  * Returns "failed" only when the backend could not be asked or hit an error, so

@@ -58,7 +58,7 @@ export default function TermsOfServicePage() {
         {
           heading: "6. Shipping, returns, and refunds",
           body: [
-            `Delivery timelines and charges are set out in our Shipping and Delivery Policy. Returns and exchanges are accepted within ${policy.returnDays} days of delivery on the conditions set out in our Returns, Exchanges and Refunds policy.`,
+            `Delivery timelines and charges are set out in our Shipping and Delivery Policy. Returns are accepted within ${policy.returnDays} days of delivery and exchanges within ${policy.exchangeDays} days, on the conditions set out in our Returns, Exchanges and Refunds policy.`,
             `Delivered items are returned for EYRA store credit, not cash: the amount you paid, less a flat ₹${policy.reverseLogisticsFee} reverse logistics fee including 18% GST (no fee for a damaged or defective item), valid for ${policy.walletCreditMonths} months. Exchanges for another size or design have no fee; if the new piece costs more, you pay the difference. Orders that have not shipped are 100% refundable to the payment method used.`,
             "We issue a GST credit note for the items returned, exchanged, or refunded after dispatch.",
             ...(policy.cancelWindowMinutes > 0

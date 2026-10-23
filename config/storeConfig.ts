@@ -32,7 +32,7 @@
  *   BIS_REGISTRATION_NUMBER   BIS Hallmarking registration number (default: the registered number)
  */
 
-import { RETURN_WINDOW_DAYS, REVERSE_LOGISTICS_FEE } from "@/config/policy-constants";
+import { EXCHANGE_WINDOW_DAYS, RETURN_WINDOW_DAYS, REVERSE_LOGISTICS_FEE } from "@/config/policy-constants";
 
 function envFloat(key: string, fallback: number): number {
   const raw = process.env[key];
@@ -145,7 +145,7 @@ export const storeConfig = {
     /** Return window, in days from delivery. */
     returnDays: RETURN_WINDOW_DAYS,
     /** Exchange window, in days from delivery. */
-    exchangeDays: RETURN_WINDOW_DAYS,
+    exchangeDays: EXCHANGE_WINDOW_DAYS,
     /**
      * Months wallet credit stays usable after it is issued; 0 means never.
      * The backend reads the same WALLET_CREDIT_VALIDITY_MONTHS to set expiry
@@ -177,8 +177,6 @@ export const storeConfig = {
     refundDaysMax: envFloat("POLICY_REFUND_DAYS_MAX", 7),
     /** Hours within which transit damage or a tampered parcel must be reported. */
     damageClaimHours: envFloat("POLICY_DAMAGE_CLAIM_HOURS", 48),
-    /** Return postage (INR) reimbursed when a pincode is not reverse-serviceable. */
-    selfShipReimbursement: envFloat("POLICY_SELF_SHIP_REIMBURSEMENT", 70),
     /** Grievance acknowledgement and resolution SLA. */
     grievanceAckHours: envFloat("POLICY_GRIEVANCE_ACK_HOURS", 48),
     grievanceResolutionDays: envFloat("POLICY_GRIEVANCE_RESOLUTION_DAYS", 30),
