@@ -66,6 +66,34 @@ async function updateOrderShipmentStatus(
   }
 }
 
+/**
+ * The Medusa backend runs the returns side of tracking: the 7-day window after
+ * delivery, a parcel coming back to us, and reverse pickups for returns and
+ * exchanges. It hears about every update from here, with the same secret.
+ * Returns "failed" only when the backend could not be asked or hit an error, so
+ * Shiprocket tries the update again.
+ */
+async function forwardToBackend(payload: ShiprocketWebhookPayload, secret: string): Promise<"ok" | "failed"> {
+  try {
+    const res = await fetch(`${MEDUSA_BASE}/webhooks/shiprocket/order-update`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-api-key": secret },
+      body: JSON.stringify(payload),
+      cache: "no-store",
+      signal: AbortSignal.timeout(20000),
+    });
+    // A 503 means the backend has no webhook secret yet: that is a setup gap, not a reason to make Shiprocket retry.
+    if (res.status >= 500 && res.status !== 503) {
+      console.error("[tracking/webhook] the backend answered", res.status, "for", payload.order_id ?? payload.awb);
+      return "failed";
+    }
+    return "ok";
+  } catch (err) {
+    console.error("[tracking/webhook] could not reach the backend:", err);
+    return "failed";
+  }
+}
+
 export async function POST(request: NextRequest) {
   const secret = process.env.SHIPROCKET_WEBHOOK_SECRET;
   if (!secret) {
@@ -90,6 +118,11 @@ export async function POST(request: NextRequest) {
   const eyraOrderRef = payload.order_id ?? payload.channel_order_id;
   const status = payload.current_status ?? payload.shipment_status;
   const awbCode = payload.awb ?? payload.awb_code;
+
+  const forwarded = eyraOrderRef && status ? await forwardToBackend(payload, secret) : "ok";
+  if (forwarded === "failed") {
+    return Response.json({ error: "The update could not be passed on. Please send it again." }, { status: 502 });
+  }
 
   if (!eyraOrderRef || !status) {
     console.warn("[tracking/webhook] Payload missing order_id/status, full body:", payload);

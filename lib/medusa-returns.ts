@@ -43,6 +43,23 @@ export interface ReturnRequest {
   /** Our team's message to the customer. */
   resolutionNote: string | null;
   createdAt: string;
+  /** What was paid for the items, GST included, after any discount. */
+  paidValue: number | null;
+  /** The flat reverse logistics fee kept from a return's store credit. */
+  feeAmount: number | null;
+  /** The courier booked to collect the item, once there is one. */
+  reverseAwb: string | null;
+  /** An exchange: what is wanted instead, what to pay, and where. */
+  exchange: {
+    replacementTitle: string | null;
+    replacementPrice: number | null;
+    priceDifference: number | null;
+    amountDue: number | null;
+    feeLinkUrl: string | null;
+    feePaid: boolean;
+    replacementOrderId: string | null;
+  } | null;
+  creditNoteId: string | null;
 }
 
 export interface OrderForReturn {
@@ -67,6 +84,19 @@ interface RawRequest {
   credit_amount: number | null;
   resolution_note: string | null;
   created_at: string;
+  paid_value?: number | null;
+  fee_amount?: number | null;
+  reverse?: { awb?: string | null } | null;
+  exchange?: {
+    replacement_title: string | null;
+    replacement_price: number | null;
+    price_difference: number | null;
+    amount_due: number | null;
+    fee_link_url: string | null;
+    fee_paid_at: string | null;
+    replacement_order_id: string | null;
+  } | null;
+  credit_note_id?: string | null;
 }
 
 function toRequest(raw: RawRequest): ReturnRequest {
@@ -88,6 +118,21 @@ function toRequest(raw: RawRequest): ReturnRequest {
     creditAmount: raw.credit_amount,
     resolutionNote: raw.resolution_note,
     createdAt: raw.created_at,
+    paidValue: raw.paid_value ?? null,
+    feeAmount: raw.fee_amount ?? null,
+    reverseAwb: raw.reverse?.awb ?? null,
+    exchange: raw.exchange
+      ? {
+          replacementTitle: raw.exchange.replacement_title,
+          replacementPrice: raw.exchange.replacement_price,
+          priceDifference: raw.exchange.price_difference,
+          amountDue: raw.exchange.amount_due,
+          feeLinkUrl: raw.exchange.fee_link_url,
+          feePaid: Boolean(raw.exchange.fee_paid_at),
+          replacementOrderId: raw.exchange.replacement_order_id,
+        }
+      : null,
+    creditNoteId: raw.credit_note_id ?? null,
   };
 }
 
@@ -180,6 +225,8 @@ export interface CreateReturnRequestInput {
   type: ReturnRequestType;
   reason: ReturnRequestReason;
   note?: string;
+  /** An exchange: the variant wanted instead. */
+  replacementVariantId?: string;
   items: { itemId: string; quantity: number }[];
 }
 
@@ -198,6 +245,7 @@ export async function createReturnRequest(
       type: input.type,
       reason: input.reason,
       ...(input.note ? { note: input.note } : {}),
+      ...(input.replacementVariantId ? { replacement_variant_id: input.replacementVariantId } : {}),
       items: input.items.map((item) => ({ item_id: item.itemId, quantity: item.quantity })),
     }),
   });

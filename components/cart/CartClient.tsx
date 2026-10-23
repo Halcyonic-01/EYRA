@@ -3,7 +3,10 @@
 import { useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useCartStore, useWishlistStore } from "@/store/useStore";
+import { lineKey, useCartStore, useWishlistStore } from "@/store/useStore";
+import { COD_CHARGE, rupees } from "@/config/offers";
+import { ToteLine, ToteOffer } from "@/components/offers/ToteOffer";
+import { PromoCodeBox } from "@/components/cart/PromoCodeBox";
 
 function TrashIcon() {
   return (
@@ -55,11 +58,7 @@ export function CartClient() {
     if (!wishlistItems.some((w) => w.product.id === item.product.id)) {
       toggleWishlist(item.product, item.variantId, item.size);
     }
-    removeFromCart(item.product.id, item.size);
-  }
-
-  function itemKey(productId: string, size: number | null) {
-    return `${productId}-${size ?? "null"}`;
+    removeFromCart(lineKey(item));
   }
 
   // Units, not cart lines. The checkout sidebar counts the same way, so a cart
@@ -76,11 +75,13 @@ export function CartClient() {
         discount: serverTotals.discountTotal,
         delivery: serverTotals.shippingTotal,
         tax: serverTotals.taxTotal,
-        total: serverTotals.total,
+        // What a prepaid order costs: the items less any discount. Cash on
+        // Delivery adds its own charge at checkout, so it is not in this number.
+        total: serverTotals.subtotal - serverTotals.discountTotal,
         isEstimate: false,
       };
     }
-    const clientSubtotal = items.reduce((sum, i) => sum + i.product.price * i.quantity, 0);
+    const clientSubtotal = items.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0);
     return {
       subtotal: clientSubtotal,
       discount: 0,
@@ -135,10 +136,11 @@ export function CartClient() {
 
           <div className="flex flex-col gap-4">
             {items.map((item) => {
-              const key = itemKey(item.product.id, item.size);
-              const discountPct = Math.round(
-                ((item.product.originalPrice - item.product.price) / item.product.originalPrice) * 100
-              );
+              const key = lineKey(item);
+              const discountPct =
+                item.originalUnitPrice > item.unitPrice
+                  ? Math.round(((item.originalUnitPrice - item.unitPrice) / item.originalUnitPrice) * 100)
+                  : 0;
 
               return (
                 // Below sm: the image+info+qty-stepper+remove row's
@@ -170,15 +172,20 @@ export function CartClient() {
                       {item.size && (
                         <p className="font-sans font-normal text-[13px] text-[#909090]">Size: {item.size}</p>
                       )}
+                      {item.variantLabel && (
+                        <p className="font-sans font-normal text-[13px] text-[#909090]">{item.variantLabel}</p>
+                      )}
 
                       {/* Price row */}
                       <div className="flex items-center gap-2 flex-wrap mt-0.5">
                         <span className="font-sans font-semibold text-[18px] leading-[27px] text-black">
-                          ₹{item.product.price.toLocaleString("en-IN")}
+                          ₹{item.unitPrice.toLocaleString("en-IN")}
                         </span>
-                        <span className="font-sans font-normal text-[15px] text-[#AAAAAA] line-through">
-                          ₹{item.product.originalPrice.toLocaleString("en-IN")}
-                        </span>
+                        {discountPct > 0 && (
+                          <span className="font-sans font-normal text-[15px] text-[#AAAAAA] line-through">
+                            ₹{item.originalUnitPrice.toLocaleString("en-IN")}
+                          </span>
+                        )}
                         {discountPct > 0 && (
                           <span className="font-sans font-normal text-[13px] text-black">
                             {discountPct}% OFF
@@ -196,7 +203,7 @@ export function CartClient() {
                   <div className="flex flex-row sm:flex-col items-center sm:items-end justify-end sm:justify-between gap-3 sm:gap-2 flex-shrink-0">
                     <button
                       aria-label="Remove item"
-                      onClick={() => removeFromCart(item.product.id, item.size)}
+                      onClick={() => removeFromCart(key)}
                       className="order-last sm:order-none w-8 h-8 flex items-center justify-center rounded-full hover:bg-[#FFF0F0] transition-colors duration-200"
                     >
                       <TrashIcon />
@@ -206,7 +213,7 @@ export function CartClient() {
                     <div className="flex items-center border border-[#CFCFCF] rounded-lg overflow-hidden">
                       <button
                         aria-label="Decrease quantity"
-                        onClick={() => updateQuantity(item.product.id, item.size, item.quantity - 1)}
+                        onClick={() => updateQuantity(key, item.quantity - 1)}
                         className="w-[26px] h-[26px] flex items-center justify-center text-black hover:bg-[#F7F7F7] transition-colors duration-150"
                       >
                         <MinusIcon />
@@ -216,7 +223,7 @@ export function CartClient() {
                       </span>
                       <button
                         aria-label="Increase quantity"
-                        onClick={() => updateQuantity(item.product.id, item.size, item.quantity + 1)}
+                        onClick={() => updateQuantity(key, item.quantity + 1)}
                         className="w-[26px] h-[26px] flex items-center justify-center text-black hover:bg-[#F7F7F7] transition-colors duration-150"
                       >
                         <PlusIcon />
@@ -234,7 +241,13 @@ export function CartClient() {
                 </div>
               );
             })}
+
           </div>
+
+          {serverTotals?.tote.inCart && <ToteLine className="mt-4 rounded-xl bg-[#F7F7F7] px-4 py-3" />}
+          {!totals.isEstimate && (
+            <ToteOffer itemsSubtotal={totals.subtotal} inCart={Boolean(serverTotals?.tote.inCart)} className="mt-4" />
+          )}
         </div>
 
         {/* Right: Order Summary */}
@@ -263,7 +276,9 @@ export function CartClient() {
 
             {totals.discount > 0 && (
               <div className="flex items-center justify-between">
-                <span className="text-[#626262]">Discount</span>
+                <span className="text-[#626262]">
+                  Discount{serverTotals?.promoCodes[0] ? ` (${serverTotals.promoCodes[0]})` : ""}
+                </span>
                 <span className="text-black">− ₹{totals.discount.toLocaleString("en-IN")}</span>
               </div>
             )}
@@ -272,12 +287,17 @@ export function CartClient() {
               <span className="text-[#626262]">Delivery</span>
               {totals.isEstimate ? (
                 <span className="text-black">-</span>
-              ) : totals.delivery === 0 ? (
-                <span className="font-medium" style={{ color: "#47B10A" }}>FREE</span>
               ) : (
-                <span className="text-black">₹{totals.delivery}</span>
+                <span className="font-medium" style={{ color: "#47B10A" }}>
+                  Free on prepaid orders
+                </span>
               )}
             </div>
+            {!totals.isEstimate && (
+              <p className="font-sans text-[12px] text-[#909090] -mt-1">
+                Cash on Delivery adds {rupees(COD_CHARGE)}. You choose at checkout.
+              </p>
+            )}
           </div>
 
           {totals.isEstimate && (
@@ -285,6 +305,8 @@ export function CartClient() {
               Delivery calculated at checkout.
             </p>
           )}
+
+          <PromoCodeBox />
 
           <div className="w-full h-px bg-[#DFDFDF]" />
 

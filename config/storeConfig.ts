@@ -8,10 +8,14 @@
  * Env vars (never prefixed with NEXT_PUBLIC_, server-only):
  *   JEWELRY_HSN_CODE          BIS HSN code (default: "7113")
  *   JEWELRY_GST_RATE          GST % as a number (default: 3)
+ *   SERVICE_SAC_CODE          SAC for the Cash on Delivery charge (default: "9997")
+ *   COD_GST_RATE              GST % on the Cash on Delivery charge (default: 18)
+ *   SHIP_WEIGHT_TOTE_G        Complimentary tote bag weight in grams (default: 120)
  *   SHIP_WEIGHT_RING_G        Ring weight in grams (default: 6)
  *   SHIP_WEIGHT_CHAIN_G       Chain/necklace weight in grams (default: 15)
  *   SHIP_WEIGHT_BRACELET_G    Bracelet weight in grams (default: 12)
- *   SHIP_WEIGHT_ANKLET_G      Anklet weight in grams (default: 10)
+ *   SHIP_WEIGHT_ANKLET_G      Anklet weight in grams (default: 10; a pair counts twice)
+ *   SHIP_WEIGHT_PENDANT_G     Pendant weight in grams (default: 12)
  *   SHIP_WEIGHT_EARRING_G     Earring weight in grams (default: 6)
  *   SHIP_DEFAULT_WEIGHT_G     Fallback per-item weight in grams (default: 10)
  *   SHIP_MIN_WEIGHT_KG        Shiprocket minimum chargeable slab in kg (default: 0.5)
@@ -25,7 +29,10 @@
  *   SELLER_CITY               Registered city
  *   SELLER_STATE              Registered state (must match a GST_STATE_CODES key in lib/gst.ts)
  *   SELLER_PINCODE            Registered PIN code
+ *   BIS_REGISTRATION_NUMBER   BIS Hallmarking registration number (default: the registered number)
  */
+
+import { RETURN_WINDOW_DAYS, REVERSE_LOGISTICS_FEE } from "@/config/policy-constants";
 
 function envFloat(key: string, fallback: number): number {
   const raw = process.env[key];
@@ -46,6 +53,12 @@ export const storeConfig = {
     gstRate: envFloat("JEWELRY_GST_RATE", 3),
   },
 
+  /** The Cash on Delivery charge is a service: its own SAC code and GST rate. */
+  service: {
+    sacCode: envString("SERVICE_SAC_CODE", "9997"),
+    gstRate: envFloat("COD_GST_RATE", 18),
+  },
+
   shipping: {
     /** Shiprocket minimum chargeable weight slab (kg). */
     minChargeableWeightKg: envFloat("SHIP_MIN_WEIGHT_KG", 0.5),
@@ -57,7 +70,9 @@ export const storeConfig = {
       chain: envFloat("SHIP_WEIGHT_CHAIN_G", 15),
       bracelet: envFloat("SHIP_WEIGHT_BRACELET_G", 12),
       anklet: envFloat("SHIP_WEIGHT_ANKLET_G", 10),
+      pendant: envFloat("SHIP_WEIGHT_PENDANT_G", 12),
       earring: envFloat("SHIP_WEIGHT_EARRING_G", 6),
+      tote: envFloat("SHIP_WEIGHT_TOTE_G", 120),
     } as Record<string, number>,
     /** Standard jewellery box dimensions (cm) sent to Shiprocket. */
     box: {
@@ -96,6 +111,8 @@ export const storeConfig = {
     ordersEmail: envString("ORDERS_PUBLIC_EMAIL", "query-orders@eyra.org.in"),
     /** Statutory / corporate mailbox used for legal and data requests. */
     adminEmail: envString("ADMIN_PUBLIC_EMAIL", "admin@eyra.org.in"),
+    /** The Grievance and Nodal Officer's mailbox, quoted on the grievance, privacy and terms pages. */
+    grievanceEmail: envString("GRIEVANCE_PUBLIC_EMAIL", "grievance@eyra.org.in"),
     pressEmail: envString("PRESS_PUBLIC_EMAIL", "press@eyra.org.in"),
     careersEmail: envString("CAREERS_PUBLIC_EMAIL", "careers@eyra.org.in"),
     /**
@@ -114,6 +131,8 @@ export const storeConfig = {
    */
   company: {
     cin: envString("COMPANY_CIN", "U32111JH2026PTC028056"),
+    /** BIS Hallmarking registration number, shown in the footer and on the authenticity page. */
+    bisRegistration: envString("BIS_REGISTRATION_NUMBER", "HM/C-5890248421"),
     grievanceOfficer: envString("GRIEVANCE_OFFICER_NAME", "Aman Agarwal"),
     grievanceOfficerTitle: "Grievance and Nodal Officer",
   },
@@ -124,23 +143,23 @@ export const storeConfig = {
    */
   policy: {
     /** Return window, in days from delivery. */
-    returnDays: envFloat("POLICY_RETURN_DAYS", 15),
+    returnDays: RETURN_WINDOW_DAYS,
     /** Exchange window, in days from delivery. */
-    exchangeDays: envFloat("POLICY_EXCHANGE_DAYS", 15),
+    exchangeDays: RETURN_WINDOW_DAYS,
     /**
      * Months wallet credit stays usable after it is issued; 0 means never.
      * The backend reads the same WALLET_CREDIT_VALIDITY_MONTHS to set expiry
      * dates, so set it to the same value in both places.
      */
-    walletCreditMonths: envFloat("WALLET_CREDIT_VALIDITY_MONTHS", 6),
+    walletCreditMonths: envFloat("WALLET_CREDIT_VALIDITY_MONTHS", 12),
     /**
      * Minutes after ordering that a customer can cancel the order themselves;
      * 0 means they cannot. The backend holds the shipment for the same time and
      * reads the same ORDER_CANCEL_WINDOW_MINUTES, so set both to the same value.
      */
     cancelWindowMinutes: envFloat("ORDER_CANCEL_WINDOW_MINUTES", 0),
-    /** What is kept when a cancellation refund goes to the original payment method. Same ORDER_CANCEL_FEE as the backend. */
-    cancelFee: envFloat("ORDER_CANCEL_FEE", 100),
+    /** Kept from a delivered item's credit, or a refused parcel's refund. Fixed at the backend too. */
+    reverseLogisticsFee: REVERSE_LOGISTICS_FEE,
     /** Hours to pack and hand an in-stock order to the courier. */
     dispatchHoursMin: envFloat("POLICY_DISPATCH_HOURS_MIN", 24),
     dispatchHoursMax: envFloat("POLICY_DISPATCH_HOURS_MAX", 48),
@@ -153,8 +172,6 @@ export const storeConfig = {
     /** Delivery time in business days for the rest of India. */
     indiaDaysMin: envFloat("POLICY_INDIA_DAYS_MIN", 4),
     indiaDaysMax: envFloat("POLICY_INDIA_DAYS_MAX", 7),
-    /** Order value (INR) above which prepaid shipping is free. */
-    freeShippingAbove: envFloat("POLICY_FREE_SHIPPING_ABOVE", 499),
     /** Business days for a refund to reach the original payment source. */
     refundDaysMin: envFloat("POLICY_REFUND_DAYS_MIN", 5),
     refundDaysMax: envFloat("POLICY_REFUND_DAYS_MAX", 7),

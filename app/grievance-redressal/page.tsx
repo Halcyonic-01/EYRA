@@ -29,7 +29,7 @@ export default function GrievanceRedressalPage() {
             `Company: ${seller.legalName}`,
             `CIN: ${company.cin}`,
             `Address: ${seller.addressLine1}, ${seller.city}, ${seller.state}, India ${seller.pincode}`,
-            `Email: ${contact.adminEmail}`,
+            `Email: ${contact.grievanceEmail}`,
           ],
         },
         {

@@ -64,6 +64,10 @@ export default function AuthenticityAndCarePage() {
                   Standards rather than simply asserted by us. The mark on your
                   piece is your proof, not our claim.
                 </p>
+                <p className="font-sans font-light text-[16px] leading-[26px] text-[#505050] mt-3">
+                  Our BIS Hallmarking registration number is{" "}
+                  <span className="font-medium text-black">{storeConfig.company.bisRegistration}</span>.
+                </p>
               </div>
             </FadeIn>
 
@@ -133,8 +137,8 @@ export default function AuthenticityAndCarePage() {
               <p className="font-sans font-light text-[16px] leading-[26px] text-[#505050] mb-8">
                 Measure the inner circumference of a ring that already fits you,
                 then match it below. If you fall between two sizes, take the
-                larger one. Sizing exchanges are free within{" "}
-                {policy.exchangeDays} days.
+                larger one. Sizing exchanges carry no fee within{" "}
+                {policy.exchangeDays} days of delivery.
               </p>
             </FadeIn>
 

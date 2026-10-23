@@ -1,4 +1,4 @@
-import type { Product } from "@/components/products/types";
+import type { Product, ProductChoice } from "@/components/products/types";
 
 if (process.env.NODE_ENV === "production") {
   throw new Error(
@@ -15,6 +15,10 @@ export interface DetailProduct extends Product {
   reviewCount: number;
   /** Maps size option value (e.g. "7") → Medusa variant ID. Undefined for mock data. */
   sizeVariantMap?: Record<string, string>;
+  /** Choices other than ring size, such as Single or Pair, or with or without a chain. */
+  choices?: ProductChoice[];
+  /** Title of the ring size option in Medusa, for matching variants. */
+  sizeOptionTitle?: string;
 }
 
 const RING_SIZES = [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20];

@@ -76,7 +76,7 @@ export default function PrivacyPolicyPage() {
             "Razorpay, for payment processing: order amount, contact information, and tokenised transaction data.",
             "Shiprocket and its courier partners, for logistics: name, delivery address, PIN code, and phone number for transit and live tracking.",
             "Clerk, for authentication: email and profile credentials used to sign you in securely.",
-            "Resend and AiSensy, for messaging: phone number and email address used to send transactional order alerts and receipts.",
+            "Resend, AiSensy and WATI, for messaging: phone number and email address used to send transactional order alerts, receipts, pickup and payment-link messages, and store credit notices.",
             "Sentry and PostHog, for analytics and reliability: anonymised device telemetry, error logs, and usage data used to fix bugs.",
             "Government authorities, strictly where required to comply with applicable law, court orders, or statutory tax audits.",
           ],
@@ -91,7 +91,7 @@ export default function PrivacyPolicyPage() {
         {
           heading: "5. Data retention and your rights",
           body: [
-            "We retain order and invoicing records for as long as Indian accounting and taxation law requires, including GST audit requirements, or until you ask us to delete your account.",
+            "We retain order and invoicing records for as long as Indian accounting and taxation law requires, including GST audit requirements for tax invoices and credit notes, or until you ask us to delete your account.",
             `You have the right to review, correct, or request deletion of the personal data we hold. To make a request, write to ${contact.adminEmail} from the address on your account. We respond within ${policy.grievanceResolutionDays} days.`,
           ],
         },
@@ -116,7 +116,7 @@ export default function PrivacyPolicyPage() {
             `Company: ${seller.legalName}`,
             `Officer: ${company.grievanceOfficer}, ${company.grievanceOfficerTitle}`,
             `Registered office: ${seller.addressLine1}, ${seller.city}, ${seller.state}, India ${seller.pincode}`,
-            `Email: ${contact.adminEmail}`,
+            `Email: ${contact.grievanceEmail}`,
             `Response: grievances acknowledged within ${policy.grievanceAckHours} hours and resolved within ${policy.grievanceResolutionDays} days of receipt.`,
           ],
         },

@@ -9,7 +9,7 @@
  * static mock data in lib/products.ts so the UI remains fully functional.
  */
 
-import type { Product } from "@/components/products/types";
+import type { Product, ProductChoice, ProductVariant } from "@/components/products/types";
 import type { DetailProduct } from "@/lib/products";
 
 /* ── Config ───────────────────────────────────────────────── */
@@ -72,6 +72,9 @@ interface MedusaVariant {
   inventory_quantity: number;
   calculated_price: MedusaCalculatedPrice | null;
   options: MedusaVariantOption[];
+  /** Variants that are not stock-managed are always available. */
+  manage_inventory?: boolean;
+  allow_backorder?: boolean;
 }
 
 interface MedusaProduct {
@@ -225,13 +228,27 @@ function extractImages(p: MedusaProduct): string[] {
 }
 
 /**
+ * A variant is available when it is not stock-managed, allows backorders, or has
+ * stock. Medusa leaves the quantity out for variants it does not track.
+ */
+function variantStock(v: MedusaVariant): number {
+  if (v.manage_inventory === false || v.allow_backorder === true) return 999;
+  return v.inventory_quantity ?? 0;
+}
+
+/**
  * Convert a raw Medusa product to the lean Product shape used in listings
  * and the cart/wishlist stores. The `id` field is set to the Medusa handle so
  * product URLs are human-readable (/products/eyra-signature-silver-ring).
  */
 function toProduct(p: MedusaProduct): Product {
   const { price, originalPrice, cheapestVariantId } = extractPrice(p.variants);
-  const inStock = p.variants.reduce((s, v) => s + (v.inventory_quantity ?? 0), 0);
+  const inStock = p.variants.reduce((s, v) => s + variantStock(v), 0);
+  const prices = new Set(
+    p.variants
+      .map((v) => v.calculated_price?.calculated_amount)
+      .filter((amount): amount is number => typeof amount === "number")
+  );
 
   return {
     id: p.handle,
@@ -243,6 +260,8 @@ function toProduct(p: MedusaProduct): Product {
     inStock,
     type: normalizeType(p),
     variantId: cheapestVariantId,
+    hasPriceRange: prices.size > 1,
+    needsChoice: p.variants.length > 1,
   };
 }
 
@@ -293,7 +312,44 @@ function toDetailProduct(p: MedusaProduct): DetailProduct {
     }
   }
 
-  return { ...base, specs, sizes, rating, reviewCount, sizeVariantMap };
+  // Every variant with its own price, so the page and the cart show what Medusa charges.
+  const optionTitleById = new Map(p.options.map((o) => [o.id, o.title]));
+  const variants: ProductVariant[] = p.variants.map((v) => {
+    const amount = v.calculated_price?.calculated_amount ?? 0;
+    const original = v.calculated_price?.original_amount ?? 0;
+    const options: Record<string, string> = {};
+    for (const o of v.options) {
+      const title = optionTitleById.get(o.option_id);
+      if (title) options[title] = o.value;
+    }
+    return {
+      id: v.id,
+      title: v.title,
+      price: Math.round(amount),
+      originalPrice: original > amount ? Math.round(original) : Math.round(amount * 1.6),
+      inStock: variantStock(v),
+      options,
+    };
+  });
+
+  // Choices other than ring size: a "Title" option with one value is Medusa's
+  // placeholder for a product with no options, so it is not a choice.
+  const choices: ProductChoice[] = p.options
+    .filter((o) => o !== sizeOption && !(o.title === "Title" && o.values.length <= 1))
+    .map((o) => ({ title: o.title, values: o.values.map((v) => v.value) }))
+    .filter((c) => c.values.length > 0);
+
+  return {
+    ...base,
+    specs,
+    sizes,
+    rating,
+    reviewCount,
+    sizeVariantMap,
+    variants,
+    choices,
+    sizeOptionTitle: sizeOption?.title,
+  };
 }
 
 /* ── Fallback helpers (development only) ─────────────────── */
@@ -311,6 +367,16 @@ async function mockDetailProduct(handle: string): Promise<DetailProduct | null> 
 /* ── Public API ───────────────────────────────────────────── */
 
 /**
+ * Products that exist only to travel with an order, such as the complimentary
+ * tote bag, carry metadata.hidden_from_shop. They are published (Medusa only
+ * lets a published product into a cart) but are never listed or opened.
+ */
+function isHiddenFromShop(product: { metadata?: Record<string, unknown> | null }): boolean {
+  const flag = product.metadata?.hidden_from_shop;
+  return flag === true || flag === "true";
+}
+
+/**
  * Fetch all published products from the Medusa store.
  *
  * Falls back to static mock data in development when the backend is unreachable,
@@ -325,8 +391,8 @@ export async function getProducts(): Promise<Product[]> {
       limit: "100",
       ...(regionId ? { region_id: regionId } : {}),
       fields: [
-        "id", "title", "handle", "description", "thumbnail",
-        "*images", "*type", "*tags", "*variants", "*variants.calculated_price",
+        "id", "title", "handle", "description", "thumbnail", "metadata",
+        "*images", "*type", "*tags", "*variants", "+variants.inventory_quantity", "*variants.calculated_price",
       ].join(","),
     },
     { next: { tags: ["products"] } }
@@ -337,7 +403,7 @@ export async function getProducts(): Promise<Product[]> {
     return [];
   }
 
-  return data.products.map(toProduct);
+  return data.products.filter((product) => !isHiddenFromShop(product)).map(toProduct);
 }
 
 /**
@@ -351,7 +417,7 @@ export async function getProductByHandle(handle: string): Promise<DetailProduct 
     "id", "title", "handle", "description", "thumbnail", "metadata",
     "*images", "*type", "*tags",
     "*options", "*options.values",
-    "*variants", "*variants.options", "*variants.calculated_price",
+    "*variants", "+variants.inventory_quantity", "*variants.options", "*variants.calculated_price",
   ].join(",");
 
   const regionId = await getRegionId();
@@ -367,7 +433,9 @@ export async function getProductByHandle(handle: string): Promise<DetailProduct 
     { next: { tags: ["products"] } }
   );
 
-  if (byHandle?.products[0]) return toDetailProduct(byHandle.products[0]);
+  if (byHandle?.products[0]) {
+    return isHiddenFromShop(byHandle.products[0]) ? null : toDetailProduct(byHandle.products[0]);
+  }
 
   // Secondary: handle might actually be a Medusa product ID (prod_01...)
   const byId = await medusaFetch<MedusaSingleResponse>(
@@ -379,7 +447,7 @@ export async function getProductByHandle(handle: string): Promise<DetailProduct 
     { next: { tags: ["products"] } }
   );
 
-  if (byId?.product) return toDetailProduct(byId.product);
+  if (byId?.product) return isHiddenFromShop(byId.product) ? null : toDetailProduct(byId.product);
 
   // Development fallback
   if (process.env.NODE_ENV !== "production") return mockDetailProduct(handle);
@@ -407,4 +475,55 @@ export async function getSimilarProducts(
   const rest = others.filter((p) => p.type !== current.type);
 
   return [...sameType, ...rest].slice(0, limit);
+}
+
+/* ── Exchange options ─────────────────────────────────────── */
+
+/** One thing a customer can exchange for: a variant that is on sale and in stock. */
+export interface ExchangeOption {
+  variantId: string;
+  /** For example "Celestial Band Ring · 12". */
+  label: string;
+  price: number;
+  /** The product's handle, so options of the same product can be listed first. */
+  productId: string;
+}
+
+/**
+ * Every size and design a customer could exchange for. Only what is on sale
+ * (published, not a hidden product like the tote), priced, and in stock is
+ * listed. It is a convenience: the backend checks the choice again, and reads
+ * the price from Medusa, when the exchange is asked for.
+ */
+export async function getExchangeOptions(): Promise<ExchangeOption[]> {
+  const regionId = await getRegionId();
+  const data = await medusaFetch<MedusaListResponse>(
+    "/store/products",
+    {
+      limit: "100",
+      ...(regionId ? { region_id: regionId } : {}),
+      fields: ["id", "title", "handle", "metadata", "*options", "*variants", "+variants.inventory_quantity", "*variants.options", "*variants.calculated_price"].join(","),
+    },
+    { next: { tags: ["products"] } }
+  );
+  if (!data) return [];
+
+  const options: ExchangeOption[] = [];
+  for (const product of data.products) {
+    if (isHiddenFromShop(product)) continue;
+    for (const variant of product.variants) {
+      const price = variant.calculated_price?.calculated_amount;
+      if (typeof price !== "number" || price <= 0 || variantStock(variant) < 1) continue;
+      const chosen = variant.options
+        .map((option) => option.value)
+        .filter((value) => value && value !== "Default Title" && value !== "Default");
+      options.push({
+        variantId: variant.id,
+        label: [product.title, ...chosen].join(" · "),
+        price: Math.round(price),
+        productId: product.handle,
+      });
+    }
+  }
+  return options;
 }

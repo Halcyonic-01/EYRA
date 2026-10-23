@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
 
     // Step 1, set email/shipping address and select a shipping method.
     // Required before Medusa will allow the cart to complete.
-    const prepared = await prepareCartForCheckout(cartId, email, shippingAddress);
+    const prepared = await prepareCartForCheckout(cartId, email, shippingAddress, "prepaid");
     if (!prepared) {
       return NextResponse.json(
         { razorpayOrderId: null, error: "cart_preparation_failed" },

@@ -5,38 +5,10 @@ import Link from "next/link";
 
 import { storeConfig } from "@/config/storeConfig";
 import { invoiceInfo } from "@/lib/invoice-kind";
-import { InvoiceDocument, type MedusaOrder } from "@/components/orders/InvoiceDocument";
+import { InvoiceDocument } from "@/components/orders/InvoiceDocument";
 import { PrintButton } from "@/components/orders/PrintButton";
-
-/* ── Data fetching ────────────────────────────────────────── */
-
-const ADMIN_BASE = (
-  process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL ?? "http://localhost:9000"
-).replace(/\/$/, "");
-
-async function fetchOrder(orderId: string): Promise<MedusaOrder | null> {
-  const key = process.env.MEDUSA_ADMIN_API_KEY;
-  if (!key) return null;
-  try {
-    const fields = [
-      "id", "display_id", "customer_id", "email", "status", "metadata", "created_at", "currency_code",
-      "subtotal", "shipping_total", "total", "credit_line_total",
-      // "*items" on purpose: asking for items.quantity by name returns no
-      // quantity, and Medusa then computes every total as zero.
-      "*items",
-      "*shipping_address",
-    ].join(",");
-    const res = await fetch(`${ADMIN_BASE}/admin/orders/${orderId}?fields=${fields}`, {
-      headers: { Authorization: `Basic ${key}` },
-      cache: "no-store",
-    });
-    if (!res.ok) return null;
-    const data = (await res.json()) as { order?: MedusaOrder };
-    return data.order ?? null;
-  } catch {
-    return null;
-  }
-}
+import { fetchInvoiceOrder } from "@/lib/invoice-order";
+import { sellerIssues } from "@/lib/invoice-view";
 
 /* ── Helpers ──────────────────────────────────────────────── */
 
@@ -61,13 +33,14 @@ export default async function InvoicePage({
   const user = await getCurrentUser();
   if (!user) redirect("/sign-in");
 
-  const order = await fetchOrder(id);
+  const order = await fetchInvoiceOrder(id);
   if (!order) notFound();
 
   const medusaCustomerId = user.publicMetadata?.medusaCustomerId as string | undefined;
   if (!medusaCustomerId || order.customer_id !== medusaCustomerId) notFound();
 
   const invoice = invoiceInfo(order.metadata);
+  const issues = invoice.kind === "tax_invoice" ? sellerIssues(storeConfig.seller) : [];
 
   return (
     <div className="max-w-[800px] mx-auto px-6 lg:px-10 py-12">
@@ -78,15 +51,26 @@ export default async function InvoicePage({
         >
           ‹ Back to order
         </Link>
-        <PrintButton />
+        <div className="flex items-center gap-4">
+          {invoice.kind === "tax_invoice" && issues.length === 0 && (
+            <a
+              href={`/orders/${order.id}/invoice/pdf`}
+              className="font-sans text-[13px] text-[#626262] underline underline-offset-2 hover:text-black transition-colors duration-200"
+            >
+              Download PDF
+            </a>
+          )}
+          <PrintButton />
+        </div>
       </div>
 
-      {invoice.kind === "tax_invoice" && !storeConfig.seller.gstin && (
+      {issues.length > 0 && (
         <div className="mb-6 p-4 bg-[#FFFDF0] border border-[#E8D87A] rounded-2xl print:hidden">
-          <p className="font-sans text-[13px] text-[#7A6200]">
-            SELLER_GSTIN is not set. This invoice is missing a GST registration number and is not
-            valid for compliance purposes until that&apos;s configured.
-          </p>
+          {issues.map((issue) => (
+            <p key={issue} className="font-sans text-[13px] text-[#7A6200]">
+              {issue} It is not valid for compliance purposes until that&apos;s configured.
+            </p>
+          ))}
         </div>
       )}
 

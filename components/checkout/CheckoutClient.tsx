@@ -6,8 +6,13 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
-import { useCartStore } from "@/store/useStore";
+import { lineKey, useCartStore } from "@/store/useStore";
 import type { CartItem } from "@/store/useStore";
+import type { CartSummary } from "@/lib/medusa-cart";
+import { fetchCheckoutPricing } from "@/lib/checkout-pricing";
+import { COD_CHARGE } from "@/config/offers";
+import { ToteLine, ToteOffer } from "@/components/offers/ToteOffer";
+import { CHECKOUT_TERMS_TEXT } from "@/config/policy-copy";
 import { estimatedDeliveryDate, formatDeliveryDateShort } from "@/lib/delivery-date";
 import { formatRupees } from "@/lib/money";
 import { WalletPanel } from "@/components/checkout/WalletPanel";
@@ -58,16 +63,12 @@ interface DisplayTotals {
   total: number;
   /** True when Medusa cart hasn't synced yet, values are client estimates. */
   isEstimate: boolean;
-}
-
-/** Cart totals returned by /api/wallet/apply, in rupees. */
-interface WalletCartTotals {
-  subtotal: number;
-  taxTotal: number;
-  shippingTotal: number;
-  discountTotal: number;
-  walletCredit: number;
-  total: number;
+  /** The complimentary tote bag is in the order. */
+  toteInCart: boolean;
+  /** How the order will be paid, which decides the delivery charge. */
+  mode: "prepaid" | "cod";
+  /** The discount code on the order, if any. */
+  promoCode: string | null;
 }
 
 /* ── Validation ───────────────────────────────────────────── */
@@ -151,6 +152,33 @@ function StepIndicator({ current }: { current: CheckoutStep }) {
   );
 }
 
+/* ── Shared price rows ────────────────────────────────────── */
+function DiscountRow({ totals }: { totals: DisplayTotals }) {
+  if (totals.discount <= 0) return null;
+  return (
+    <div className="flex justify-between">
+      <span className="text-[#626262]">Discount{totals.promoCode ? ` (${totals.promoCode})` : ""}</span>
+      <span className="text-black">− ₹{totals.discount.toLocaleString("en-IN")}</span>
+    </div>
+  );
+}
+
+/** Prepaid orders ship free; Cash on Delivery shows its own charge, never mixed into the price of the items. */
+function DeliveryRow({ totals }: { totals: DisplayTotals }) {
+  return (
+    <div className="flex justify-between">
+      <span className="text-[#626262]">{totals.mode === "cod" ? "Cash on Delivery charge" : "Delivery"}</span>
+      {totals.isEstimate ? (
+        <span className="text-black">-</span>
+      ) : totals.delivery === 0 ? (
+        <span className="font-medium" style={{ color: "#47B10A" }}>Free</span>
+      ) : (
+        <span className="text-black">₹{totals.delivery.toLocaleString("en-IN")}</span>
+      )}
+    </div>
+  );
+}
+
 /* ── Order sidebar ────────────────────────────────────────── */
 function OrderSidebar({ items, totals }: { items: CartItem[]; totals: DisplayTotals }) {
   const totalQty = items.reduce((s, i) => s + i.quantity, 0);
@@ -163,17 +191,18 @@ function OrderSidebar({ items, totals }: { items: CartItem[]; totals: DisplayTot
 
       <div className="flex flex-col gap-3 max-h-[260px] overflow-y-auto pr-1">
         {items.map((item) => (
-          <div key={`${item.product.id}-${item.size}`} className="flex gap-3 items-center">
+          <div key={lineKey(item)} className="flex gap-3 items-center">
             <div className="relative w-12 h-12 flex-shrink-0 rounded-xl overflow-hidden bg-white border border-[#E1E1E1]">
               <Image src={item.product.images[0]} alt={item.product.name} fill className="object-contain p-1" sizes="48px" />
             </div>
             <div className="flex-1 min-w-0">
               <p className="font-sans font-normal text-[13px] text-black truncate">{item.product.name}</p>
               {item.size && <p className="font-sans font-normal text-[11px] text-[#909090]">Size: {item.size}</p>}
+              {item.variantLabel && <p className="font-sans font-normal text-[11px] text-[#909090]">{item.variantLabel}</p>}
               <p className="font-sans font-normal text-[11px] text-[#626262]">Qty: {item.quantity}</p>
             </div>
             <span className="font-sans font-medium text-[13px] text-black flex-shrink-0">
-              ₹{(item.product.price * item.quantity).toLocaleString("en-IN")}
+              ₹{(item.unitPrice * item.quantity).toLocaleString("en-IN")}
             </span>
           </div>
         ))}
@@ -186,28 +215,14 @@ function OrderSidebar({ items, totals }: { items: CartItem[]; totals: DisplayTot
           <span className="text-[#626262]">Subtotal ({totalQty} {totalQty === 1 ? "item" : "items"})</span>
           <span className="text-black">₹{totals.subtotal.toLocaleString("en-IN")}</span>
         </div>
-        {totals.discount > 0 && (
-          <div className="flex justify-between">
-            <span className="text-[#626262]">Discount</span>
-            <span className="text-black">− ₹{totals.discount.toLocaleString("en-IN")}</span>
-          </div>
-        )}
+        <DiscountRow totals={totals} />
         <div className="flex justify-between">
           <span className="text-[#626262]">Tax (GST)</span>
           <span className="text-black">
             {totals.isEstimate ? "-" : `₹${totals.tax.toLocaleString("en-IN")}`}
           </span>
         </div>
-        <div className="flex justify-between">
-          <span className="text-[#626262]">Delivery</span>
-          {totals.isEstimate ? (
-            <span className="text-black">-</span>
-          ) : totals.delivery === 0 ? (
-            <span className="font-medium" style={{ color: "#47B10A" }}>FREE</span>
-          ) : (
-            <span className="text-black">₹{totals.delivery}</span>
-          )}
-        </div>
+        <DeliveryRow totals={totals} />
         {totals.walletCredit > 0 && (
           <div className="flex justify-between">
             <span className="text-[#626262]">Wallet credit</span>
@@ -226,6 +241,8 @@ function OrderSidebar({ items, totals }: { items: CartItem[]; totals: DisplayTot
           ₹{totals.total.toLocaleString("en-IN")}
         </span>
       </div>
+
+      {!totals.isEstimate && <ToteOffer itemsSubtotal={totals.subtotal} inCart={totals.toteInCart} />}
     </div>
   );
 }
@@ -422,7 +439,7 @@ function ReviewStep({
         </div>
         <div className="divide-y divide-[#F5F5F5]">
           {items.map((item) => (
-            <div key={`${item.product.id}-${item.size}`} className="flex gap-4 px-5 py-4 items-center">
+            <div key={lineKey(item)} className="flex gap-4 px-5 py-4 items-center">
               <div className="relative w-[60px] h-[60px] flex-shrink-0 rounded-xl overflow-hidden bg-[#F9F9F9] border border-[#E1E1E1]">
                 <Image src={item.product.images[0]} alt={item.product.name} fill className="object-contain p-1.5" sizes="60px" />
               </div>
@@ -430,21 +447,23 @@ function ReviewStep({
                 <p className="font-sans font-normal text-[15px] text-black">{item.product.name}</p>
                 <div className="flex items-center gap-3 mt-0.5 flex-wrap">
                   {item.size && <span className="font-sans text-[12px] text-[#909090]">Size: {item.size}</span>}
+                  {item.variantLabel && <span className="font-sans text-[12px] text-[#909090]">{item.variantLabel}</span>}
                   <span className="font-sans text-[12px] text-[#909090]">Qty: {item.quantity}</span>
                 </div>
               </div>
               <div className="flex flex-col items-end flex-shrink-0">
                 <span className="font-sans font-medium text-[15px] text-black">
-                  ₹{(item.product.price * item.quantity).toLocaleString("en-IN")}
+                  ₹{(item.unitPrice * item.quantity).toLocaleString("en-IN")}
                 </span>
-                {item.product.originalPrice > item.product.price && (
+                {item.originalUnitPrice > item.unitPrice && (
                   <span className="font-sans text-[12px] text-[#AAAAAA] line-through">
-                    ₹{(item.product.originalPrice * item.quantity).toLocaleString("en-IN")}
+                    ₹{(item.originalUnitPrice * item.quantity).toLocaleString("en-IN")}
                   </span>
                 )}
               </div>
             </div>
           ))}
+          {totals.toteInCart && <ToteLine className="px-5 py-4" />}
         </div>
       </div>
 
@@ -458,28 +477,14 @@ function ReviewStep({
             <span className="text-[#626262]">Subtotal</span>
             <span className="text-black">₹{totals.subtotal.toLocaleString("en-IN")}</span>
           </div>
-          {totals.discount > 0 && (
-            <div className="flex justify-between">
-              <span className="text-[#626262]">Discount</span>
-              <span className="text-black">− ₹{totals.discount.toLocaleString("en-IN")}</span>
-            </div>
-          )}
+          <DiscountRow totals={totals} />
           <div className="flex justify-between">
             <span className="text-[#626262]">Tax (GST)</span>
             <span className="text-black">
               {totals.isEstimate ? "-" : `₹${totals.tax.toLocaleString("en-IN")}`}
             </span>
           </div>
-          <div className="flex justify-between">
-            <span className="text-[#626262]">Delivery</span>
-            {totals.isEstimate ? (
-              <span className="text-black">-</span>
-            ) : totals.delivery === 0 ? (
-              <span className="font-medium" style={{ color: "#47B10A" }}>FREE</span>
-            ) : (
-              <span className="text-black">₹{totals.delivery}</span>
-            )}
-          </div>
+          <DeliveryRow totals={totals} />
           {totals.walletCredit > 0 && (
             <div className="flex justify-between">
               <span className="text-[#626262]">Wallet credit</span>
@@ -535,6 +540,7 @@ function ReviewStep({
 function PaymentStep({
   totals, shippingForm, paymentMethod, loading, razorpayError, serviceability,
   walletBalance, walletBusy, walletError, walletOnly,
+  termsAccepted, onTermsChange,
   onSelectMethod, onToggleWallet, onBack, onPlaceOrder,
 }: {
   totals: DisplayTotals; shippingForm: ShippingForm;
@@ -544,6 +550,9 @@ function PaymentStep({
   walletBalance: number | null; walletBusy: boolean; walletError: string;
   /** True when wallet credit pays for the whole order, so no payment method is needed. */
   walletOnly: boolean;
+  /** The customer has agreed to the return terms; an order cannot be placed until they do. */
+  termsAccepted: boolean;
+  onTermsChange: (accepted: boolean) => void;
   onSelectMethod: (m: PaymentMethod) => void;
   onToggleWallet: (on: boolean) => void;
   onBack: () => void; onPlaceOrder: () => void;
@@ -603,6 +612,9 @@ function PaymentStep({
             <p className="font-sans font-normal text-[13px] text-[#626262] mt-1">
               Pay in cash when your order arrives. No online transaction needed.
             </p>
+            <p className="font-sans font-medium text-[13px] text-black mt-1.5">
+              Adds a ₹{COD_CHARGE} Cash on Delivery charge.
+            </p>
           </div>
           <svg className="flex-shrink-0 mt-0.5" width="30" height="30" viewBox="0 0 24 24" fill="none" aria-hidden="true">
             <rect x="2" y="5" width="20" height="14" rx="2" stroke="#626262" strokeWidth="1.5" />
@@ -625,6 +637,9 @@ function PaymentStep({
             <p className="font-sans font-medium text-[16px] text-black">Prepaid via Razorpay</p>
             <p className="font-sans font-normal text-[13px] text-[#626262] mt-1">
               Pay securely via UPI, credit/debit card, net banking, or wallet.
+            </p>
+            <p className="font-sans font-medium text-[13px] mt-1.5" style={{ color: "#3D7A1A" }}>
+              Free shipping on prepaid orders.
             </p>
             <div className="flex items-center gap-1.5 mt-2.5 flex-wrap">
               {["UPI", "Cards", "Net Banking", "Wallets"].map((m) => (
@@ -673,6 +688,24 @@ function PaymentStep({
         </p>
       </div>
 
+      <label className="flex items-start gap-3 rounded-2xl border border-[#E1E1E1] p-4 cursor-pointer">
+        <input
+          type="checkbox"
+          data-testid="return-terms-checkbox"
+          checked={termsAccepted}
+          onChange={(e) => onTermsChange(e.target.checked)}
+          className="mt-[3px] h-4 w-4 flex-shrink-0 accent-black"
+        />
+        <span className="font-sans text-[13px] leading-[20px] text-[#444]">{CHECKOUT_TERMS_TEXT}</span>
+      </label>
+      <p className="-mt-3 px-1 font-sans text-[12px] leading-[18px] text-[#909090]" data-testid="return-terms-note">
+        There is no return fee for a damaged or defective item. The ₹99 fee includes 18% GST.{" "}
+        <Link href="/refund-policy" target="_blank" className="text-black underline underline-offset-2">
+          Read the full return policy
+        </Link>
+        .
+      </p>
+
       <div className="flex gap-3">
         <button
           onClick={onBack}
@@ -683,7 +716,7 @@ function PaymentStep({
         </button>
         <button
           onClick={onPlaceOrder}
-          disabled={(!walletOnly && !paymentMethod) || loading}
+          disabled={(!walletOnly && !paymentMethod) || !termsAccepted || loading}
           className="flex-[2] h-[52px] bg-black text-white font-sans font-medium text-[16px] rounded-full hover:bg-[#1a1a1a] disabled:opacity-40 disabled:cursor-not-allowed transition-colors duration-200 flex items-center justify-center gap-2"
           style={{ boxShadow: "inset 0px 6px 10px rgba(211,211,211,0.3)" }}
         >
@@ -730,40 +763,49 @@ export function CheckoutClient() {
   const serverTotals = useCartStore((s) => s.serverTotals);
   const clearCart = useCartStore((s) => s.clearCart);
 
-  // Server-authoritative totals from Medusa. Falls back to a client-side estimate
-  // (no tax/delivery) only when the cart has not yet synced with the backend.
-  //
-  // Once the customer has toggled wallet credit, Medusa's answer to that call
-  // (which includes the credit) takes over, since the cart store's own totals
-  // do not know about the wallet.
-  const [walletTotals, setWalletTotals] = useState<WalletCartTotals | null>(null);
+  // Server-authoritative totals. The backend prices the cart for how the customer
+  // means to pay (free shipping prepaid, the Cash on Delivery charge for COD) and
+  // for any wallet credit, and every call below hands back the cart it priced.
+  // Until the first answer, the cart store's own totals stand in, on a prepaid
+  // basis, and before even those arrive the numbers are client estimates.
+  const [pricing, setPricing] = useState<CartSummary | null>(null);
 
   const displayTotals = useMemo<DisplayTotals>(() => {
-    if (walletTotals) {
+    if (pricing) {
+      const t = pricing.totals;
       return {
-        subtotal: walletTotals.subtotal,
-        tax: walletTotals.taxTotal,
-        delivery: walletTotals.shippingTotal,
-        discount: walletTotals.discountTotal,
-        walletCredit: walletTotals.walletCredit,
-        total: walletTotals.total,
+        subtotal: Math.round(t.items_subtotal),
+        tax: Math.round(t.tax_total),
+        delivery: Math.round(t.shipping_total),
+        discount: Math.round(t.discount_total),
+        walletCredit: Math.round(t.wallet_credit),
+        total: Math.round(t.total),
         isEstimate: false,
+        toteInCart: pricing.tote.in_cart,
+        mode: pricing.payment_mode ?? "prepaid",
+        promoCode: pricing.promo_codes[0] ?? null,
       };
     }
     if (serverTotals) {
       return {
         subtotal: serverTotals.subtotal,
         tax: serverTotals.taxTotal,
-        delivery: serverTotals.shippingTotal,
+        delivery: 0,
         discount: serverTotals.discountTotal,
         walletCredit: 0,
-        total: serverTotals.total,
+        total: serverTotals.subtotal - serverTotals.discountTotal,
         isEstimate: false,
+        toteInCart: serverTotals.tote.inCart,
+        mode: "prepaid",
+        promoCode: serverTotals.promoCodes[0] ?? null,
       };
     }
-    const subtotal = items.reduce((s, i) => s + i.product.price * i.quantity, 0);
-    return { subtotal, tax: 0, delivery: 0, discount: 0, walletCredit: 0, total: subtotal, isEstimate: true };
-  }, [walletTotals, serverTotals, items]);
+    const subtotal = items.reduce((s, i) => s + i.unitPrice * i.quantity, 0);
+    return {
+      subtotal, tax: 0, delivery: 0, discount: 0, walletCredit: 0, total: subtotal,
+      isEstimate: true, toteInCart: false, mode: "prepaid", promoCode: null,
+    };
+  }, [pricing, serverTotals, items]);
 
   /* Step machine */
   const [step, setStep] = useState<CheckoutStep>(1);
@@ -782,6 +824,7 @@ export function CheckoutClient() {
   /* Payment */
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | null>(null);
   const [payLoading, setPayLoading] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const [razorpayError, setRazorpayError] = useState("");
 
 
@@ -799,40 +842,40 @@ export function CheckoutClient() {
   const walletClearedFor = useRef<string | null>(null);
   const userId = user?.id;
 
-  /* Read the wallet, and clear any credit left on the cart from an earlier
-     visit to checkout, so what is shown always matches what will be charged. */
+  /* Price the cart for prepaid on arrival, with any credit left on it from an
+     earlier visit cleared, so what is shown always matches what will be charged.
+     Signed-in customers also have their wallet read. */
   useEffect(() => {
-    if (!userId) return;
     let cancelled = false;
 
     (async () => {
-      try {
-        const res = await fetch("/api/wallet");
-        const data = (await res.json()) as { balance?: number };
-        if (!cancelled) setWalletBalance(typeof data.balance === "number" ? data.balance : 0);
-      } catch {
-        if (!cancelled) setWalletBalance(0);
+      if (userId) {
+        try {
+          const res = await fetch("/api/wallet");
+          const data = (await res.json()) as { balance?: number };
+          if (!cancelled) setWalletBalance(typeof data.balance === "number" ? data.balance : 0);
+        } catch {
+          if (!cancelled) setWalletBalance(0);
+        }
       }
 
       if (!cartId || walletClearedFor.current === cartId) return;
       walletClearedFor.current = cartId;
-      try {
-        const res = await fetch("/api/wallet/apply", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ cartId, apply: false }),
-        });
-        if (res.ok && !cancelled) {
-          const data = (await res.json()) as { totals: WalletCartTotals };
-          setWalletTotals(data.totals);
-        }
-      } catch {
-        // Not fatal: the server clears unused credit again when payment starts.
-      }
+      const result = await fetchCheckoutPricing(cartId, "prepaid", "off");
+      if (result.ok && !cancelled) setPricing(result.cart);
+      // Not fatal on failure: the server prices the cart again when payment starts.
     })();
 
     return () => { cancelled = true; };
   }, [userId, cartId]);
+
+  /* Choose how to pay. The delivery charge and total follow the choice. */
+  async function handleSelectMethod(method: PaymentMethod) {
+    setPaymentMethod(method);
+    if (!cartId) return;
+    const result = await fetchCheckoutPricing(cartId, method, "keep");
+    if (result.ok) setPricing(result.cart);
+  }
 
   /* Switch wallet credit on or off for this cart. */
   async function handleToggleWallet(on: boolean) {
@@ -840,20 +883,13 @@ export function CheckoutClient() {
     setWalletBusy(true);
     setWalletError("");
     try {
-      const res = await fetch("/api/wallet/apply", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ cartId, apply: on }),
-      });
-      const data = (await res.json()) as {
-        totals?: WalletCartTotals; walletBalance?: number; message?: string;
-      };
-      if (!res.ok || !data.totals) {
-        setWalletError(data.message ?? "Could not update your wallet credit. Please try again.");
+      const result = await fetchCheckoutPricing(cartId, paymentMethod ?? "prepaid", on ? "on" : "off");
+      if (!result.ok) {
+        setWalletError(result.message);
         return;
       }
-      setWalletTotals(data.totals);
-      if (on && typeof data.walletBalance === "number") setWalletBalance(data.walletBalance);
+      setPricing(result.cart);
+      if (on && typeof result.walletBalance === "number") setWalletBalance(result.walletBalance);
     } catch (err) {
       console.error("[EYRA/wallet] toggle failed:", err);
       setWalletError("Could not update your wallet credit. Please try again.");
@@ -985,6 +1021,10 @@ export function CheckoutClient() {
   /* Place order handler */
   async function handlePlaceOrder() {
     if (!paymentMethod && !walletOnly) return;
+    if (!termsAccepted) {
+      setRazorpayError("Please agree to the return terms to place your order.");
+      return;
+    }
     setPayLoading(true);
     setRazorpayError("");
 
@@ -1288,7 +1328,9 @@ export function CheckoutClient() {
                 walletBusy={walletBusy}
                 walletError={walletError}
                 walletOnly={walletOnly}
-                onSelectMethod={setPaymentMethod}
+                termsAccepted={termsAccepted}
+                onTermsChange={setTermsAccepted}
+                onSelectMethod={handleSelectMethod}
                 onToggleWallet={handleToggleWallet}
                 onBack={() => setStep(2)}
                 onPlaceOrder={handlePlaceOrder}

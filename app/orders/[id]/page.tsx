@@ -1,3 +1,5 @@
+import { ORDERED_STEPS, detectStep, recordedStatusNote, recordedStep } from "@/lib/tracking-steps";
+import { totalAfterWallet, walletCreditOf } from "@/lib/order-credit";
 import type { Metadata } from "next";
 import { formatRupees } from "@/lib/money";
 import { getCurrentUser } from "@/lib/current-user";
@@ -12,12 +14,15 @@ import CancelOrderPanel from "@/components/orders/CancelOrderPanel";
 import CancellationBanner from "@/components/orders/CancellationBanner";
 import { invoiceInfo } from "@/lib/invoice-kind";
 import { fetchCancellationPreview } from "@/lib/medusa-cancellation";
+import { listCreditNotes } from "@/lib/medusa-credit-notes";
 
 /* ── Medusa types ─────────────────────────────────────────── */
 
 interface MedusaOrderItem {
   id: string;
   title: string;
+  /** For example "Pair" or "With silver chain". */
+  variant_title?: string | null;
   quantity: number;
   unit_price: number;
   total: number;
@@ -44,10 +49,15 @@ interface MedusaOrder {
   fulfillment_status: string;
   total: number;
   subtotal: number;
+  /** Price of the items before any discount, without shipping. */
+  item_subtotal?: number;
+  discount_total?: number;
   tax_total: number;
+  /** The Cash on Delivery charge, or zero for prepaid orders. */
   shipping_total: number;
-  /** Wallet credit used on this order; `total` is already net of it. */
+  /** All credit lines on the order; `total` is already net of them. Only the wallet's count as wallet credit (see lib/order-credit). */
   credit_line_total?: number;
+  credit_lines?: { amount?: number | string | null; reference?: string | null }[];
   currency_code: string;
   created_at: string;
   items: MedusaOrderItem[];
@@ -59,6 +69,10 @@ interface MedusaOrder {
     dispatch_state?: string;
     invoice_number?: string;
     invoice_date?: string;
+    shiprocket_status?: string;
+    shiprocket_status_updated_at?: string;
+    /** Set on the order sent to replace an item in an exchange. */
+    replacement_for_order?: string;
   };
 }
 
@@ -96,7 +110,7 @@ async function fetchOrder(orderId: string): Promise<MedusaOrder | null> {
   try {
     // customer_id isn't in Medusa's default retrieve fields, request it
     // explicitly so ownership can be verified before rendering the order.
-    const res = await fetch(`${ADMIN_BASE}/admin/orders/${orderId}?fields=+customer_id,+credit_line_total`, {
+    const res = await fetch(`${ADMIN_BASE}/admin/orders/${orderId}?fields=+customer_id,+credit_line_total,+item_subtotal,+discount_total,*credit_lines`, {
       // Secret API keys (sk_...) authenticate via HTTP Basic, not this header.
       headers: { Authorization: `Basic ${key}` },
       cache: "no-store",
@@ -156,41 +170,25 @@ function formatAmount(amount: number): string {
   return `₹${Math.round(amount).toLocaleString("en-IN")}`;
 }
 
-type TrackStep = {
-  label: string;
-  key: string[];
-};
-
-const ORDERED_STEPS: TrackStep[] = [
-  { label: "Order Placed",      key: ["order placed", "new", "pending"] },
-  { label: "Pickup Scheduled",  key: ["pickup scheduled", "pickup generated", "pickup queued"] },
-  { label: "Picked Up",         key: ["picked up", "out for pickup", "in transit"] },
-  { label: "Shipped",           key: ["shipped", "dispatched", "reached hub", "hub"] },
-  { label: "Out for Delivery",  key: ["out for delivery"] },
-  { label: "Delivered",         key: ["delivered"] },
-];
-
-function detectStep(text: string): number {
-  const lower = text.toLowerCase();
-  for (let i = ORDERED_STEPS.length - 1; i >= 0; i--) {
-    if (ORDERED_STEPS[i].key.some((k) => lower.includes(k))) return i;
-  }
-  return 0;
-}
-
 function TrackingTimeline({
   activities,
+  recordedStatus,
+  recordedAt,
   awbCode,
   courierName,
 }: {
   activities: TrackActivity[];
   awbCode: string;
   courierName?: string;
+  /** The courier's latest status as our order recorded it, used when the courier's feed has nothing. */
+  recordedStatus?: string | null;
+  recordedAt?: string | null;
 }) {
   // Determine how far along the canonical steps we are
-  const latestStep = activities.length > 0
+  const feedStep = activities.length > 0
     ? Math.max(...activities.map((a) => detectStep(a.status ?? a.activity)))
     : 0;
+  const latestStep = Math.max(feedStep, recordedStep(recordedStatus));
 
   return (
     <div className="rounded-2xl border border-[#E1E1E1] overflow-hidden">
@@ -290,7 +288,7 @@ function TrackingTimeline({
       ) : (
         <div className="px-5 py-6 text-center">
           <p className="font-sans text-[13px] text-[#909090]">
-            Tracking details will appear once the parcel is handed to the courier.
+            {recordedStatusNote(recordedStatus, recordedAt) ?? "Tracking details will appear once the parcel is handed to the courier."}
           </p>
         </div>
       )}
@@ -325,6 +323,11 @@ export default async function OrderDetailPage({
   const activities = awbCode ? await fetchTracking(awbCode) : [];
 
   const requests = (await listReturnRequests(medusaCustomerId, order.id)) ?? [];
+  const creditNotes = (await listCreditNotes(order.id)) ?? [];
+  // Once a parcel has been delivered, or is coming back to us, it can no longer be cancelled:
+  // the return and exchange terms below take over.
+  const courierStatus = String(order.metadata?.shiprocket_status ?? "").trim().toUpperCase();
+  const delivered = courierStatus === "DELIVERED" || courierStatus.startsWith("RTO");
   // What this customer can do about cancelling, and what happened if they did.
   const preview = await fetchCancellationPreview(order.id, medusaCustomerId);
   const isCancelled = order.status === "canceled";
@@ -373,7 +376,7 @@ export default async function OrderDetailPage({
         </div>
         <div className="flex items-center gap-4">
           <span className="font-sans font-semibold text-[22px] text-black">
-            {formatAmount(order.total)}
+            {formatAmount(totalAfterWallet(order))}
           </span>
           <Link
             href={`/orders/${order.id}/invoice`}
@@ -404,7 +407,16 @@ export default async function OrderDetailPage({
         <div className="flex-1 flex flex-col gap-6">
 
           {/* Cancelling: the window, or why it is no longer possible */}
-          {preview && !isCancelled && <CancelOrderPanel orderId={order.id} preview={preview} />}
+          {preview && !isCancelled && !delivered && <CancelOrderPanel orderId={order.id} preview={preview} />}
+
+          {order.metadata?.replacement_for_order && (
+            <p className="rounded-2xl border border-[#E1E1E1] bg-[#FAFAFA] px-5 py-4 font-sans text-[13px] text-[#444]">
+              This is the replacement we are sending for your exchange. It is already paid for.{" "}
+              <Link href={`/orders/${order.metadata.replacement_for_order}`} className="text-black underline underline-offset-2">
+                See the original order
+              </Link>
+            </p>
+          )}
 
           {/* Tracking timeline, only when AWB exists */}
           {awbCode && (
@@ -412,6 +424,8 @@ export default async function OrderDetailPage({
               activities={activities}
               awbCode={awbCode}
               courierName={courierName}
+              recordedStatus={order.metadata?.shiprocket_status}
+              recordedAt={order.metadata?.shiprocket_status_updated_at}
             />
           )}
 
@@ -449,20 +463,57 @@ export default async function OrderDetailPage({
                               ? "bg-[#E8F7DD] text-[#2F7A06]"
                               : request.status === "rejected"
                               ? "bg-[#FFF1F1] text-[#B42318]"
+                              : request.status === "pending_fee"
+                              ? "bg-[#FFF6E5] text-[#8A5A00]"
                               : "bg-[#F0F0F0] text-[#626262]"
                           }`}
                         >
-                          {STATUS_LABELS[request.status as ReturnRequestStatus]}
+                          {STATUS_LABELS[request.status as ReturnRequestStatus] ?? request.status}
                         </span>
                       </div>
                       <p className="mt-1 font-sans text-[12px] text-[#909090]">
                         {request.items.map((item) => `${item.quantity} × ${item.title}`).join(", ")}
                       </p>
+                      {request.exchange?.replacementTitle && (
+                        <p className="mt-1 font-sans text-[12px] text-[#626262]">
+                          Exchange for: {request.exchange.replacementTitle}
+                        </p>
+                      )}
+                      {request.status === "pending_fee" && request.exchange?.feeLinkUrl && (
+                        <a
+                          href={request.exchange.feeLinkUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="mt-2 inline-block rounded-full bg-black px-5 py-2 font-sans text-[12px] text-white"
+                        >
+                          Pay {formatRupees(request.exchange.amountDue ?? 0)} to confirm your exchange
+                        </a>
+                      )}
+                      {request.status === "reverse_pickup_scheduled" && (
+                        <p className="mt-1 font-sans text-[12px] text-[#626262]">
+                          The courier will collect your item
+                          {request.reverseAwb ? ` (tracking number ${request.reverseAwb})` : ""}. Please hand it over in its original box.
+                        </p>
+                      )}
+                      {request.status === "awaiting_inspection" && (
+                        <p className="mt-1 font-sans text-[12px] text-[#626262]">
+                          Your item reached us and is being checked. We will message you as soon as it is done.
+                        </p>
+                      )}
                       {request.status === "approved" && request.creditAmount ? (
                         <p className="mt-1 font-sans text-[12px] text-[#2F7A06]">
-                          {formatRupees(request.creditAmount)} added to your wallet.
+                          {formatRupees(request.creditAmount)} added to your wallet as store credit.
                         </p>
                       ) : null}
+                      {request.status === "approved" && request.exchange?.replacementOrderId && (
+                        <p className="mt-1 font-sans text-[12px] text-[#2F7A06]">
+                          Your replacement is on its way:{" "}
+                          <Link href={`/orders/${request.exchange.replacementOrderId}`} className="underline underline-offset-2">
+                            see the replacement order
+                          </Link>
+                          .
+                        </p>
+                      )}
                       {request.resolutionNote && (
                         <p className="mt-1 font-sans text-[12px] text-[#626262]">{request.resolutionNote}</p>
                       )}
@@ -470,6 +521,33 @@ export default async function OrderDetailPage({
                   ))}
                 </div>
               )}
+            </div>
+          )}
+
+          {/* GST credit notes: the documents that reverse part of the tax invoice */}
+          {creditNotes.length > 0 && (
+            <div className="rounded-2xl border border-[#E1E1E1] overflow-hidden">
+              <div className="bg-[#F7F7F7] px-5 py-3">
+                <p className="font-sans font-medium text-[12px] text-[#626262] uppercase tracking-wider">Credit notes</p>
+              </div>
+              <div className="divide-y divide-[#F5F5F5]">
+                {creditNotes.map((note) => (
+                  <div key={note.id} className="flex items-center justify-between gap-3 px-5 py-4">
+                    <div>
+                      <p className="font-sans text-[14px] text-black">{note.number}</p>
+                      <p className="font-sans text-[12px] text-[#909090]">
+                        Against invoice {note.originalInvoiceNumber} · {formatRupees(note.total)}
+                      </p>
+                    </div>
+                    <a
+                      href={`/orders/${order.id}/credit-notes/${note.id}/pdf`}
+                      className="font-sans text-[12px] text-black underline underline-offset-2 hover:text-[#626262]"
+                    >
+                      Download PDF
+                    </a>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 
@@ -505,12 +583,15 @@ export default async function OrderDetailPage({
                     <p className="font-sans font-normal text-[14px] text-black truncate">
                       {item.title}
                     </p>
+                    {item.variant_title && item.variant_title !== "Default Title" && item.variant_title !== item.title && (
+                      <p className="font-sans text-[12px] text-[#909090] mt-0.5">{item.variant_title}</p>
+                    )}
                     <p className="font-sans text-[12px] text-[#909090] mt-0.5">
                       Qty: {item.quantity}
                     </p>
                   </div>
                   <span className="font-sans font-medium text-[14px] text-black flex-shrink-0">
-                    {formatAmount(item.unit_price * item.quantity)}
+                    {item.unit_price === 0 ? "Free" : formatAmount(item.unit_price * item.quantity)}
                   </span>
                 </div>
               ))}
@@ -531,28 +612,34 @@ export default async function OrderDetailPage({
             <div className="px-5 py-4 flex flex-col gap-2.5 font-sans text-[13px]">
               <div className="flex justify-between">
                 <span className="text-[#626262]">Subtotal</span>
-                <span className="text-black">{formatAmount(order.subtotal)}</span>
+                <span className="text-black">{formatAmount(order.item_subtotal ?? order.subtotal)}</span>
               </div>
+              {(order.discount_total ?? 0) > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-[#626262]">Discount</span>
+                  <span className="text-black">− {formatAmount(order.discount_total ?? 0)}</span>
+                </div>
+              )}
               <div className="flex justify-between">
                 <span className="text-[#626262]">Tax</span>
                 <span className="text-black">{formatAmount(order.tax_total)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-[#626262]">Shipping</span>
+                <span className="text-[#626262]">{order.shipping_total === 0 ? "Shipping" : "Cash on Delivery charge"}</span>
                 {order.shipping_total === 0
-                  ? <span className="font-medium" style={{ color: "#47B10A" }}>FREE</span>
+                  ? <span className="font-medium" style={{ color: "#47B10A" }}>Free</span>
                   : <span className="text-black">{formatAmount(order.shipping_total)}</span>}
               </div>
-              {(order.credit_line_total ?? 0) > 0 && (
+              {walletCreditOf(order) > 0 && (
                 <div className="flex justify-between">
                   <span className="text-[#626262]">Wallet credit</span>
-                  <span className="font-medium" style={{ color: "#47B10A" }}>− {formatRupees(order.credit_line_total ?? 0)}</span>
+                  <span className="font-medium" style={{ color: "#47B10A" }}>− {formatRupees(walletCreditOf(order))}</span>
                 </div>
               )}
               <div className="h-px bg-[#F0F0F0] my-0.5" />
               <div className="flex justify-between">
                 <span className="font-semibold text-black">Total</span>
-                <span className="font-semibold text-[16px] text-black">{formatAmount(order.total)}</span>
+                <span className="font-semibold text-[16px] text-black">{formatAmount(totalAfterWallet(order))}</span>
               </div>
             </div>
           </div>

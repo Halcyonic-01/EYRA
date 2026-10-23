@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const prepared = await prepareCartForCheckout(cartId, email, shippingAddress);
+    const prepared = await prepareCartForCheckout(cartId, email, shippingAddress, "prepaid");
     if (!prepared) {
       return NextResponse.json({ orderId: null, error: "cart_preparation_failed" }, { status: 200 });
     }

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Logo } from "@/components/ui/Logo";
 import { NewsletterForm } from "./NewsletterForm";
+import { BisMark } from "./BisMark";
 import { TrustBar } from "./TrustBar";
 import { COLLECTIONS } from "@/config/collections";
 import { storeConfig } from "@/config/storeConfig";
@@ -172,6 +173,7 @@ export function Footer() {
                   </li>
                 ))}
               </ul>
+              <BisMark />
             </div>
 
             {/* Corporate registration details */}
@@ -184,6 +186,8 @@ export function Footer() {
               <br />
               CIN: {company.cin}
               {seller.gstin && <> | GSTIN: {seller.gstin}</>}
+              <br />
+              BIS Hallmarking Registration No.: {company.bisRegistration}
               <br />
               Email:{" "}
               <a

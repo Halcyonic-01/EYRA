@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { LegalDocument } from "@/components/layout/LegalDocument";
 import { storeConfig } from "@/config/storeConfig";
+import { COD_CHARGE, TOTE_MIN_SUBTOTAL } from "@/config/offers";
 import { describeWindow } from "@/lib/cancellation";
 
 export const metadata: Metadata = {
@@ -11,7 +12,6 @@ export const metadata: Metadata = {
 
 const { contact, policy, seller } = storeConfig;
 
-const freeShipping = policy.freeShippingAbove.toLocaleString("en-IN");
 
 // Cancelling is only offered when a cancel window is set, so its text follows that setting.
 const canCancel = policy.cancelWindowMinutes > 0;
@@ -29,6 +29,8 @@ export default function ShippingPolicyPage() {
           heading: "1. Order processing and dispatch",
           body: [
             `Standard in-stock orders are prepared and dispatched within ${policy.dispatchHoursMin} to ${policy.dispatchHoursMax} hours of payment confirmation.`,
+            `Complimentary promotional tote bag included with orders above ₹${TOTE_MIN_SUBTOTAL.toLocaleString("en-IN")}; subject to stock availability.`,
+            "The tote bag is a gift with the order. It is added to your order at no charge and is packed with your parcel. The order value for this offer is the price of your items before any discount, without shipping.",
             `Personalised, engraved, or custom-made designs need an additional ${policy.customExtraDaysMin} to ${policy.customExtraDaysMax} working days for craftsmanship. If your order contains both standard and personalised jewellery, we may split the shipment so your ready-to-wear pieces are not held back.`,
             ...(canCancel
               ? [
@@ -57,8 +59,8 @@ export default function ShippingPolicyPage() {
         {
           heading: "4. Shipping charges",
           body: [
-            `Standard delivery is free across India on all prepaid orders above ₹${freeShipping}. Orders below that carry a nominal handling fee, always shown at checkout before you pay.`,
-            "Cash on delivery orders may carry an additional handling fee, which is also shown at checkout.",
+            "Standard delivery is free across India on every prepaid order. There is no minimum order value, and you do not need a code: it is applied automatically at checkout.",
+            `Cash on Delivery orders carry a ₹${COD_CHARGE} Cash on Delivery charge, added once and shown at checkout before you place the order, and it includes 18% GST. Choose a prepaid payment method and it comes off.`,
           ],
         },
         {
@@ -79,13 +81,15 @@ export default function ShippingPolicyPage() {
           heading: "7. Your invoice",
           body: [
             "We issue your GST tax invoice when your order is dispatched, not when you pay. Until then, your account shows an order receipt for the order, and the tax invoice replaces it once the order ships.",
-            "You can view and print the receipt or the invoice from the order in your account. If an order is cancelled before it ships, no tax invoice is issued for it.",
+            "You can view and print the receipt or the invoice from the order in your account. If an order is cancelled before it ships, no tax invoice is issued for it. A complimentary tote bag appears on the invoice as a free line.",
+            "If items are returned or exchanged, or an order is cancelled after it shipped or a delivery is refused, we issue a GST credit note against the invoice. It appears on the order page, where you can download it.",
           ],
         },
         {
           heading: "8. Failed deliveries and address changes",
           body: [
             "Couriers attempt delivery up to three times. Please keep the phone number on your order reachable, since most failed deliveries are caused by an unanswered verification call.",
+            "If you refuse a delivery, or the courier cannot deliver and the parcel comes back to us, we reverse the sale with a credit note and refund what you paid, less a ₹99 reverse logistics fee (see our Returns, Exchanges and Refunds policy). The Cash on Delivery charge is not refunded once delivery was attempted.",
             canCancel
               ? `We can only change a delivery address before the shipment is created, which is within the first ${cancelWindow} after you order, so email ${contact.ordersEmail} straight away with your order number. The quickest fix for a wrong address is to cancel the order from your account while you still can, choose the wallet refund to get the full amount back, and place the order again with the right address. Once the courier has the parcel, the address is fixed.`
               : `We can only change a delivery address before dispatch, so email ${contact.ordersEmail} as soon as you notice. Once the courier has the parcel, the address is fixed.`,

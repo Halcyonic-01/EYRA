@@ -27,7 +27,9 @@ export default function CancellationBanner({ summary, eta, validMonths }: Props)
     );
   } else if (summary.refund_method === "original" && !stillFinishing) {
     lines.push(
-      `Your refund of ${formatRupees(summary.refund_amount)} has started and will reach your original payment method in ${eta}. A ${formatRupees(summary.fee)} cancellation fee was kept.`
+      `Your refund of ${formatRupees(summary.refund_amount)} has started and will reach your original payment method in ${eta}.${
+        summary.fee > 0 ? ` A ${formatRupees(summary.fee)} cancellation fee was kept.` : " Nothing was deducted."
+      }`
     );
   } else if (stillFinishing && summary.paid_online > 0) {
     lines.push("We are finishing your refund and will email you as soon as it is done.");
