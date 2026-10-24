@@ -7,7 +7,7 @@ import { describeWindow } from "@/lib/cancellation";
 export const metadata: Metadata = {
   title: "Returns, Exchanges and Refunds",
   description:
-    "How to cancel an order before it ships, what to do once it has shipped, EYRA's 7-day return and exchange terms, how returns are settled as store credit, reverse pickup, and what we need to process a transit damage claim.",
+    "How to cancel an order before it ships, what to do once it has shipped, EYRA's 15-day return and 7-day exchange terms, how returns are settled as store credit, reverse pickup, and what we need to process a transit damage claim.",
 };
 
 const { contact, policy, seller } = storeConfig;
@@ -45,11 +45,11 @@ export default function RefundPolicyPage() {
           ],
         },
         {
-          heading: `2. ${policy.returnDays}-day return and exchange window`,
+          heading: `2. Returns within ${policy.returnDays} days, exchanges within ${policy.exchangeDays} days`,
           body: [
-            `Delivered items can be returned or exchanged within ${policy.returnDays} days of delivery. The ${policy.returnDays} days start from the date the courier marks your parcel delivered.`,
+            `Delivered items can be returned within ${policy.returnDays} days of delivery and exchanged within ${policy.exchangeDays} days of delivery. The days start from the date the courier marks your parcel delivered.`,
             "To qualify, the jewellery must be in its original, unworn, and unaltered condition, and must come back with all original packaging, tags, warranty and authenticity cards, and any promotional gifts, such as the complimentary tote bag or silver coins, included with the order.",
-            `Returns are settled as store credit, not cash: Free ${policy.returnDays}-Day Easy Exchanges & Store Credit Returns. No Cash Refunds. Orders that have not shipped are different: they are refunded in full (see the section on cancelling).`,
+            `Returns are settled as store credit, not cash: Free ${policy.exchangeDays}-Day Easy Exchanges & ${policy.returnDays}-Day Store Credit Returns. No Cash Refunds. Orders that have not shipped are different: they are refunded in full (see the section on cancelling).`,
           ],
         },
         {
@@ -102,7 +102,7 @@ export default function RefundPolicyPage() {
           heading: "8. Reverse pickup and remote PIN codes",
           body: [
             "Once a return is booked, our courier partner attempts a reverse pickup from your address. Please be available to hand over the parcel and to answer the agent's verification call.",
-            `Where a rural or non-standard PIN code is not reverse-serviceable, we will ask you to send the package via a reliable tracked service such as India Post Speed Post. We reimburse return postage up to ₹${policy.selfShipReimbursement} against a valid courier receipt. Any amount beyond that is borne by the customer.`,
+            `If a pickup cannot be arranged from your PIN code, email ${contact.ordersEmail} with your order number and we will arrange the return with you.`,
           ],
         },
         {
@@ -116,7 +116,7 @@ export default function RefundPolicyPage() {
         {
           heading: "10. How to start a return or exchange",
           body: [
-            "Open the order in your account, choose Return or Exchange, select the item, and pick a reason: size issue, design preference, damaged in transit, or defective. The option appears once your order has been delivered and stays for 7 days.",
+            `Open the order in your account, choose Return or Exchange, select the item, and pick a reason: size issue, design preference, damaged in transit, or defective. The option appears once your order has been delivered. Returns stay open for ${policy.returnDays} days and exchanges for ${policy.exchangeDays} days.`,
             "For a return, we book the courier right away and email you the pickup details. For an exchange we do the same, after you have paid any price difference. Pack the jewellery securely in its original box and hand it to the courier agent at pickup.",
             `For any question about an order, or if you would rather not use the account flow, email ${contact.ordersEmail} with your order number and we will open the request for you.`,
             `${seller.legalName}, ${seller.addressLine1}, ${seller.city}, ${seller.state} ${seller.pincode}, India.`,
@@ -142,7 +142,7 @@ export default function RefundPolicyPage() {
                 body: [
                   "Once the shipment has been created, the order can no longer be cancelled from your account, and the Cancel button is switched off.",
                   `If your parcel is on its way and you no longer want it, refuse the delivery at your door. The parcel comes back to us. We then reverse the sale with a GST credit note and refund what you paid, less the ₹${fee} reverse logistics fee (18% GST included) that covers the return freight. If you paid by Cash on Delivery you paid nothing, so there is nothing to refund, and the Cash on Delivery charge is not refunded once delivery was attempted.`,
-                  `If the parcel was delivered, the return and exchange terms above apply for ${policy.returnDays} days.`,
+                  `If the parcel was delivered, the return terms above apply for ${policy.returnDays} days and the exchange terms for ${policy.exchangeDays} days.`,
                   `If you need help, email ${contact.ordersEmail} with your order number.`,
                 ],
               },

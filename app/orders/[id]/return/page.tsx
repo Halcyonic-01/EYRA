@@ -68,11 +68,12 @@ export default async function ReturnPage({ params }: { params: Promise<{ id: str
 
       <h1 className="mb-2 font-sans text-[24px] font-medium text-black">Return or exchange</h1>
       <p className="mb-8 font-sans text-[14px] text-[#626262]">
-        Returns and exchanges are open for {Math.min(returnDays, exchangeDays)} days after delivery.
+        Returns are open for {returnDays} days after delivery, and exchanges for {exchangeDays} days.
         {e.returnUntil && open && (
           <>
             {" "}
-            For this order, that is until {formatDay(e.canReturn ? e.returnUntil : (e.exchangeUntil ?? e.returnUntil))}.
+            For this order, returns are open until {formatDay(e.returnUntil)}
+            {e.canExchange && e.exchangeUntil ? <> and exchanges until {formatDay(e.exchangeUntil)}</> : <> (the exchange period has ended)</>}.
           </>
         )}
       </p>

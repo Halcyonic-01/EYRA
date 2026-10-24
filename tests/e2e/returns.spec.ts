@@ -2,24 +2,25 @@ import { readFileSync } from "node:fs";
 import { test, expect } from "@playwright/test";
 
 import { CHECKOUT_TERMS_TEXT, PDP_POLICY_BADGE } from "../../config/policy-copy";
-import { RETURN_WINDOW_DAYS, REVERSE_LOGISTICS_FEE } from "../../config/policy-constants";
+import { EXCHANGE_WINDOW_DAYS, RETURN_WINDOW_DAYS, REVERSE_LOGISTICS_FEE } from "../../config/policy-constants";
 import { eligibility, needsUnboxingVideo, reasonLabel, REQUEST_REASONS, STATUS_LABELS } from "../../lib/return-requests";
 
 // The return, exchange and cancellation rules are the backend's and are tested there.
 // These cover what the storefront itself decides or says.
 
 test.describe("the fixed policy numbers", () => {
-  test("are 7 days and one flat return fee of 99; an exchange has no fee", () => {
-    expect(RETURN_WINDOW_DAYS).toBe(7);
+  test("are 15 days for a return, 7 days for an exchange, and one flat return fee of 99 (an exchange has no fee)", () => {
+    expect(RETURN_WINDOW_DAYS).toBe(15);
+    expect(EXCHANGE_WINDOW_DAYS).toBe(7);
     expect(REVERSE_LOGISTICS_FEE).toBe(99);
   });
 });
 
 test.describe("the policy wording", () => {
   test("the badge and the checkbox read exactly as the business wrote them", () => {
-    expect(PDP_POLICY_BADGE).toBe("Free 7-Day Easy Exchanges & Store Credit Returns. No Cash Refunds.");
+    expect(PDP_POLICY_BADGE).toBe("Free 7-Day Easy Exchanges & 15-Day Store Credit Returns. No Cash Refunds.");
     expect(CHECKOUT_TERMS_TEXT).toBe(
-      "I agree to EYRA JEWELS' return terms: Unshipped orders are 100% refundable. Delivered items are eligible for size exchange or store credit returns (minus a flat ₹99 reverse logistics fee) within 7 days of delivery. Unboxing video required for damaged/defective claims."
+      "I agree to EYRA JEWELS' return terms: Unshipped orders are 100% refundable. Delivered items are eligible for size exchange within 7 days of delivery, or store credit returns (minus a flat ₹99 reverse logistics fee) within 15 days of delivery. Unboxing video required for damaged/defective claims."
     );
   });
 
@@ -46,7 +47,7 @@ test.describe("the policy wording", () => {
   test("the refund policy page states the new terms", async ({ page }) => {
     await page.goto("/refund-policy");
     const body = page.locator("main");
-    await expect(body).toContainText("7-day return and exchange window");
+    await expect(body).toContainText("Returns within 15 days, exchanges within 7 days");
     await expect(body).toContainText("less a flat ₹99 reverse logistics fee");
     await expect(body).toContainText("No Cash Refunds");
     await expect(body).toContainText("100% refundable, with nothing deducted");
@@ -85,13 +86,21 @@ test.describe("reasons and statuses", () => {
 });
 
 test.describe("when a request can be made", () => {
-  const windows = { returnDays: RETURN_WINDOW_DAYS, exchangeDays: RETURN_WINDOW_DAYS };
+  const windows = { returnDays: RETURN_WINDOW_DAYS, exchangeDays: EXCHANGE_WINDOW_DAYS };
   const delivered = (at: string) => ({ status: "completed", metadata: { shiprocket_status: "Delivered", shiprocket_status_updated_at: at } });
 
-  test("opens at delivery and closes 7 days later", () => {
+  test("opens at delivery, closes exchanges after 7 days and returns after 15", () => {
     const at = "2026-10-10T08:00:00Z";
-    expect(eligibility(delivered(at), windows, new Date("2026-10-17T07:59:00Z")).canReturn).toBe(true);
-    expect(eligibility(delivered(at), windows, new Date("2026-10-17T08:01:00Z")).closedReason).toBe("window_closed");
+    const day7 = eligibility(delivered(at), windows, new Date("2026-10-17T07:59:00Z"));
+    expect(day7).toMatchObject({ canReturn: true, canExchange: true });
+
+    // Day 10: the exchange has closed but a return is still open.
+    const day10 = eligibility(delivered(at), windows, new Date("2026-10-20T08:00:00Z"));
+    expect(day10).toMatchObject({ canReturn: true, canExchange: false, closedReason: null });
+
+    const day15 = eligibility(delivered(at), windows, new Date("2026-10-25T07:59:00Z"));
+    expect(day15.canReturn).toBe(true);
+    expect(eligibility(delivered(at), windows, new Date("2026-10-25T08:01:00Z")).closedReason).toBe("window_closed");
   });
 
   test("is not open before delivery, or once the parcel is coming back", () => {

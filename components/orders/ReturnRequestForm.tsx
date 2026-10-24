@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
-import { RETURN_WINDOW_DAYS, REVERSE_LOGISTICS_FEE } from "@/config/policy-constants";
+import { EXCHANGE_WINDOW_DAYS, RETURN_WINDOW_DAYS, REVERSE_LOGISTICS_FEE } from "@/config/policy-constants";
 import { formatRupees } from "@/lib/money";
 import { REQUEST_REASONS, needsUnboxingVideo, type ReturnRequestReason, type ReturnRequestType } from "@/lib/return-requests";
 
@@ -207,7 +207,7 @@ export default function ReturnRequestForm({ orderId, orderNumber, items, canRetu
         </div>
         <p className="font-sans text-[12px] leading-relaxed text-[#909090]" data-testid="request-terms">
           {isExchange
-            ? `There is no fee for an exchange. If your new piece costs more, you pay only the difference by a secure payment link before we book the pickup. If it costs less, the difference is added to your wallet. Open for ${RETURN_WINDOW_DAYS} days after delivery.`
+            ? `There is no fee for an exchange. If your new piece costs more, you pay only the difference by a secure payment link before we book the pickup. If it costs less, the difference is added to your wallet. Open for ${EXCHANGE_WINDOW_DAYS} days after delivery.`
             : `A return is paid back as EYRA store credit, valid for ${walletCreditMonths} months: what you paid for the item, less a flat ${formatRupees(REVERSE_LOGISTICS_FEE)} reverse logistics fee (GST included; no fee at all for a damaged or defective item). There are no cash refunds on delivered items. Open for ${RETURN_WINDOW_DAYS} days after delivery.`}
         </p>
       </fieldset>
