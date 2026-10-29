@@ -59,17 +59,39 @@ async function addViaMedusa(email: string): Promise<void> {
   const key = process.env.MEDUSA_ADMIN_API_KEY;
   if (!key) throw new Error("MEDUSA_ADMIN_API_KEY not set");
 
+  const headers = { "Content-Type": "application/json", Authorization: `Basic ${key}` };
+
   // Try to find an existing customer first to avoid duplicates
   const searchRes = await fetch(
-    `${base}/admin/customers?email=${encodeURIComponent(email)}&limit=1&fields=id`,
+    `${base}/admin/customers?email=${encodeURIComponent(email)}&limit=1&fields=id,metadata`,
     // Secret API keys (sk_...) authenticate via HTTP Basic, not this header.
     { headers: { Authorization: `Basic ${key}` }, cache: "no-store" }
   );
 
   if (searchRes.ok) {
-    const searchData = await searchRes.json() as { customers?: { id: string }[] };
-    if ((searchData.customers?.length ?? 0) > 0) {
-      // Already exists, silently succeed (no duplicate)
+    const searchData = await searchRes.json() as {
+      customers?: { id: string; metadata?: Record<string, unknown> | null }[];
+    };
+    const existing = searchData.customers?.[0];
+    if (existing) {
+      const flag = existing.metadata?.newsletter_subscriber;
+      if (flag === true || flag === "true") return;
+
+      // Someone who is already a customer and asks for updates must be put on the
+      // list too. Without the tag they would never be sent an offer. Asking again
+      // after unsubscribing is a fresh opt-in. The backend sends the welcome offer
+      // when it sees the tag appear.
+      const tagRes = await fetch(`${base}/admin/customers/${existing.id}`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          metadata: { newsletter_subscriber: true, subscribed_at: new Date().toISOString(), unsubscribed_at: "" },
+        }),
+        cache: "no-store",
+      });
+      if (!tagRes.ok) {
+        throw new Error(`Medusa customer update failed ${tagRes.status}: ${await tagRes.text()}`);
+      }
       return;
     }
   }
@@ -77,10 +99,7 @@ async function addViaMedusa(email: string): Promise<void> {
   // Create a guest customer record tagged as newsletter subscriber
   const createRes = await fetch(`${base}/admin/customers`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Basic ${key}`,
-    },
+    headers,
     body: JSON.stringify({
       email,
       metadata: { newsletter_subscriber: true, subscribed_at: new Date().toISOString() },

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { getCurrentUser } from "@/lib/current-user";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { orderListStatus } from "@/lib/order-list-status";
 
 export const metadata: Metadata = {
   title: "My Orders",
@@ -34,6 +35,8 @@ interface MedusaOrder {
     shiprocket_shipment_id?: string;
     awb_code?: string;
     courier_name?: string;
+    shiprocket_status?: string;
+    dispatch_state?: string;
   };
 }
 
@@ -81,25 +84,16 @@ function formatAmount(amount: number): string {
 const STATUS_LABEL: Record<string, string> = {
   pending: "Pending",
   completed: "Completed",
+  canceled: "Cancelled",
   cancelled: "Cancelled",
   requires_action: "Action Required",
-};
-
-const FULFILLMENT_LABEL: Record<string, string> = {
-  not_fulfilled: "Processing",
-  partially_fulfilled: "Partially Shipped",
-  fulfilled: "Shipped",
-  partially_shipped: "Partially Shipped",
-  shipped: "Shipped",
-  partially_delivered: "Partially Delivered",
-  delivered: "Delivered",
-  cancelled: "Cancelled",
 };
 
 function StatusBadge({ status }: { status: string }) {
   const label = STATUS_LABEL[status] ?? status;
   const colours: Record<string, string> = {
     completed: "bg-[#F0FBE8] text-[#3D7A1A] border-[#C8EEB8]",
+    canceled: "bg-[#FFF0F0] text-[#B91C1C] border-[#FECACA]",
     cancelled: "bg-[#FFF0F0] text-[#B91C1C] border-[#FECACA]",
     requires_action: "bg-[#FFFDF0] text-[#7A6200] border-[#E8D87A]",
     pending: "bg-[#F7F7F7] text-[#626262] border-[#E1E1E1]",
@@ -113,9 +107,7 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-function FulfillmentBadge({ status }: { status: string }) {
-  const label = FULFILLMENT_LABEL[status] ?? status;
-  const isDone = ["shipped", "fulfilled", "delivered"].includes(status);
+function FulfillmentBadge({ label, isDone }: { label: string; isDone: boolean }) {
   return (
     <span
       className={`inline-flex items-center gap-1 text-[11px] font-sans ${isDone ? "text-[#3D7A1A]" : "text-[#626262]"}`}
@@ -177,6 +169,7 @@ export default async function OrdersPage() {
         <div className="flex flex-col gap-4">
           {orders.map((order) => {
             const hasTracking = !!order.metadata?.awb_code;
+            const view = orderListStatus(order);
             return (
               <Link
                 key={order.id}
@@ -189,8 +182,8 @@ export default async function OrdersPage() {
                     <span className="font-sans font-medium text-[15px] text-black">
                       #{order.display_id}
                     </span>
-                    <StatusBadge status={order.status} />
-                    <FulfillmentBadge status={order.fulfillment_status} />
+                    <StatusBadge status={view.badge} />
+                    {view.progress && <FulfillmentBadge label={view.progress.label} isDone={view.progress.done} />}
                   </div>
                   <div className="flex items-center gap-4">
                     <span className="font-sans font-normal text-[13px] text-[#909090]">

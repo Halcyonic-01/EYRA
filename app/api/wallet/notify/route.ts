@@ -1,6 +1,14 @@
 import { timingSafeEqual } from "crypto";
 import { NextRequest } from "next/server";
 
+import { isOwnSiteUrl } from "@/lib/email-layout";
+import {
+  sendOrderDeliveredEmail,
+  sendOrderShippedEmail,
+  sendPromotionEmail,
+  sendRefundProcessedEmail,
+  sendWelcomeOfferEmail,
+} from "@/lib/customer-email";
 import { sendOrderCancelledEmail, sendRequestRejectedEmail, sendWalletCreditEmail } from "@/lib/wallet-email";
 
 function safeEqual(a: string, b: string): boolean {
@@ -33,6 +41,21 @@ interface NotifyBody {
   eta?: string;
   wallet_expires_at?: string | null;
   valid_months?: number;
+  // order_shipped, order_delivered, refund_processed
+  order_id?: string;
+  awb?: string | null;
+  courier?: string | null;
+  credit_note?: string | null;
+  // welcome_offer, promotion
+  code?: string;
+  min_order?: number | null;
+  subject?: string;
+  headline?: string;
+  message?: string;
+  cta_label?: string;
+  cta_url?: string;
+  /** Set by the backend on updates that must go out once; passed on to Resend. */
+  idempotency_key?: string;
 }
 
 /**
@@ -120,6 +143,83 @@ export async function POST(req: NextRequest) {
       eta: body.eta ?? "5 to 7 working days",
       walletExpiresAt: body.wallet_expires_at ?? null,
       validMonths: body.valid_months ?? 6,
+    });
+    return Response.json({ sent });
+  }
+
+  if (body.type === "order_shipped" || body.type === "order_delivered") {
+    if (typeof body.order_number !== "number" || !body.order_id) {
+      return Response.json({ error: "order_number and order_id are required." }, { status: 400 });
+    }
+    const common = {
+      email: body.email,
+      firstName: body.first_name,
+      orderNumber: body.order_number,
+      orderId: body.order_id,
+      idempotencyKey: body.idempotency_key,
+    };
+    const sent =
+      body.type === "order_shipped"
+        ? await sendOrderShippedEmail({ ...common, awb: body.awb ?? null, courier: body.courier ?? null })
+        : await sendOrderDeliveredEmail(common);
+    return Response.json({ sent });
+  }
+
+  if (body.type === "refund_processed") {
+    if (typeof body.order_number !== "number" || typeof body.refund_amount !== "number" || !body.reason) {
+      return Response.json({ error: "order_number, refund_amount and reason are required." }, { status: 400 });
+    }
+    const sent = await sendRefundProcessedEmail({
+      email: body.email,
+      firstName: body.first_name,
+      orderNumber: body.order_number,
+      amount: body.refund_amount,
+      reason: body.reason,
+      creditNote: body.credit_note ?? null,
+      eta: body.eta ?? "5 to 7 working days",
+      idempotencyKey: body.idempotency_key,
+    });
+    return Response.json({ sent });
+  }
+
+  if (body.type === "welcome_offer") {
+    if (!body.code || typeof body.amount !== "number" || typeof body.min_order !== "number") {
+      return Response.json({ error: "code, amount and min_order are required." }, { status: 400 });
+    }
+    const sent = await sendWelcomeOfferEmail({
+      email: body.email,
+      firstName: body.first_name,
+      code: body.code,
+      amount: body.amount,
+      minOrder: body.min_order,
+      idempotencyKey: body.idempotency_key,
+    });
+    return Response.json({ sent });
+  }
+
+  if (body.type === "promotion") {
+    if (!body.subject || !body.headline || !body.message || !body.cta_label || !body.cta_url) {
+      return Response.json(
+        { error: "subject, headline, message, cta_label and cta_url are required." },
+        { status: 400 }
+      );
+    }
+    if (!isOwnSiteUrl(body.cta_url)) {
+      return Response.json({ error: "cta_url must be a page on the EYRA site." }, { status: 400 });
+    }
+    const hasOffer = !!body.code && typeof body.amount === "number";
+    const sent = await sendPromotionEmail({
+      email: body.email,
+      firstName: body.first_name,
+      subject: body.subject,
+      headline: body.headline,
+      message: body.message,
+      offer: hasOffer
+        ? { code: body.code as string, amount: body.amount as number, minOrder: body.min_order ?? null }
+        : null,
+      ctaLabel: body.cta_label,
+      ctaUrl: body.cta_url,
+      idempotencyKey: body.idempotency_key,
     });
     return Response.json({ sent });
   }
