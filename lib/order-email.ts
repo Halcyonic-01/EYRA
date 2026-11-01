@@ -10,6 +10,7 @@
 import "server-only";
 
 import { sendEmail } from "@/lib/email";
+import { COLOR, SITE_URL, logoImage } from "@/lib/email-layout";
 
 const BASE_URL = (
   process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL ?? "http://localhost:9000"
@@ -100,18 +101,9 @@ async function markConfirmationEmailSent(orderId: string): Promise<void> {
   }
 }
 
-/** EYRA's brand palette (app/globals.css), mirrored here since email clients can't read @theme tokens. */
-export const COLOR = {
-  jet: "#020202",
-  carbon: "#4d4d4d",
-  ash: "#626262",
-  stone: "#909090",
-  cloud: "#ebebeb",
-  ivory: "#f9f9f9",
-  white: "#ffffff",
-};
-
-export const SITE_URL = "https://www.eyra.org.in";
+// The palette and site address now live in the shared layout; re-exported so
+// existing imports keep working.
+export { COLOR, SITE_URL };
 
 function formatAddress(addr: OrderShippingAddress | null): string {
   if (!addr) return "";
@@ -163,7 +155,7 @@ function renderOrderEmail(order: OrderForEmail): string {
     <table role="presentation" width="100%" style="max-width:520px;margin:0 auto;background:${COLOR.white};border-radius:16px;overflow:hidden;">
       <tr>
         <td style="padding:40px 40px 0 40px;text-align:center;">
-          <div style="font-family:'Cormorant Garamond',Georgia,serif;font-weight:500;font-size:28px;letter-spacing:6px;color:${COLOR.jet};">EYRA</div>
+          ${logoImage()}
         </td>
       </tr>
       <tr>

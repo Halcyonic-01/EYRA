@@ -12,19 +12,8 @@
 import "server-only";
 
 import { sendEmail } from "@/lib/email";
-import { COLOR, SITE_URL } from "@/lib/order-email";
+import { COLOR, FONT, SITE_URL, button, escapeHtml, row, shell } from "@/lib/email-layout";
 import { formatRupees } from "@/lib/money";
-
-const FONT = "Poppins,Helvetica,Arial,sans-serif";
-
-function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
 
 function formatLongDate(iso: string): string {
   return new Date(iso).toLocaleDateString("en-IN", {
@@ -32,37 +21,6 @@ function formatLongDate(iso: string): string {
     month: "long",
     year: "numeric",
   });
-}
-
-function shell(content: string): string {
-  return `
-  <div style="background:${COLOR.ivory};padding:40px 16px;">
-    <table role="presentation" width="100%" style="max-width:520px;margin:0 auto;background:${COLOR.white};border-radius:16px;overflow:hidden;">
-      <tr>
-        <td style="padding:40px 40px 0 40px;text-align:center;">
-          <div style="font-family:'Cormorant Garamond',Georgia,serif;font-weight:500;font-size:28px;letter-spacing:6px;color:${COLOR.jet};">EYRA</div>
-        </td>
-      </tr>
-      ${content}
-      <tr>
-        <td style="padding:32px 40px 40px 40px;text-align:center;font-family:${FONT};font-size:12px;color:${COLOR.stone};">
-          Questions? Reply to this email or visit <a href="${SITE_URL}/support" style="color:${COLOR.stone};">our support page</a>.
-        </td>
-      </tr>
-    </table>
-  </div>`;
-}
-
-function button(href: string, label: string): string {
-  return `<a href="${href}" style="display:inline-block;background:${COLOR.jet};color:${COLOR.white};font-family:${FONT};font-size:14px;text-decoration:none;padding:14px 32px;border-radius:999px;">${label}</a>`;
-}
-
-function row(label: string, value: string): string {
-  return `
-            <tr>
-              <td style="padding:10px 0;border-bottom:1px solid ${COLOR.cloud};font-family:${FONT};font-size:14px;color:${COLOR.ash};">${label}</td>
-              <td style="padding:10px 0;border-bottom:1px solid ${COLOR.cloud};font-family:${FONT};font-size:14px;color:${COLOR.jet};text-align:right;">${value}</td>
-            </tr>`;
 }
 
 /* ── Credit added ─────────────────────────────────────────── */
