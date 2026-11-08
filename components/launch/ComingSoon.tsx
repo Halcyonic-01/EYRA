@@ -32,7 +32,7 @@ export function ComingSoon() {
         </h2>
         <Countdown target={LAUNCH_DATE_ISO} />
         <p className="text-base sm:text-lg font-medium tracking-[0.25em] text-mist">
-          08 / 11 / 2026
+          23 / 11 / 2026
         </p>
       </section>
 

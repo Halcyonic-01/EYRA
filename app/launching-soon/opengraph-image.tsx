@@ -1,6 +1,6 @@
 import { ImageResponse } from "next/og";
 
-export const alt = "EYRA | Launching 08/11/2026";
+export const alt = "EYRA | Launching 23/11/2026";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -26,7 +26,7 @@ export default function Image() {
         </div>
         <div style={{ marginTop: 56, width: 80, height: 1, background: "#909090" }} />
         <div style={{ marginTop: 56, fontSize: 40, letterSpacing: 14, color: "#e2e2e2" }}>
-          LAUNCHING 08 / 11 / 2026
+          LAUNCHING 23 / 11 / 2026
         </div>
       </div>
     ),
