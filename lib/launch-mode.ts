@@ -10,8 +10,8 @@ export const LAUNCH_PATH = "/launching-soon";
 /** Set by proxy.ts so the root layout can skip the store chrome. */
 export const LAUNCH_HEADER = "x-launch-mode";
 
-/** 08 Nov 2026, 00:00 IST. */
-export const LAUNCH_DATE_ISO = "2026-11-08T00:00:00+05:30";
+/** 23 Nov 2026, 00:00 IST. */
+export const LAUNCH_DATE_ISO = "2026-11-23T00:00:00+05:30";
 
 export function isLaunchMode(): boolean {
   const raw = process.env.LAUNCH_MODE ?? process.env.NEXT_PUBLIC_LAUNCH_MODE;
