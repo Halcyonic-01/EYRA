@@ -398,8 +398,6 @@ export function ProductDetailClient({
             {/* Right: Sticky product info */}
             <div className="w-full lg:flex-1 lg:sticky lg:self-start flex flex-col gap-6" style={{ top: "calc(var(--header-offset) + 2rem)" }}>
 
-              <PolicyBadge />
-
               {/* Identity: name, subtitle, rating, price */}
               <div className="flex flex-col gap-[7px]">
                 <h1 className="font-sans font-medium text-[20px] leading-[30px] text-black">
@@ -564,6 +562,8 @@ export function ProductDetailClient({
                   {inCart ? "Added to cart" : "Add to cart"}
                 </button>
               </div>
+
+              <PolicyBadge />
 
               {/* Policies, as a quiet list under the actions */}
               <ul className="flex flex-col gap-3 pt-1">
