@@ -162,9 +162,10 @@ test.describe("complimentary tote bag", () => {
     );
   });
 
-  test("the product page shows the tote bag line without the stock caveat", async ({ page }) => {
+  test("the product page no longer shows the free-shipping and tote pill, and no stock caveat", async ({ page }) => {
     await page.goto("/products/luna-anklet");
-    await expect(page.getByText(/complimentary tote bag above ₹1,499\./)).toBeVisible();
+    await expect(page.getByText(/complimentary tote bag above ₹1,499\./)).toHaveCount(0);
+    await expect(page.getByText(/Free shipping on prepaid orders/)).toHaveCount(0);
     await expect(page.getByText(/subject to stock availability/)).toHaveCount(0);
   });
 });

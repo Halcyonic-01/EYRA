@@ -15,7 +15,7 @@ import {
   resolveVariant,
   type Selection,
 } from "@/lib/variant-selection";
-import { COD_CHARGE, TOTE_MIN_SUBTOTAL, rupees } from "@/config/offers";
+import { COD_CHARGE, rupees } from "@/config/offers";
 import { PolicyBadge } from "@/components/products/PolicyBadge";
 
 /* ── Inline SVG icons ────────────────────────────── */
@@ -91,6 +91,51 @@ function CodIcon() {
     </svg>
   );
 }
+
+function ShieldIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#545454" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+      <path d="M9 12l2 2 4-4" />
+    </svg>
+  );
+}
+
+function SparkleIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#545454" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3z" />
+      <path d="M19 17l.7 1.8L21.5 19.5l-1.8.7L19 22l-.7-1.8-1.8-.7 1.8-.7L19 17z" />
+    </svg>
+  );
+}
+
+function DropIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#545454" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M12 2.5s-6.5 7.2-6.5 12a6.5 6.5 0 0 0 13 0c0-4.8-6.5-12-6.5-12z" />
+    </svg>
+  );
+}
+
+/** Quality promises shown as a vertical stack at the bottom of the product details. */
+const QUALITY_BADGES: readonly { icon: React.ReactNode; title: string; description: string }[] = [
+  {
+    icon: <ShieldIcon />,
+    title: "925 Sterling Silver & Hallmarked",
+    description: "Crafted with genuine 925 silver, certified for unmatched purity and quality.",
+  },
+  {
+    icon: <SparkleIcon />,
+    title: "Advanced Anti-Tarnish Coating",
+    description: "Treated to resist daily wear, sweat, and tarnishing so your jewelry stays brilliant.",
+  },
+  {
+    icon: <DropIcon />,
+    title: "Waterproof & Hypoallergenic",
+    description: "Safe for sensitive skin and completely water-resistant for everyday effortless wear.",
+  },
+];
 
 function XIcon() {
   return (
@@ -360,9 +405,11 @@ export function ProductDetailClient({
                 <h1 className="font-sans font-medium text-[20px] leading-[30px] text-black">
                   {product.name}
                 </h1>
-                <p className="font-sans font-normal text-[16px] leading-[24px] text-[#A0A0A0]">
-                  {product.description}
-                </p>
+                {product.description && (
+                  <p className="font-sans font-normal text-sm text-gray-600 leading-relaxed">
+                    {product.description}
+                  </p>
+                )}
 
                 {/* Star rating: only once there are reviews to show */}
                 {product.reviewCount > 0 && (
@@ -387,26 +434,10 @@ export function ProductDetailClient({
                   <span className="font-sans font-normal text-[18px] leading-[28px] text-[#A3A3A3] line-through">
                     ₹{shownOriginal.toLocaleString("en-IN")}
                   </span>
-                  {/* Promo badge */}
-                  <div
-                    className="flex items-center px-5 py-1.5 rounded-[24px]"
-                    style={{ background: "linear-gradient(90deg, rgba(228,194,60,0.14) 0%, rgba(255,255,255,0) 100%)" }}
-                  >
-                    <span className="font-sans font-normal text-[14px] leading-[21px] text-black">
-                      Free shipping on prepaid orders. A complimentary tote bag above {rupees(TOTE_MIN_SUBTOTAL)}.
-                    </span>
-                  </div>
                 </div>
                 <p className="font-sans font-normal text-[15px] leading-[22px] text-[#BABABA]">
                   Inclusive of all taxes
                 </p>
-
-                {/* Material and quality, as one quiet line */}
-                {product.specs.length > 0 && (
-                  <p className="font-sans font-normal text-[14px] leading-[21px] text-[#626262]">
-                    {product.specs.join(" • ")}
-                  </p>
-                )}
               </div>
 
               {/* Choices besides ring size: single or pair, with or without a chain */}
@@ -582,6 +613,19 @@ export function ProductDetailClient({
                       : "Sorry, we don't currently deliver to this pincode."}
                   </p>
                 )}
+              </div>
+
+              {/* Quality badges: bottom of the product details, below delivery */}
+              <div className="flex flex-col gap-4 pt-6 border-t border-[#E1E1E1]">
+                {QUALITY_BADGES.map((badge) => (
+                  <div key={badge.title} className="flex items-start gap-3">
+                    <span className="shrink-0 mt-0.5">{badge.icon}</span>
+                    <div className="flex flex-col gap-1">
+                      <p className="font-sans font-medium text-sm text-black">{badge.title}</p>
+                      <p className="font-sans font-normal text-xs text-gray-500 leading-relaxed">{badge.description}</p>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
