@@ -6,7 +6,6 @@ import { CollectionsGrid } from "@/components/home/CollectionsGrid";
 import { GenderSplit } from "@/components/home/GenderSplit";
 import { ValuesSection } from "@/components/home/ValuesSection";
 import { BrandStory } from "@/components/home/BrandStory";
-import { NewCollections } from "@/components/home/NewCollections";
 import { CtaBanner } from "@/components/home/CtaBanner";
 import { NewsletterBanner } from "@/components/home/NewsletterBanner";
 
@@ -21,7 +20,6 @@ export default function Home() {
       <GenderSplit />
       <ValuesSection />
       <BrandStory />
-      <NewCollections />
       <CtaBanner />
       <NewsletterBanner />
     </>

@@ -41,7 +41,7 @@ export function CollectionsGrid() {
         </FadeIn>
 
         {/* 3-column grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
           {COLLECTIONS.map((col, i) => (
             <FadeIn key={col.label} delay={i * 80}>
               <Link href={col.href} className="group block relative overflow-hidden bg-pewter aspect-[3/4]">
@@ -50,11 +50,11 @@ export function CollectionsGrid() {
                   alt={col.label}
                   fill
                   className="object-cover transition-transform duration-700 ease-out group-hover:scale-105"
-                  sizes="(max-width: 640px) 100vw, 33vw"
+                  sizes="(max-width: 1024px) 50vw, 25vw"
                 />
                 <div className="absolute inset-0 bg-black/15 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
-                <div className="absolute bottom-0 left-0 right-0 px-6 py-6">
-                  <p className="font-display font-light text-[1.3rem] tracking-[0.06em] text-white">
+                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/50 to-transparent px-3 pb-3 pt-10 sm:px-6 sm:pb-6 sm:pt-16">
+                  <p className="font-display font-light text-[0.95rem] sm:text-[1.3rem] leading-tight tracking-[0.04em] sm:tracking-[0.06em] text-white">
                     {col.label}
                   </p>
                 </div>

@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { ArrowRight } from "lucide-react";
 import { FadeIn } from "@/components/ui/FadeIn";
 import { getProducts } from "@/lib/medusa";
 
@@ -37,14 +38,16 @@ export async function TrendingCarousel() {
           </p>
         </FadeIn>
 
-        {/* Horizontal scroll track */}
+        {/* Horizontal scroll track. On mobile it bleeds to the screen edges so the
+            next tile peeks in, and a visible scrollbar plus a swipe hint show it scrolls. */}
         <FadeIn delay={140}>
-          <div className="flex gap-6 overflow-x-auto hide-scrollbar snap-x snap-mandatory pb-2">
+          <div className="-mx-6 px-6 lg:mx-0 lg:px-0">
+          <div className="carousel-scroll flex gap-4 sm:gap-6 overflow-x-auto snap-x snap-mandatory scroll-px-6 lg:scroll-px-0 pb-4">
             {products.map((product) => (
               <Link
                 key={product.id}
                 href={`/products/${product.id}`}
-                className="group flex-shrink-0 snap-start w-[200px] sm:w-[220px]"
+                className="group flex-shrink-0 snap-start w-[150px] sm:w-[220px]"
               >
                 <div className="relative overflow-hidden bg-cloud aspect-square mb-3 rounded-full">
                   <Image
@@ -52,17 +55,22 @@ export async function TrendingCarousel() {
                     alt={product.name}
                     fill
                     className="object-cover transition-transform duration-700 ease-out group-hover:scale-105"
-                    sizes="220px"
+                    sizes="(max-width: 640px) 150px, 220px"
                   />
                 </div>
-                <p className="font-sans font-light text-[0.82rem] text-carbon text-center leading-snug">
+                <p className="font-sans font-light text-[0.75rem] sm:text-[0.82rem] text-carbon text-center leading-snug">
                   {product.name}
                 </p>
-                <p className="font-sans font-normal text-[0.82rem] text-jet text-center leading-snug mt-1">
+                <p className="font-sans font-normal text-[0.75rem] sm:text-[0.82rem] text-jet text-center leading-snug mt-1">
                   ₹{product.price.toLocaleString("en-IN")}
                 </p>
               </Link>
             ))}
+          </div>
+          <p className="mt-2 flex items-center justify-end gap-2 font-sans text-[0.7rem] tracking-[0.14em] uppercase text-smoke lg:hidden">
+            Swipe to explore
+            <ArrowRight size={14} strokeWidth={1.5} aria-hidden="true" />
+          </p>
           </div>
         </FadeIn>
 

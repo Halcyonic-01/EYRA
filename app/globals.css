@@ -64,9 +64,12 @@ body {
 .fade-hidden-left     { opacity: 0; transform: translateX(1.5rem); }
 .fade-visible         { opacity: 1; transform: translate(0, 0); }
 
-/* ── Carousel scrollbar hide ───────────────────────────── */
-.hide-scrollbar { scrollbar-width: none; }
-.hide-scrollbar::-webkit-scrollbar { display: none; }
+/* ── Carousel scrollbar ───────────────────────────────── */
+/* Visible, slim scrollbar so a horizontal carousel reads as scrollable. */
+.carousel-scroll { scrollbar-width: thin; scrollbar-color: #909090 #e2e2e2; }
+.carousel-scroll::-webkit-scrollbar { height: 4px; }
+.carousel-scroll::-webkit-scrollbar-track { background: #e2e2e2; border-radius: 9999px; }
+.carousel-scroll::-webkit-scrollbar-thumb { background: #909090; border-radius: 9999px; }
 
 
 /* Sign-in and sign-up window: a short rise-in, skipped for reduced motion. */

@@ -21,29 +21,29 @@ const PANELS = [
 export function GenderSplit() {
   return (
     <section className="bg-white">
-      <div className="grid grid-cols-1 sm:grid-cols-2">
+      <div className="grid grid-cols-2">
         {PANELS.map((panel) => (
           <div
             key={panel.tag}
             className="group relative overflow-hidden"
-            style={{ height: "clamp(400px, 55vw, 680px)" }}
+            style={{ height: "clamp(280px, 60vw, 680px)" }}
           >
             <Image
               src={panel.src}
               alt={panel.tag}
               fill
               className="object-cover object-center transition-transform duration-700 ease-out group-hover:scale-105"
-              sizes="(max-width: 640px) 100vw, 50vw"
+              sizes="(max-width: 640px) 50vw, 50vw"
             />
             {/* Gradient */}
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent pointer-events-none" />
 
             {/* Content overlay */}
-            <div className="absolute bottom-10 left-8 lg:left-12 max-w-[240px] lg:max-w-[280px]">
-              <p className="font-sans font-semibold text-[0.7rem] tracking-[0.3em] uppercase text-white/80 mb-3">
+            <div className="absolute bottom-5 left-3 right-3 sm:bottom-10 sm:left-8 sm:right-auto lg:left-12 max-w-[240px] lg:max-w-[280px]">
+              <p className="font-sans font-semibold text-[0.6rem] sm:text-[0.7rem] tracking-[0.2em] sm:tracking-[0.3em] uppercase text-white/80 mb-2 sm:mb-3">
                 {panel.tag}
               </p>
-              <p className="font-sans font-light text-[0.82rem] leading-relaxed text-white/80 mb-5">
+              <p className="hidden sm:block font-sans font-light text-[0.82rem] leading-relaxed text-white/80 mb-5">
                 {panel.description}
               </p>
               <Link
