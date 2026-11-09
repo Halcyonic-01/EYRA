@@ -14,8 +14,8 @@ export default function Home() {
       <HeroSection />
       <StatsBar />
       <AboutSection />
-      <TrendingCarousel />
       <CollectionsGrid />
+      <TrendingCarousel />
       <GenderSplit />
       <ValuesSection />
       <CtaBanner />
