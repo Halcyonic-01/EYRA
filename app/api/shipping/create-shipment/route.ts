@@ -1,4 +1,5 @@
 import type { NextRequest } from "next/server";
+import { weightKey } from "@/lib/product-type";
 import { storeConfig } from "@/config/storeConfig";
 import { rememberOrderForShipment } from "@/lib/shiprocket-store";
 import { splitName } from "@/lib/medusa-order";
@@ -126,7 +127,7 @@ function orderDate(): string {
 
 function itemWeightKg(type: string): number {
   const { itemWeightsG, defaultItemWeightG } = storeConfig.shipping;
-  return (itemWeightsG[type] ?? defaultItemWeightG) / 1000;
+  return (itemWeightsG[weightKey(type)] ?? defaultItemWeightG) / 1000;
 }
 
 function totalParcelWeightKg(items: ShipmentItem[]): number {
