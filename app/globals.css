@@ -40,6 +40,9 @@
   --color-ivory:    #f9f9f9; /* off-white section background */
   --color-white:    #ffffff;
 
+  /* Accent, announcement bar */
+  --color-crimson:  #b91c1c; /* red, sale and announcement bar */
+
   /* ── Border radius ─────────────────────────────────────── */
   --radius-none: 0px;
   --radius-xs:   2px;
