@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import { X, Menu, Search, ShoppingBag, User, Heart, LogOut } from "lucide-react";
+import { usePathname } from "next/navigation";
+import { Menu, ShoppingBag, User, Heart, LogOut } from "lucide-react";
+import { DeliveryCheckWidget } from "@/components/home/DeliveryCheckWidget";
 import { useAuth } from "@clerk/nextjs";
 import { Logo } from "@/components/ui/Logo";
 import { MobileNav } from "@/components/layout/MobileNav";
@@ -25,13 +26,9 @@ const NAV_ITEMS = [
 
 export function Navbar() {
   const [scrolled,  setScrolled]  = useState(false);
-  const [searchOpen, setSearchOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const closeMenu = useCallback(() => setMenuOpen(false), []);
-  const [searchValue, setSearchValue] = useState("");
-  const searchInputRef = useRef<HTMLInputElement>(null);
   const pathname = usePathname();
-  const router = useRouter();
   const isHome = pathname === "/";
   const cartCount = useCartStore((s) => s.items.reduce((n, i) => n + i.quantity, 0));
   const wishlistCount = useWishlistStore((s) => s.items.length);
@@ -45,17 +42,6 @@ export function Navbar() {
   const walletHint = wallet?.nextExpiry
     ? `${formatRupees(wallet.nextExpiry.amount)} expires on ${new Date(wallet.nextExpiry.expiresAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}`
     : "Your wallet credit";
-
-  useEffect(() => {
-    if (searchOpen) searchInputRef.current?.focus();
-  }, [searchOpen]);
-
-  function submitSearch(e: React.FormEvent) {
-    e.preventDefault();
-    const q = searchValue.trim();
-    setSearchOpen(false);
-    router.push(q ? `/products?q=${encodeURIComponent(q)}` : "/products");
-  }
 
   useEffect(() => {
     if (!isHome) return;
@@ -131,20 +117,7 @@ export function Navbar() {
 
           {/* Action icons */}
           <div className="flex items-center gap-0.5">
-            <button
-              aria-label={searchOpen ? "Close search" : "Search"}
-              aria-expanded={searchOpen}
-              onClick={() => setSearchOpen((prev) => !prev)}
-              className={[
-                "p-2.5 transition-colors duration-200",
-                darkTheme ? "text-pearl hover:text-white" : "text-[#333] hover:text-black",
-              ].join(" ")}
-            >
-              {searchOpen
-                ? <X size={17} strokeWidth={1.5} />
-                : <Search size={17} strokeWidth={1.5} />
-              }
-            </button>
+            <DeliveryCheckWidget dark={darkTheme} />
             {/* Account: signed-in users go to their profile, guests to sign-in.
                 Desktop only. Below lg, account lives in the drawer's guest card. */}
             {wallet && wallet.balance > 0 && (
@@ -219,43 +192,6 @@ export function Navbar() {
       {/* ── Mobile navigation drawer (below lg) ───────── */}
       <MobileNav open={menuOpen} onClose={closeMenu} />
 
-      {/* ── Search panel ──────────────────────────────── */}
-      {searchOpen && (
-        <>
-          <div
-            className="fixed inset-0 z-40 bg-black/20"
-            onClick={() => setSearchOpen(false)}
-            aria-hidden="true"
-          />
-          <div
-            className="fixed inset-x-0 z-50 bg-white border-b border-[#CFCFCF] shadow-sm"
-            style={{ top: "var(--nav-height)" }}
-          >
-            <form
-              onSubmit={submitSearch}
-              className="max-w-screen-xl mx-auto px-6 lg:px-10 py-6 flex items-center gap-4"
-              role="search"
-            >
-              <Search size={18} strokeWidth={1.5} className="text-[#909090] shrink-0" />
-              <input
-                ref={searchInputRef}
-                type="search"
-                value={searchValue}
-                onChange={(e) => setSearchValue(e.target.value)}
-                placeholder="Search rings, chains, anklets…"
-                aria-label="Search products"
-                className="flex-1 bg-transparent font-sans font-light text-[16px] text-black placeholder:text-[#909090] focus:outline-none"
-              />
-              <button
-                type="submit"
-                className="font-sans font-medium text-[14px] text-black underline underline-offset-2 hover:text-[#626262] transition-colors duration-200 shrink-0"
-              >
-                Search
-              </button>
-            </form>
-          </div>
-        </>
-      )}
     </>
   );
 }

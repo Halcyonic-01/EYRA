@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { DeliveryCheckWidget } from "./DeliveryCheckWidget";
+import { HomeSearch } from "./HomeSearch";
 
 export function HeroSection() {
   return (
@@ -12,7 +12,7 @@ export function HeroSection() {
           <p className="text-center text-[0.7rem] sm:text-[0.72rem] font-sans font-normal tracking-[0.16em] sm:tracking-[0.22em] uppercase text-carbon">
             Made to order&nbsp;&nbsp;|&nbsp;&nbsp;Crafted within 7–10 days
           </p>
-          <DeliveryCheckWidget />
+          <HomeSearch />
         </div>
       </div>
 

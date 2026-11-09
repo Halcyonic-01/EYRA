@@ -1,18 +1,19 @@
 "use client";
 
 import { useState } from "react";
+import { Truck } from "lucide-react";
 import { Dropdown } from "@/components/ui/Dropdown";
 import { usePincodeServiceability } from "@/lib/hooks/usePincodeServiceability";
 import { formatDeliveryRange } from "@/lib/delivery-date";
 
 /**
- * Compact "check delivery to your pincode" trigger for the homepage's top
- * announcement strip. Reuses Dropdown for the popover, it already solves
+ * Icon-only "check delivery to your pincode" trigger in the header, in the
+ * slot the search icon used to occupy. Reuses Dropdown for the popover, it already solves
  * portal positioning and viewport clamping correctly, no need to redo that,
  * and the shared usePincodeServiceability hook for a real, Shiprocket-backed
  * answer rather than a guess.
  */
-export function DeliveryCheckWidget() {
+export function DeliveryCheckWidget({ dark = false }: { dark?: boolean }) {
   const [pincode, setPincode] = useState("");
   const pincodeCheck = usePincodeServiceability();
 
@@ -21,7 +22,12 @@ export function DeliveryCheckWidget() {
   }
 
   return (
-    <Dropdown label="Check Delivery" active={pincodeCheck.status === "success"}>
+    <Dropdown
+      label="Check delivery"
+      active={pincodeCheck.status === "success"}
+      icon={<Truck size={17} strokeWidth={1.5} />}
+      iconClassName={dark ? "text-pearl hover:text-white" : "text-[#333] hover:text-black"}
+    >
       {() => (
         <div className="flex flex-col gap-3 w-[260px]">
           <p className="font-sans font-medium text-[13px] text-black">

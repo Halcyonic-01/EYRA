@@ -22,9 +22,14 @@ import { ChevronDown } from "lucide-react";
 export function Dropdown({
   label,
   active,
+  icon,
+  iconClassName = "",
   children,
 }: {
   label: string;
+  /** When set, the trigger is an icon-only button; `label` becomes its accessible name. */
+  icon?: React.ReactNode;
+  iconClassName?: string;
   /** Shown as a filled dot next to the label when a non-default value is selected. */
   active?: boolean;
   children: (close: () => void) => React.ReactNode;
@@ -89,6 +94,20 @@ export function Dropdown({
 
   return (
     <>
+      {icon ? (
+        <button
+          ref={triggerRef}
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          aria-label={label}
+          title={label}
+          aria-haspopup="true"
+          aria-expanded={open}
+          className={["p-2.5 transition-colors duration-200", iconClassName].join(" ")}
+        >
+          {icon}
+        </button>
+      ) : (
       <button
         ref={triggerRef}
         type="button"
@@ -110,6 +129,7 @@ export function Dropdown({
           className={`transition-transform duration-200 ${open ? "rotate-180" : ""}`}
         />
       </button>
+      )}
 
       {open &&
         createPortal(
