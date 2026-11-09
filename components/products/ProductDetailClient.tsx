@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useRef } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import type { DetailProduct } from "@/lib/products";
@@ -127,8 +127,27 @@ export function ProductDetailClient({
   const [sizeChartOpen, setSizeChartOpen] = useState(false);
   const [pincode, setPincode] = useState("");
   const [shareNote, setShareNote] = useState("");
+  const [lightboxOpen, setLightboxOpen] = useState(false);
   const pincodeCheck = usePincodeServiceability();
   const touchStartX = useRef<number>(0);
+
+  // While the full-screen view is open: lock page scroll, and let the keyboard
+  // close it or move between images.
+  useEffect(() => {
+    if (!lightboxOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setLightboxOpen(false);
+      if (e.key === "ArrowRight") setActiveImage((i) => Math.min(product.images.length - 1, i + 1));
+      if (e.key === "ArrowLeft") setActiveImage((i) => Math.max(0, i - 1));
+    }
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [lightboxOpen, product.images.length]);
 
   const addToCart = useCartStore((s) => s.addToCart);
   const cartItems = useCartStore((s) => s.items);
@@ -225,13 +244,7 @@ export function ProductDetailClient({
               <div className="relative bg-white border border-[#CFCFCF] flex flex-col" style={{ minHeight: 436 }}>
 
                 {/* Top controls */}
-                <div className="flex items-start justify-between px-[18px] pt-5">
-                  <button
-                    className="border border-[#E4C23C] text-[#473900] font-sans font-normal text-[15px] leading-[22px] px-[10px] py-[5px] rounded-[333px] bg-white/90"
-                    style={{ backdropFilter: "blur(4px)" }}
-                  >
-                    Try it on
-                  </button>
+                <div className="flex items-start justify-end px-[18px] pt-5">
                   <div className="flex gap-1 items-start">
                     {shareNote && (
                       <span
@@ -274,8 +287,15 @@ export function ProductDetailClient({
 
                 {/* Main image */}
                 <div
-                  className="relative flex-1 mx-2.5 mt-4 mb-0 cursor-grab active:cursor-grabbing select-none"
+                  role="button"
+                  tabIndex={0}
+                  aria-label="View image full screen"
+                  className="relative flex-1 mx-2.5 mt-4 mb-0 cursor-zoom-in select-none"
                   style={{ minHeight: 280 }}
+                  onClick={() => setLightboxOpen(true)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") setLightboxOpen(true);
+                  }}
                   onTouchStart={handleTouchStart}
                   onTouchEnd={handleTouchEnd}
                 >
@@ -646,6 +666,60 @@ export function ProductDetailClient({
             </div>
           </div>
         </>
+      )}
+
+      {/* ── Full-screen image view (tap the main image) ── */}
+      {lightboxOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={`${product.name} images`}
+          className="fixed inset-0 z-[100] bg-black/95 flex flex-col"
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
+        >
+          <div className="flex items-center justify-between px-5 py-4 text-white">
+            <span className="font-sans font-normal text-[16px] leading-[24px]">
+              {activeImage + 1}/{product.images.length}
+            </span>
+            <button
+              aria-label="Close full screen"
+              onClick={() => setLightboxOpen(false)}
+              className="w-[42px] h-[42px] rounded-full bg-white/10 flex items-center justify-center text-white hover:bg-white/20 transition-colors duration-200"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true">
+                <path d="M18 6L6 18M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+
+          <div className="relative flex-1 mx-4 mb-4">
+            <Image
+              src={product.images[activeImage]}
+              alt={`${product.name}, view ${activeImage + 1}`}
+              fill
+              className="object-contain"
+              sizes="100vw"
+            />
+            {/* Arrows for desktop. On touch screens, swipe instead. */}
+            <button
+              aria-label="Previous image"
+              onClick={() => setActiveImage((i) => Math.max(0, i - 1))}
+              disabled={activeImage === 0}
+              className="hidden sm:flex absolute left-2 top-1/2 -translate-y-1/2 w-[42px] h-[42px] rounded-full bg-white/10 items-center justify-center text-white hover:bg-white/20 disabled:opacity-30 transition-colors duration-200"
+            >
+              <ChevronLeftIcon />
+            </button>
+            <button
+              aria-label="Next image"
+              onClick={() => setActiveImage((i) => Math.min(product.images.length - 1, i + 1))}
+              disabled={activeImage === product.images.length - 1}
+              className="hidden sm:flex absolute right-2 top-1/2 -translate-y-1/2 w-[42px] h-[42px] rounded-full bg-white/10 items-center justify-center text-white hover:bg-white/20 disabled:opacity-30 transition-colors duration-200"
+            >
+              <ChevronRightIcon />
+            </button>
+          </div>
+        </div>
       )}
     </>
   );
