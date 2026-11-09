@@ -13,6 +13,12 @@ test.describe("allowed image hosts", () => {
     expect(list).toContain("www.eyra.org.in");
   });
 
+  test("always allows media.eyra.org.in, where uploaded product images live, with no env var", () => {
+    // A build without MEDUSA_IMAGE_HOSTS answered 400 for every product photo.
+    const media = imageRemotePatterns({}).find((p) => p.hostname === "media.eyra.org.in");
+    expect(media).toMatchObject({ protocol: "https", pathname: "/**" });
+  });
+
   test("allows local Medusa only for its /static folder", () => {
     const local = imageRemotePatterns({}).find((p) => p.hostname === "localhost");
     expect(local).toMatchObject({ protocol: "http", port: "9000", pathname: "/static/**" });
@@ -58,6 +64,14 @@ test.describe("the running image optimiser", () => {
       `/_next/image?url=${encodeURIComponent("https://some-stranger-bucket.s3.us-east-1.amazonaws.com/a.png")}&w=64&q=75`
     );
     expect(res.status()).toBe(400);
+  });
+
+  test("serves an uploaded product image from media.eyra.org.in", async ({ request }) => {
+    const res = await request.get(
+      `/_next/image?url=${encodeURIComponent("https://media.eyra.org.in/IMG2-01M70BXGMSPHT51KJQ7Y2TAV89.PNG")}&w=640&q=75`
+    );
+    // Not rejected as a disallowed host (400). 200 when the image is reachable.
+    expect(res.status()).not.toBe(400);
   });
 
   test("still serves a catalogue image from EYRA's own domain", async ({ request }) => {
