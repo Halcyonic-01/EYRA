@@ -35,8 +35,20 @@ export function defaultSelection(
   return selection;
 }
 
+/**
+ * A size option's values in the order to show them. Medusa keeps them as text,
+ * so "7", "7.5", "S" and "Small" are all valid sizes. When every value is a
+ * number they are shown smallest first (6, 7 ... 20, not 10, 11 ... 6);
+ * otherwise in the order they were entered in the admin.
+ */
+export function orderSizes(values: readonly string[]): string[] {
+  const cleaned = [...new Set(values.map((value) => value.trim()).filter(Boolean))];
+  const numeric = cleaned.every((value) => /^\d+(\.\d+)?$/.test(value));
+  return numeric ? cleaned.sort((a, b) => Number(a) - Number(b)) : cleaned;
+}
+
 export interface Resolved {
-  /** The one variant to sell, or null while a ring size is still to be picked. */
+  /** The one variant to sell, or null while a size is still to be picked. */
   variant: ProductVariant | null;
   /** The price to show: the variant's, or the lowest of those still possible. */
   price: number;
@@ -45,18 +57,18 @@ export interface Resolved {
 }
 
 /**
- * The variant the customer has chosen. `sizeTitle` is the ring size option's
- * title; when the product has one and no size is picked, there is no single
- * variant yet, but the price can still be shown.
+ * The variant the customer has chosen. `sizeTitle` is the size option's title
+ * (a ring's size, or any other product's); when the product has one and no size
+ * is picked, there is no single variant yet, but the price can still be shown.
  */
 export function resolveVariant(
   variants: readonly ProductVariant[],
   choices: Selection,
   sizeTitle: string | undefined,
-  size: number | null
+  size: string | null
 ): Resolved {
   const wanted: Selection = { ...choices };
-  if (sizeTitle && size !== null) wanted[sizeTitle] = String(size);
+  if (sizeTitle && size !== null) wanted[sizeTitle] = size;
 
   const candidates = candidateVariants(variants, wanted);
   const needsSize = Boolean(sizeTitle) && size === null;
@@ -86,11 +98,11 @@ export function choiceOptions(
   choice: ProductChoice,
   current: Selection,
   sizeTitle: string | undefined,
-  size: number | null
+  size: string | null
 ): ChoiceOption[] {
   return choice.values.map((value) => {
     const wanted: Selection = { ...current, [choice.title]: value };
-    if (sizeTitle && size !== null) wanted[sizeTitle] = String(size);
+    if (sizeTitle && size !== null) wanted[sizeTitle] = size;
     const candidates = candidateVariants(variants, wanted);
     const prices = candidates.map((variant) => variant.price);
     return {
@@ -99,6 +111,27 @@ export function choiceOptions(
       inStock: candidates.some((variant) => variant.inStock > 0),
     };
   });
+}
+
+/**
+ * Each size with its price and whether it can be bought, given the other
+ * choices made (a ring that also comes as a pair is sold out in one and not the
+ * other). A size with no variant left in stock is shown but cannot be picked.
+ */
+export function sizeOptions(
+  variants: readonly ProductVariant[],
+  sizes: readonly string[],
+  current: Selection,
+  sizeTitle: string | undefined
+): ChoiceOption[] {
+  // Without a variant list (development mock data) there is no stock to judge by.
+  if (!sizeTitle || variants.length === 0) return sizes.map((value) => ({ value, price: 0, inStock: true }));
+  return choiceOptions(variants, { title: sizeTitle, values: [...sizes] }, current, undefined, null);
+}
+
+/** The same size, whether saved as text ("7") or, on an older cart line, as a number (7). */
+export function sameSize(a: string | number | null | undefined, b: string | number | null | undefined): boolean {
+  return String(a ?? "") === String(b ?? "");
 }
 
 /** A cart line for this variant already exists. */

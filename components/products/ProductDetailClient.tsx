@@ -8,13 +8,7 @@ import { useCartStore, useWishlistStore } from "@/store/useStore";
 import { SIZE_CHART } from "@/lib/sizing";
 import { usePincodeServiceability } from "@/lib/hooks/usePincodeServiceability";
 import { formatDeliveryRange } from "@/lib/delivery-date";
-import {
-  choiceOptions,
-  defaultSelection,
-  isInCart,
-  resolveVariant,
-  type Selection,
-} from "@/lib/variant-selection";
+import { choiceOptions, defaultSelection, isInCart, resolveVariant, type Selection, sameSize, sizeOptions } from "@/lib/variant-selection";
 import { COD_CHARGE, rupees } from "@/config/offers";
 import { PolicyBadge } from "@/components/products/PolicyBadge";
 import { ProductOffers } from "@/components/offers/ProductOffers";
@@ -168,7 +162,10 @@ export function ProductDetailClient({
 }) {
   const router = useRouter();
   const [activeImage, setActiveImage] = useState(0);
-  const [selectedSize, setSelectedSize] = useState<number | null>(null);
+  // A size as written in Medusa ("7", "7.5", "S"). A product with only one size has it picked already.
+  const [pickedSize, setSelectedSize] = useState<string | null>(() =>
+    product.sizes.length === 1 ? product.sizes[0] : null
+  );
   const [sizeRequiredError, setSizeRequiredError] = useState(false);
   const [sizeChartOpen, setSizeChartOpen] = useState(false);
   const [pincode, setPincode] = useState("");
@@ -205,9 +202,20 @@ export function ProductDetailClient({
   const choices = useMemo(() => product.choices ?? [], [product.choices]);
   const [selection, setSelection] = useState<Selection>(() => defaultSelection(variants, choices));
 
+  // Any product with a Size option (a ring, or a sized bracelet) needs one picked.
+  const hasSizes = product.sizes.length > 0;
+  const sizeLabel = product.type === "ring" ? "Ring Size" : product.sizeOptionTitle ?? "Size";
+  // Each size and whether it is in stock, given the other choices.
+  const sizeOpts = useMemo(
+    () => sizeOptions(variants, product.sizes, selection, product.sizeOptionTitle),
+    [variants, product.sizes, selection, product.sizeOptionTitle]
+  );
+  // A picked size that is sold out under the other choices (a pair, say) counts as not picked.
+  const selectedSize =
+    pickedSize !== null && sizeOpts.some((o) => o.value === pickedSize && o.inStock) ? pickedSize : null;
   const resolved = useMemo(
-    () => resolveVariant(variants, selection, product.sizeOptionTitle, product.type === "ring" ? selectedSize : null),
-    [variants, selection, product.sizeOptionTitle, product.type, selectedSize]
+    () => resolveVariant(variants, selection, product.sizeOptionTitle, hasSizes ? selectedSize : null),
+    [variants, selection, product.sizeOptionTitle, hasSizes, selectedSize]
   );
   // The variant to sell. Products Medusa has no variant list for (mock data)
   // fall back to the product's own variant.
@@ -216,7 +224,7 @@ export function ProductDetailClient({
   const shownOriginal = variants.length > 0 ? resolved.originalPrice : product.originalPrice;
   const inCart = isInCart(cartItems, variantId) ||
     (variants.length === 0 &&
-      cartItems.some((i) => i.product.id === product.id && i.size === (product.type === "ring" ? selectedSize : null)));
+      cartItems.some((i) => i.product.id === product.id && sameSize(i.size, hasSizes ? selectedSize : null)));
 
   /**
    * Resolves which variant an add-to-cart/buy-now action should use.
@@ -226,7 +234,7 @@ export function ProductDetailClient({
    * the size picker instead of guessing.
    */
   function resolveVariantId(): string | undefined | null {
-    if (product.type === "ring" && !selectedSize) {
+    if (hasSizes && !selectedSize) {
       setSizeRequiredError(true);
       return null;
     }
@@ -315,13 +323,13 @@ export function ProductDetailClient({
                         // size" prompt for that case. What it must not do is
                         // silently store an arbitrary size as if chosen.
                         const wishlistVariantId =
-                          product.type === "ring" && !selectedSize ? undefined : variantId;
+                          hasSizes && !selectedSize ? undefined : variantId;
                         // Save the size alongside the variant so moving this
                         // to the cart later can label the line with it.
                         toggleWishlist(
                           product,
                           wishlistVariantId,
-                          product.type === "ring" ? selectedSize : null
+                          hasSizes ? selectedSize : null
                         );
                       }}
                       className="w-[42px] h-[42px] rounded-full bg-white border border-[#DDDDDD] flex items-center justify-center hover:border-black transition-colors duration-200"
@@ -446,7 +454,7 @@ export function ProductDetailClient({
                   choice,
                   selection,
                   product.sizeOptionTitle,
-                  product.type === "ring" ? selectedSize : null
+                  hasSizes ? selectedSize : null
                 );
                 return (
                   <div key={choice.title} className="flex flex-col gap-3">
@@ -483,33 +491,39 @@ export function ProductDetailClient({
                 );
               })}
 
-              {/* Ring size picker, rings only */}
-              {product.type === "ring" && (
+              {/* Size picker: rings, and any other product with a Size option */}
+              {hasSizes && (
                 <div className="flex flex-col gap-3">
                   <div className="flex items-center justify-between">
                     <span className="font-sans font-medium text-[14px] leading-[21px] text-black">
-                      Ring Size{selectedSize ? `: ${selectedSize}` : ""}
+                      {sizeLabel}{selectedSize ? `: ${selectedSize}` : ""}
                     </span>
-                    <button
-                      onClick={() => setSizeChartOpen(true)}
-                      className="font-sans font-light text-[13px] text-[#626262] underline underline-offset-2 hover:text-black transition-colors duration-200"
-                    >
-                      Size chart guide
-                    </button>
+                    {product.type === "ring" && (
+                      <button
+                        onClick={() => setSizeChartOpen(true)}
+                        className="font-sans font-light text-[13px] text-[#626262] underline underline-offset-2 hover:text-black transition-colors duration-200"
+                      >
+                        Size chart guide
+                      </button>
+                    )}
                   </div>
-                  <div className="flex flex-wrap gap-2">
-                    {product.sizes.map((size) => {
+                  <div className="flex flex-wrap gap-2" role="radiogroup" aria-label={sizeLabel}>
+                    {sizeOpts.map(({ value: size, inStock }) => {
                       const active = selectedSize === size;
                       return (
                         <button
                           key={size}
                           type="button"
-                          aria-pressed={active}
+                          role="radio"
+                          aria-checked={active}
+                          aria-label={inStock ? `${sizeLabel} ${size}` : `${sizeLabel} ${size}, sold out`}
+                          title={inStock ? undefined : "Sold out"}
+                          disabled={!inStock}
                           onClick={() => {
                             setSelectedSize(active ? null : size);
                             setSizeRequiredError(false);
                           }}
-                          className={`min-w-[44px] h-11 px-3 rounded-full border font-sans text-[14px] tabular-nums transition-colors duration-150 ${
+                          className={`min-w-[44px] h-11 px-3 rounded-full border font-sans text-[14px] tabular-nums transition-colors duration-150 disabled:cursor-not-allowed disabled:border-[#E6E6E6] disabled:bg-[#F7F7F7] disabled:text-[#B5B5B5] disabled:line-through ${
                             active
                               ? "border-black bg-black text-white"
                               : sizeRequiredError
@@ -522,6 +536,9 @@ export function ProductDetailClient({
                       );
                     })}
                   </div>
+                  {sizeOpts.some((o) => !o.inStock) && (
+                    <p className="font-sans font-normal text-[12px] text-[#909090]">Crossed-out sizes are sold out.</p>
+                  )}
                   {sizeRequiredError && (
                     <p role="alert" className="font-sans font-normal text-[13px] text-[#D93025]">
                       Please select a size before you continue.
@@ -535,9 +552,9 @@ export function ProductDetailClient({
                 <button
                   onClick={() => {
                     const chosen = resolveVariantId();
-                    if (chosen === null) return; // ring with no size picked
+                    if (chosen === null) return; // no size picked yet
                     if (!inCart) {
-                      addToCart(product, product.type === "ring" ? selectedSize : null, chosen);
+                      addToCart(product, hasSizes ? selectedSize : null, chosen);
                     }
                     router.push("/checkout");
                   }}
@@ -550,8 +567,8 @@ export function ProductDetailClient({
                   onClick={() => {
                     if (inCart) return;
                     const chosen = resolveVariantId();
-                    if (chosen === null) return; // ring with no size picked
-                    addToCart(product, product.type === "ring" ? selectedSize : null, chosen);
+                    if (chosen === null) return; // no size picked yet
+                    addToCart(product, hasSizes ? selectedSize : null, chosen);
                   }}
                   className={`flex-1 flex items-center justify-center px-6 sm:px-8 py-4 font-sans font-medium text-[15px] tracking-wide leading-[20px] whitespace-nowrap rounded-full border transition-colors duration-200 ${
                     inCart
@@ -680,16 +697,16 @@ export function ProductDetailClient({
                     <tr
                       key={row.size}
                       className={
-                        selectedSize === row.size
+                        selectedSize === String(row.size)
                           ? "bg-[rgba(228,194,60,0.1)]"
                           : i % 2 === 0
                           ? "bg-white"
                           : "bg-[#FAFAFA]"
                       }
                     >
-                      <td className={`border border-[#CFCFCF] p-3 ${selectedSize === row.size ? "font-medium text-black" : "text-[#626262]"}`}>
+                      <td className={`border border-[#CFCFCF] p-3 ${selectedSize === String(row.size) ? "font-medium text-black" : "text-[#626262]"}`}>
                         {row.size}
-                        {selectedSize === row.size && (
+                        {selectedSize === String(row.size) && (
                           <span className="ml-2 text-[11px] text-[#9F7A00]">← selected</span>
                         )}
                       </td>

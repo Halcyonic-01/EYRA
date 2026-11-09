@@ -3,7 +3,10 @@ import {
   candidateVariants,
   choiceOptions,
   defaultSelection,
+  orderSizes,
   resolveVariant,
+  sameSize,
+  sizeOptions,
 } from "../../lib/variant-selection";
 import type { ProductVariant } from "../../components/products/types";
 
@@ -80,7 +83,7 @@ test.describe("choosing a variant", () => {
     expect(unsized.variant).toBeNull();
     expect(unsized.price).toBe(2499);
 
-    const sized = resolveVariant(ring, {}, "Size", 13);
+    const sized = resolveVariant(ring, {}, "Size", "13");
     expect(sized.needsSize).toBe(false);
     expect(sized.variant?.id).toBe("ring-13");
   });
@@ -102,7 +105,70 @@ test.describe("choosing a variant", () => {
       variant("d", { Size: "13", Pack: "Pair" }, 3800),
     ];
     const choices = [{ title: "Pack", values: ["Single", "Pair"] }];
-    expect(resolveVariant(both, { Pack: "Pair" }, "Size", 13).variant?.id).toBe("d");
-    expect(choiceOptions(both, choices[0], { Pack: "Single" }, "Size", 12).map((o) => o.price)).toEqual([2000, 3800]);
+    expect(resolveVariant(both, { Pack: "Pair" }, "Size", "13").variant?.id).toBe("d");
+    expect(choiceOptions(both, choices[0], { Pack: "Single" }, "Size", "12").map((o) => o.price)).toEqual([2000, 3800]);
+  });
+});
+
+// One product per design, one variant per size, each with its own stock.
+test.describe("sizes", () => {
+  test("a sold-out size is shown but cannot be picked, and only that size", () => {
+    const sized = [
+      variant("ring-6", { Size: "6" }, 2499, 10),
+      variant("ring-7", { Size: "7" }, 2499, 0),
+      variant("ring-8", { Size: "8" }, 2499, 3),
+    ];
+    expect(sizeOptions(sized, ["6", "7", "8"], {}, "Size")).toEqual([
+      { value: "6", price: 2499, inStock: true },
+      { value: "7", price: 2499, inStock: false },
+      { value: "8", price: 2499, inStock: true },
+    ]);
+  });
+
+  test("a size sold out in one choice stays available in another", () => {
+    const both = [
+      variant("a", { Size: "12", Pack: "Single" }, 2000, 0),
+      variant("b", { Size: "12", Pack: "Pair" }, 3800, 4),
+    ];
+    expect(sizeOptions(both, ["12"], { Pack: "Single" }, "Size")[0].inStock).toBe(false);
+    expect(sizeOptions(both, ["12"], { Pack: "Pair" }, "Size")[0].inStock).toBe(true);
+  });
+
+  test("with no variant list (mock data) every size can be picked", () => {
+    expect(sizeOptions([], ["6", "7"], {}, "Size").every((o) => o.inStock)).toBe(true);
+  });
+
+  test("numeric sizes are shown smallest first, not in text order", () => {
+    expect(orderSizes(["10", "6", "20", "7", "11"])).toEqual(["6", "7", "10", "11", "20"]);
+    expect(orderSizes(["7.5", "7", "8"])).toEqual(["7", "7.5", "8"]);
+  });
+
+  test("labels that are not numbers are kept, in the order they were entered", () => {
+    expect(orderSizes(["S", "M", "L"])).toEqual(["S", "M", "L"]);
+    expect(orderSizes(["Small", "Medium", "Large"])).toEqual(["Small", "Medium", "Large"]);
+    expect(orderSizes([" 7 ", "7", "", "8"])).toEqual(["7", "8"]);
+  });
+
+  test("a size written as text picks exactly its variant, including half sizes and letters", () => {
+    const half = ["7", "7.5", "8"].map((size) => variant(`r-${size}`, { Size: size }, 2499));
+    expect(resolveVariant(half, {}, "Size", "7.5").variant?.id).toBe("r-7.5");
+    expect(resolveVariant(half, {}, "Size", "7").variant?.id).toBe("r-7");
+
+    const lettered = ["S", "M", "L"].map((size) => variant(`b-${size}`, { Size: size }, 1999));
+    expect(resolveVariant(lettered, {}, "Size", "M").variant?.id).toBe("b-M");
+  });
+
+  test("a bracelet with a size option needs a size too, like a ring", () => {
+    const bracelet = ["S", "M", "L"].map((size) => variant(`b-${size}`, { Size: size }, 1999));
+    expect(resolveVariant(bracelet, {}, "Size", null)).toMatchObject({ needsSize: true, variant: null });
+    expect(resolveVariant(bracelet, {}, "Size", "L").variant?.id).toBe("b-L");
+  });
+
+  test("an older cart line saved as a number matches the same size as text", () => {
+    expect(sameSize(7, "7")).toBe(true);
+    expect(sameSize("7", "7")).toBe(true);
+    expect(sameSize(null, undefined)).toBe(true);
+    expect(sameSize("7", "7.5")).toBe(false);
+    expect(sameSize("7", null)).toBe(false);
   });
 });

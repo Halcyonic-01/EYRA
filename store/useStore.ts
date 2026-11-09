@@ -1,11 +1,11 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import type { Product, ProductVariant } from "@/components/products/types";
+import type { ChosenSize, Product, ProductVariant } from "@/components/products/types";
 import type { CartSummary, CartTotals } from "@/lib/medusa-cart";
 
 export interface CartItem {
   product: Product;
-  size: number | null;
+  size: ChosenSize;
   quantity: number;
   /** Medusa variant ID, undefined for mock-data items */
   variantId?: string;
@@ -25,7 +25,7 @@ export interface CartItem {
  * pair) are two lines, each at its own price. Items without a variant (mock
  * data) fall back to product and size.
  */
-export function lineKey(item: { product: { id: string }; size: number | null; variantId?: string }): string {
+export function lineKey(item: { product: { id: string }; size: ChosenSize; variantId?: string }): string {
   return item.variantId ?? `${item.product.id}-${item.size ?? "null"}`;
 }
 
@@ -47,7 +47,7 @@ interface CartStore {
   /** Set when a discount code stopped applying because the cart changed. */
   promoNotice: string | null;
 
-  addToCart: (product: Product, size?: number | null, variantId?: string) => void;
+  addToCart: (product: Product, size?: ChosenSize, variantId?: string) => void;
   removeFromCart: (key: string) => void;
   updateQuantity: (key: string, qty: number) => void;
   clearCart: () => void;
@@ -415,13 +415,13 @@ export interface WishlistItem {
    * ring to the cart produced a line with the right variant and no visible
    * size at all. Absent on entries saved before this field existed.
    */
-  size?: number | null;
+  size?: ChosenSize;
 }
 
 interface WishlistStore {
   items: WishlistItem[];
   hasSynced: boolean;
-  toggle: (product: Product, variantId?: string, size?: number | null) => void;
+  toggle: (product: Product, variantId?: string, size?: ChosenSize) => void;
   isWishlisted: (productId: string) => boolean;
   remove: (productId: string) => void;
   initWishlist: () => Promise<void>;
