@@ -30,6 +30,8 @@ export interface DiscountOffer {
   code: string;
   /** Flat rupees off the order. */
   amount: number;
+  /** The order's items must be strictly worth more than this, before discount and shipping. */
+  minOrderAbove: number;
   /** One line on who it is for, and what order value it needs. */
   title: string;
   terms: string;
@@ -39,18 +41,21 @@ export const DISCOUNT_OFFERS: readonly DiscountOffer[] = [
   {
     code: "WELCOME200",
     amount: 200,
+    minOrderAbove: 1499,
     title: "₹200 off your order",
     terms: "Orders above ₹1,499. Once per account. Sign in to use it.",
   },
   {
     code: "EYRA350",
     amount: 350,
+    minOrderAbove: 3000,
     title: "₹350 off your order",
     terms: "Orders above ₹3,000.",
   },
   {
     code: "EYRA650",
     amount: 650,
+    minOrderAbove: 5000,
     title: "₹650 off your order",
     terms: "Orders above ₹5,000.",
   },

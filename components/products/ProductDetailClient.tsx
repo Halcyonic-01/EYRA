@@ -17,6 +17,7 @@ import {
 } from "@/lib/variant-selection";
 import { COD_CHARGE, rupees } from "@/config/offers";
 import { PolicyBadge } from "@/components/products/PolicyBadge";
+import { ProductOffers } from "@/components/offers/ProductOffers";
 
 /* ── Inline SVG icons ────────────────────────────── */
 
@@ -614,6 +615,9 @@ export function ProductDetailClient({
                   </p>
                 )}
               </div>
+
+              {/* Offers that this piece qualifies for, below delivery */}
+              <ProductOffers subtotal={shownPrice} context="product" />
 
               {/* Quality badges: bottom of the product details, below delivery */}
               <div className="flex flex-col gap-4 pt-6 border-t border-[#E1E1E1]">

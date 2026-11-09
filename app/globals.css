@@ -11,9 +11,8 @@
   --subnav-height: 2.5rem; /* mobile For Her / For Him row under the bar; 0 on lg+ */
   /* Total fixed header height: primary bar plus the mobile sub-row. */
   --nav-height: calc(var(--bar-height) + var(--subnav-height));
-  --banner-height: 2.25rem; /* 36px, matches the LaunchSaleBanner height */
-  /* Space taken by everything fixed to the top: banner plus navbar. */
-  --header-offset: calc(var(--banner-height) + var(--nav-height));
+  /* Space taken by everything fixed to the top: the navbar. */
+  --header-offset: var(--nav-height);
 }
 
 /* From the lg breakpoint the category links sit in the primary bar, so the mobile sub-row is gone. */
@@ -86,13 +85,3 @@ body {
 @media (prefers-reduced-motion: no-preference) {
   .auth-rise { animation: auth-rise 260ms cubic-bezier(0.22, 1, 0.36, 1) both; }
 }
-
-/* Launch sale banner: the track holds two identical groups, so sliding it by
-   half its width lands exactly on the start of the other group (seamless).
-   Runs right to left. Deliberately not gated on prefers-reduced-motion. */
-@keyframes marquee {
-  from { transform: translateX(0); }
-  to { transform: translateX(-50%); }
-}
-.marquee-track { animation: marquee 55s linear infinite; }
-.marquee:hover .marquee-track { animation-play-state: paused; }

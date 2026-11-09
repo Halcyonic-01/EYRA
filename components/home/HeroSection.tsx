@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { DeliveryCheckWidget } from "./DeliveryCheckWidget";
-import { PromoCodeDrawer } from "./PromoCodeDrawer";
 
 export function HeroSection() {
   return (
@@ -16,8 +15,6 @@ export function HeroSection() {
           <DeliveryCheckWidget />
         </div>
       </div>
-
-      <PromoCodeDrawer />
 
       {/* ── Display heading ──────────────────────────── */}
       <div className="max-w-screen-xl mx-auto px-6 lg:px-16 pt-10 sm:pt-14 lg:pt-16 pb-8 sm:pb-10 text-center">

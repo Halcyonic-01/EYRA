@@ -6,6 +6,7 @@ import Link from "next/link";
 import { lineKey, useCartStore, useWishlistStore } from "@/store/useStore";
 import { COD_CHARGE, rupees } from "@/config/offers";
 import { ToteLine, ToteOffer } from "@/components/offers/ToteOffer";
+import { ProductOffers } from "@/components/offers/ProductOffers";
 import { PromoCodeBox } from "@/components/cart/PromoCodeBox";
 
 function TrashIcon() {
@@ -305,6 +306,8 @@ export function CartClient() {
               Delivery calculated at checkout.
             </p>
           )}
+
+          <ProductOffers subtotal={totals.subtotal} context="cart" />
 
           <PromoCodeBox />
 

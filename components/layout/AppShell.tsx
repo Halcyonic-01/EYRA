@@ -2,7 +2,6 @@
 
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
-import { LaunchSaleBanner } from "@/components/layout/LaunchSaleBanner";
 import { useCartStore, useWishlistStore } from "@/store/useStore";
 
 /**
@@ -52,7 +51,6 @@ export function AppShell({
         {/* The shop stays visible behind the window; inert so nothing in it can be reached. */}
         <div aria-hidden="true" inert className="pointer-events-none select-none">
           {navbar}
-          <LaunchSaleBanner />
           <div style={{ paddingTop: "var(--header-offset)" }}>{authBackdrop}</div>
         </div>
         {children}
@@ -63,7 +61,6 @@ export function AppShell({
   return (
     <>
       {navbar}
-      <LaunchSaleBanner />
       <main className="flex-1" style={{ paddingTop: "var(--header-offset)" }}>
         {children}
       </main>
