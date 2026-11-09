@@ -67,7 +67,7 @@ function ChevronRightIcon() {
 
 function ReturnIcon() {
   return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#696969" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#696969" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="shrink-0">
       <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
       <path d="M3 3v5h5" />
     </svg>
@@ -76,7 +76,7 @@ function ReturnIcon() {
 
 function ExchangeIcon() {
   return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#696969" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#696969" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="shrink-0">
       <path d="M7 16H3v-4" /><path d="M3 12a9 9 0 0 1 14.12-7.37" />
       <path d="M17 8h4v4" /><path d="M21 12a9 9 0 0 1-14.12 7.37" />
     </svg>
@@ -85,7 +85,7 @@ function ExchangeIcon() {
 
 function CodIcon() {
   return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#696969" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#696969" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="shrink-0">
       <path d="M6 3h12" /><path d="M6 8h8" /><path d="M6 13l8.5 8" />
       <path d="M6 13h3a4 4 0 0 0 0-8" />
     </svg>
@@ -364,25 +364,27 @@ export function ProductDetailClient({
                   {product.description}
                 </p>
 
-                {/* Star rating */}
-                <div className="flex items-center gap-[2px] mt-1">
-                  <span className="font-sans font-normal text-[16px] text-black mr-1">
-                    {product.rating}/5
-                  </span>
-                  {Array.from({ length: 5 }, (_, i) => (
-                    <StarIcon key={i} filled={i < Math.round(product.rating)} />
-                  ))}
-                  <span className="ml-2 font-sans font-normal text-[13px] text-[#909090]">
-                    ({product.reviewCount} reviews)
-                  </span>
-                </div>
+                {/* Star rating: only once there are reviews to show */}
+                {product.reviewCount > 0 && (
+                  <div className="flex items-center gap-[2px] mt-1">
+                    <span className="font-sans font-normal text-[16px] text-black mr-1">
+                      {product.rating}/5
+                    </span>
+                    {Array.from({ length: 5 }, (_, i) => (
+                      <StarIcon key={i} filled={i < Math.round(product.rating)} />
+                    ))}
+                    <span className="ml-2 font-sans font-normal text-[13px] text-[#909090]">
+                      ({product.reviewCount} reviews)
+                    </span>
+                  </div>
+                )}
 
-                {/* Price row */}
-                <div className="flex items-center flex-wrap gap-3 mt-2">
+                {/* Price row: current price bold, MRP muted beside it */}
+                <div className="flex items-baseline flex-wrap gap-3 mt-2">
                   <span className="font-sans font-medium text-[24px] leading-[36px] text-black">
                     ₹{shownPrice.toLocaleString("en-IN")}
                   </span>
-                  <span className="font-sans font-normal text-[20px] leading-[30px] text-[#AAAAAA] line-through">
+                  <span className="font-sans font-normal text-[18px] leading-[28px] text-[#A3A3A3] line-through">
                     ₹{shownOriginal.toLocaleString("en-IN")}
                   </span>
                   {/* Promo badge */}
@@ -398,18 +400,13 @@ export function ProductDetailClient({
                 <p className="font-sans font-normal text-[15px] leading-[22px] text-[#BABABA]">
                   Inclusive of all taxes
                 </p>
-              </div>
 
-              {/* Material spec badges */}
-              <div className="flex flex-wrap gap-2">
-                {product.specs.map((spec) => (
-                  <span
-                    key={spec}
-                    className="px-3 py-1 border border-[#CFCFCF] rounded-full font-sans font-normal text-[13px] leading-[21px] text-[#626262] bg-white"
-                  >
-                    {spec}
-                  </span>
-                ))}
+                {/* Material and quality, as one quiet line */}
+                {product.specs.length > 0 && (
+                  <p className="font-sans font-normal text-[14px] leading-[21px] text-[#626262]">
+                    {product.specs.join(" • ")}
+                  </p>
+                )}
               </div>
 
               {/* Choices besides ring size: single or pair, with or without a chain */}
@@ -471,24 +468,29 @@ export function ProductDetailClient({
                     </button>
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    {product.sizes.map((size) => (
-                      <button
-                        key={size}
-                        onClick={() => {
-                          setSelectedSize(size === selectedSize ? null : size);
-                          setSizeRequiredError(false);
-                        }}
-                        className={`w-10 h-10 border font-sans font-normal text-[14px] rounded transition-colors duration-150 ${
-                          selectedSize === size
-                            ? "bg-black text-white border-black"
-                            : sizeRequiredError
-                              ? "bg-white border-[#D93025] text-[#626262] hover:border-black hover:text-black"
-                              : "bg-white border-[#CFCFCF] text-[#626262] hover:border-black hover:text-black"
-                        }`}
-                      >
-                        {size}
-                      </button>
-                    ))}
+                    {product.sizes.map((size) => {
+                      const active = selectedSize === size;
+                      return (
+                        <button
+                          key={size}
+                          type="button"
+                          aria-pressed={active}
+                          onClick={() => {
+                            setSelectedSize(active ? null : size);
+                            setSizeRequiredError(false);
+                          }}
+                          className={`min-w-[44px] h-11 px-3 rounded-full border font-sans text-[14px] tabular-nums transition-colors duration-150 ${
+                            active
+                              ? "border-black bg-black text-white"
+                              : sizeRequiredError
+                                ? "border-[#D93025] bg-white text-[#626262] hover:border-black hover:text-black"
+                                : "border-[#D4D4D4] bg-white text-[#3A3A3A] hover:border-black hover:text-black"
+                          }`}
+                        >
+                          {size}
+                        </button>
+                      );
+                    })}
                   </div>
                   {sizeRequiredError && (
                     <p role="alert" className="font-sans font-normal text-[13px] text-[#D93025]">
@@ -509,7 +511,7 @@ export function ProductDetailClient({
                     }
                     router.push("/checkout");
                   }}
-                  className="flex-1 flex items-center justify-center px-4 sm:px-8 py-3 sm:py-[14px] bg-black text-white font-sans font-medium text-[15px] sm:text-[18px] leading-[20px] whitespace-nowrap rounded-full hover:bg-[#1a1a1a] transition-colors duration-200"
+                  className="flex-1 flex items-center justify-center px-6 sm:px-8 py-4 bg-black text-white font-sans font-medium text-[15px] tracking-wide leading-[20px] whitespace-nowrap rounded-full hover:bg-[#1a1a1a] transition-colors duration-200"
                   style={{ boxShadow: "inset 0px 6px 10px rgba(211,211,211,0.3)" }}
                 >
                   Buy now
@@ -521,7 +523,7 @@ export function ProductDetailClient({
                     if (chosen === null) return; // ring with no size picked
                     addToCart(product, product.type === "ring" ? selectedSize : null, chosen);
                   }}
-                  className={`flex-1 flex items-center justify-center px-4 sm:px-8 py-3 sm:py-[14px] font-sans font-medium text-[15px] sm:text-[18px] leading-[20px] whitespace-nowrap rounded-full border transition-colors duration-200 ${
+                  className={`flex-1 flex items-center justify-center px-6 sm:px-8 py-4 font-sans font-medium text-[15px] tracking-wide leading-[20px] whitespace-nowrap rounded-full border transition-colors duration-200 ${
                     inCart
                       ? "bg-black text-white border-black"
                       : "bg-white text-black border-[#DBDBDB] hover:border-black"
@@ -532,22 +534,15 @@ export function ProductDetailClient({
                 </button>
               </div>
 
-              {/* Service badges */}
-              <div className="flex border border-[#C5C5C5] rounded-[20px] overflow-hidden">
-                {serviceItems.map((item, i) => (
-                  <div
-                    key={item.label}
-                    className={`flex-1 flex flex-col items-center gap-[5px] py-3 ${
-                      i < serviceItems.length - 1 ? "border-r border-[#C5C5C5]" : ""
-                    }`}
-                  >
+              {/* Policies, as a quiet list under the actions */}
+              <ul className="flex flex-col gap-3 pt-1">
+                {serviceItems.map((item) => (
+                  <li key={item.label} className="flex items-center gap-3 font-sans font-normal text-[14px] leading-[21px] text-[#505050]">
                     {item.icon}
-                    <span className="font-sans font-normal text-[12px] leading-[18px] text-[#696969] text-center">
-                      {item.label}
-                    </span>
-                  </div>
+                    <span>{item.label}</span>
+                  </li>
                 ))}
-              </div>
+              </ul>
 
               {/* Pincode delivery checker */}
               <div className="flex flex-col gap-[6px]">

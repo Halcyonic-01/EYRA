@@ -292,6 +292,9 @@ function toProduct(p: MedusaProduct): Product {
   };
 }
 
+/** Values Medusa writes into the placeholder option of a product with no real options. */
+const PLACEHOLDER_OPTION_VALUES = new Set(["Default Title", "Default", "Default option value"]);
+
 /**
  * Convert a raw Medusa product to the richer DetailProduct shape used on the
  * product detail page. Requires the options, options.values, and tags
@@ -359,10 +362,15 @@ function toDetailProduct(p: MedusaProduct): DetailProduct {
     };
   });
 
-  // Choices other than ring size: a "Title" option with one value is Medusa's
-  // placeholder for a product with no options, so it is not a choice.
+  // Choices other than ring size. Medusa fills a product that has no real
+  // options with a placeholder option ("Title", or "Default option" whose only
+  // value is "Default option value"). Those are not choices, so they must not
+  // reach the page as a selectable button.
+  const isPlaceholderOption = (o: MedusaProductOption) =>
+    (o.title === "Title" && o.values.length <= 1) ||
+    o.values.every((v) => PLACEHOLDER_OPTION_VALUES.has(v.value));
   const choices: ProductChoice[] = p.options
-    .filter((o) => o !== sizeOption && !(o.title === "Title" && o.values.length <= 1))
+    .filter((o) => o !== sizeOption && !isPlaceholderOption(o))
     .map((o) => ({ title: o.title, values: o.values.map((v) => v.value) }))
     .filter((c) => c.values.length > 0);
 
