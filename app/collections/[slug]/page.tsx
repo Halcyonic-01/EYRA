@@ -47,7 +47,7 @@ export default async function CollectionPage({
   // top-level route. The homepage hero still links here, so keep it resolving.
   if (slug === "new") redirect("/new-arrivals");
 
-  // Send aliases (/collections/necklaces) to the canonical URL so there is a
+  // Send aliases (/collections/necklaces, /collections/chains) to the canonical URL so there is a
   // single indexable address per collection.
   const canonical = canonicalSlug(slug);
   if (canonical) redirect(`/collections/${canonical}`);

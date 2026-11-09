@@ -33,8 +33,8 @@ export const COLLECTIONS: readonly Collection[] = [
     image: "/images/collection-1.jpg",
   },
   {
-    slug: "necklaces",
-    label: "Necklaces & Pendants",
+    slug: "pendants",
+    label: "Pendants",
     description:
       "Rope twists, serpentine links, and everyday pendants built to layer.",
     types: ["pendant"],
@@ -76,14 +76,14 @@ export const COLLECTIONS: readonly Collection[] = [
 
 /**
  * Legacy and colloquial slugs kept alive so older links, bookmarks, and any
- * indexed URLs resolve instead of 404ing. "Necklaces" is what customers search
- * for; "chain" is what the catalogue calls the same product type.
+ * indexed URLs resolve instead of 404ing. Old necklace URLs redirect to pendants.
+ * "chain" is what the catalogue calls the same product type.
  */
 const SLUG_ALIASES: Record<string, string> = {
-  chains: "necklaces",
-  chain: "necklaces",
-  necklace: "necklaces",
-  pendants: "necklaces",
+  chains: "pendants",
+  chain: "pendants",
+  necklace: "pendants",
+  necklaces: "pendants",
   ring: "rings",
   anklet: "anklets",
   bracelet: "bracelets",

@@ -74,7 +74,7 @@ test("every internal link found on entry pages resolves", async ({ page }) => {
 
 test("collection aliases redirect to their canonical URL", async ({ page }) => {
   await page.goto("/collections/chains");
-  await expect(page).toHaveURL(/\/collections\/necklaces$/);
+  await expect(page).toHaveURL(/\/collections\/pendants$/);
 
   await page.goto("/collections/new");
   await expect(page).toHaveURL(/\/new-arrivals$/);
@@ -115,6 +115,6 @@ test.describe("HTTP status codes", () => {
     const res = await request.get("/collections/chains", { maxRedirects: 0 });
     expect(res.status()).toBeGreaterThanOrEqual(300);
     expect(res.status()).toBeLessThan(400);
-    expect(res.headers()["location"]).toContain("/collections/necklaces");
+    expect(res.headers()["location"]).toContain("/collections/pendants");
   });
 });

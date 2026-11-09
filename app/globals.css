@@ -7,19 +7,11 @@
 */
 
 :root {
-  --bar-height: 4.5rem; /* 72px, the primary header bar */
-  --subnav-height: 2.5rem; /* mobile For Her / For Him row under the bar; 0 on lg+ */
-  /* Total fixed header height: primary bar plus the mobile sub-row. */
-  --nav-height: calc(var(--bar-height) + var(--subnav-height));
+  --bar-height: 4.5rem; /* 72px, the single header bar on every breakpoint */
+  /* Total fixed header height. */
+  --nav-height: var(--bar-height);
   /* Space taken by everything fixed to the top: the navbar. */
   --header-offset: var(--nav-height);
-}
-
-/* From the lg breakpoint the category links sit in the primary bar, so the mobile sub-row is gone. */
-@media (min-width: 64rem) {
-  :root {
-    --subnav-height: 0rem;
-  }
 }
 
 @theme {

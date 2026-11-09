@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { X, Search, ShoppingBag, User, Heart, LogOut } from "lucide-react";
+import { X, Menu, Search, ShoppingBag, User, Heart, LogOut } from "lucide-react";
 import { useAuth } from "@clerk/nextjs";
 import { Logo } from "@/components/ui/Logo";
+import { MobileNav } from "@/components/layout/MobileNav";
 import { useSignOut } from "@/components/auth/useSignOut";
 import { useWalletBalance } from "@/components/wallet/useWalletBalance";
 import { WalletChip } from "@/components/wallet/WalletChip";
@@ -22,15 +23,11 @@ const NAV_ITEMS = [
   { label: "Contact",     href: "/contact"      },
 ] as const;
 
-/* Mobile-only category row, shown under the primary bar below lg. */
-const CATEGORY_ITEMS = [
-  { label: "For Her", href: "/collections/for-her" },
-  { label: "For Him", href: "/collections/for-him" },
-] as const;
-
 export function Navbar() {
   const [scrolled,  setScrolled]  = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const closeMenu = useCallback(() => setMenuOpen(false), []);
   const [searchValue, setSearchValue] = useState("");
   const searchInputRef = useRef<HTMLInputElement>(null);
   const pathname = usePathname();
@@ -94,8 +91,22 @@ export function Navbar() {
           ].join(" ")}
           style={{ height: "var(--bar-height)" }}
         >
-          {/* Logo */}
-          <Logo variant={darkTheme ? "light" : "dark"} size="xl" />
+          {/* Left: hamburger (below lg) beside the logo */}
+          <div className="flex items-center min-w-0">
+            <button
+              type="button"
+              aria-label="Open menu"
+              aria-expanded={menuOpen}
+              onClick={() => setMenuOpen(true)}
+              className={[
+                "lg:hidden -ml-2.5 mr-1 p-2.5 transition-colors duration-200",
+                darkTheme ? "text-pearl hover:text-white" : "text-[#333] hover:text-black",
+              ].join(" ")}
+            >
+              <Menu size={20} strokeWidth={1.5} />
+            </button>
+            <Logo variant={darkTheme ? "light" : "dark"} size="xl" />
+          </div>
 
           {/* Desktop nav */}
           <nav
@@ -135,8 +146,7 @@ export function Navbar() {
               }
             </button>
             {/* Account: signed-in users go to their profile, guests to sign-in.
-                This is deliberately the sole account entry point in the header,
-                no separate text "Sign in" / "Sign up" links. */}
+                Desktop only. Below lg, account lives in the drawer's guest card. */}
             {wallet && wallet.balance > 0 && (
               <WalletChip balance={wallet.balance} hint={walletHint} dark={darkTheme} />
             )}
@@ -144,7 +154,7 @@ export function Navbar() {
               href={isSignedIn ? "/account" : "/sign-in"}
               aria-label={isSignedIn ? "Your account" : "Sign in"}
               className={[
-                "p-2.5 transition-colors duration-200 block",
+                "p-2.5 transition-colors duration-200 hidden lg:block",
                 darkTheme ? "text-pearl hover:text-white" : "text-[#333] hover:text-black",
               ].join(" ")}
             >
@@ -204,35 +214,10 @@ export function Navbar() {
           </div>
         </div>
 
-        {/* Category row, mobile only. Desktop shows these in the primary nav. */}
-        <nav
-          className="lg:hidden flex items-center justify-center gap-9"
-          style={{ height: "var(--subnav-height)" }}
-          aria-label="Shop by category"
-        >
-          {CATEGORY_ITEMS.map(({ label, href }) => {
-            const active = pathname?.startsWith(href) ?? false;
-            return (
-              <Link
-                key={href}
-                href={href}
-                aria-current={active ? "page" : undefined}
-                className={[
-                  "font-display text-[0.95rem] tracking-[0.12em] underline underline-offset-[6px] decoration-[0.5px] transition-colors duration-200",
-                  active
-                    ? darkTheme ? "text-white decoration-white" : "text-black decoration-black"
-                    : [
-                        "decoration-transparent",
-                        darkTheme ? "text-pearl hover:text-white" : "text-[#7A7A7A] hover:text-black",
-                      ].join(" "),
-                ].join(" ")}
-              >
-                {label}
-              </Link>
-            );
-          })}
-        </nav>
       </header>
+
+      {/* ── Mobile navigation drawer (below lg) ───────── */}
+      <MobileNav open={menuOpen} onClose={closeMenu} />
 
       {/* ── Search panel ──────────────────────────────── */}
       {searchOpen && (

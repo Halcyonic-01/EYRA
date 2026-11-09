@@ -6,7 +6,7 @@ const PANELS = [
     src: "/images/for-her.jpg",
     tag: "FOR HER",
     description:
-      "From delicate rings to bold statement necklaces, every piece is designed to make women feel effortlessly beautiful with contemporary minimal style.",
+      "From delicate rings to bold statement pendants, every piece is designed to make women feel effortlessly beautiful with contemporary minimal style.",
     href: "/collections/for-her",
   },
   {
