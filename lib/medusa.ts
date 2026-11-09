@@ -10,6 +10,7 @@
  */
 
 import type { Product, ProductChoice, ProductVariant } from "@/components/products/types";
+import { canonicalProductType } from "@/lib/product-type";
 import type { DetailProduct } from "@/lib/products";
 
 /* ── Config ───────────────────────────────────────────────── */
@@ -169,13 +170,13 @@ async function getRegionId(): Promise<string | undefined> {
 
 /**
  * Map Medusa's open-ended product type to the types our UI understands.
- * Falls back to keyword matching on title/handle before defaulting to "ring".
+ * Names are matched ignoring case and plurals ("Rings" is a ring). When the type is
+ * missing or unknown it falls back to keyword matching on title/handle before
+ * defaulting to "ring".
  */
 function normalizeType(p: MedusaProduct): "ring" | "chain" | "bracelet" | "anklet" {
-  const raw = p.type?.value?.toLowerCase() ?? "";
-  if (raw === "ring" || raw === "chain" || raw === "bracelet" || raw === "anklet") {
-    return raw;
-  }
+  const known = canonicalProductType(p.type?.value);
+  if (known) return known;
   const text = `${p.title} ${p.handle}`.toLowerCase();
   // Anklets are checked first: an "ankle bracelet" is an anklet, not a bracelet.
   if (text.includes("anklet") || text.includes("ankle bracelet")) return "anklet";
