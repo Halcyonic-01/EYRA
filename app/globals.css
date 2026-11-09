@@ -7,11 +7,12 @@
 */
 
 :root {
+  --banner-height: 2rem; /* 32px, rotating announcement bar above the header */
   --bar-height: 4.5rem; /* 72px, the single header bar on every breakpoint */
-  /* Total fixed header height. */
+  /* Total fixed header height (the bar itself, not counting the announcement). */
   --nav-height: var(--bar-height);
-  /* Space taken by everything fixed to the top: the navbar. */
-  --header-offset: var(--nav-height);
+  /* Space taken by everything fixed to the top: announcement bar plus navbar. */
+  --header-offset: calc(var(--banner-height) + var(--nav-height));
 }
 
 @theme {
@@ -63,6 +64,15 @@ body {
 .fade-hidden          { opacity: 0; transform: translateY(1.5rem); }
 .fade-hidden-left     { opacity: 0; transform: translateX(1.5rem); }
 .fade-visible         { opacity: 1; transform: translate(0, 0); }
+
+/* ── Announcement bar text: a short fade-up each time the message changes ── */
+@keyframes banner-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .banner-text { animation: banner-in 500ms ease-out; }
+}
 
 /* ── Carousel scrollbar ───────────────────────────────── */
 /* Visible, slim scrollbar so a horizontal carousel reads as scrollable. */

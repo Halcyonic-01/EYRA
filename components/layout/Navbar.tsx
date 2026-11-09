@@ -8,6 +8,7 @@ import { DeliveryCheckWidget } from "@/components/home/DeliveryCheckWidget";
 import { useAuth } from "@clerk/nextjs";
 import { Logo } from "@/components/ui/Logo";
 import { MobileNav } from "@/components/layout/MobileNav";
+import { AnnouncementBanner } from "@/components/layout/AnnouncementBanner";
 import { useSignOut } from "@/components/auth/useSignOut";
 import { useWalletBalance } from "@/components/wallet/useWalletBalance";
 import { WalletChip } from "@/components/wallet/WalletChip";
@@ -60,6 +61,8 @@ export function Navbar() {
 
   return (
     <>
+      <AnnouncementBanner />
+
       {/* ── Fixed top bar ─────────────────────────────── */}
       <header
         className={[
@@ -68,7 +71,7 @@ export function Navbar() {
             ? "bg-charcoal/95 backdrop-blur-md border-b border-white/10"
             : "bg-white/90 backdrop-blur-md border-b border-[#CFCFCF]",
         ].join(" ")}
-        style={{ height: "var(--nav-height)" }}
+        style={{ top: "var(--banner-height)", height: "var(--nav-height)" }}
       >
         <div
           className={[

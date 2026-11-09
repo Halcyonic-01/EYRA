@@ -18,7 +18,7 @@ const NAV_LINKS = [
   { label: "Shop for him", href: "/collections/for-him" },
   { label: "Collection", href: "/collections" },
   { label: "New Arrival", href: "/new-arrivals" },
-  { label: "About and Contact", href: "/about" },
+  { label: "Contact", href: "/contact" },
 ] as const;
 
 /**
@@ -76,8 +76,9 @@ export function MobileNav({
         aria-modal="true"
         aria-label="Site menu"
         aria-hidden={!open}
+        style={{ top: "var(--banner-height)" }}
         className={[
-          "fixed inset-y-0 left-0 z-[60] flex w-[min(86vw,22rem)] flex-col bg-ivory shadow-xl",
+          "fixed bottom-0 left-0 z-[60] flex w-[min(86vw,22rem)] flex-col bg-ivory shadow-xl",
           "transition-[transform,visibility] duration-300 ease-out lg:hidden",
           open ? "visible translate-x-0" : "invisible -translate-x-full",
         ].join(" ")}
@@ -86,8 +87,8 @@ export function MobileNav({
           className="flex shrink-0 items-center justify-between px-6"
           style={{ height: "var(--bar-height)" }}
         >
-          <p className="font-sans text-[0.7rem] tracking-[0.28em] uppercase text-[#5F5F5F]">
-            Menu
+          <p className="font-display text-[1.4rem] tracking-[0.14em] text-jet">
+            EYRA
           </p>
           <button
             ref={closeRef}
@@ -154,6 +155,19 @@ export function MobileNav({
                 </Link>
               </li>
             ))}
+
+            {/* Orders need an account (/orders redirects guests to sign-in), so only signed-in users see this. */}
+            {isLoaded && isSignedIn && (
+              <li className="border-b border-[#E2E2E2]">
+                <Link
+                  href="/orders"
+                  onClick={onClose}
+                  className="flex items-center py-4 font-display text-[1.375rem] tracking-[0.02em] text-black hover:text-[#4D4D4D] transition-colors duration-200"
+                >
+                  My orders
+                </Link>
+              </li>
+            )}
           </ul>
         </nav>
 
