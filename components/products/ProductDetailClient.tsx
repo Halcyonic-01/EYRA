@@ -393,7 +393,7 @@ export function ProductDetailClient({
                     style={{ background: "linear-gradient(90deg, rgba(228,194,60,0.14) 0%, rgba(255,255,255,0) 100%)" }}
                   >
                     <span className="font-sans font-normal text-[14px] leading-[21px] text-black">
-                      Free shipping on prepaid orders. A complimentary tote bag above {rupees(TOTE_MIN_SUBTOTAL)}, subject to stock availability.
+                      Free shipping on prepaid orders. A complimentary tote bag above {rupees(TOTE_MIN_SUBTOTAL)}.
                     </span>
                   </div>
                 </div>

@@ -28,7 +28,7 @@ export function ToteOffer({
       >
         {inCart
           ? "A complimentary EYRA tote bag is included with this order."
-          : "This order qualifies for a complimentary EYRA tote bag, subject to stock availability."}
+          : "This order qualifies for a complimentary EYRA tote bag."}
       </p>
     );
   }

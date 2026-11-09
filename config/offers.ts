@@ -64,7 +64,7 @@ export const AUTOMATIC_BENEFITS: readonly { title: string; terms: string }[] = [
   },
   {
     title: "Complimentary EYRA tote bag",
-    terms: `Included with orders above ₹${TOTE_MIN_SUBTOTAL.toLocaleString("en-IN")}, subject to stock availability.`,
+    terms: `Included with orders above ₹${TOTE_MIN_SUBTOTAL.toLocaleString("en-IN")}.`,
   },
 ];
 

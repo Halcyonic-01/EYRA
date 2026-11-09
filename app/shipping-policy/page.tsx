@@ -29,7 +29,7 @@ export default function ShippingPolicyPage() {
           heading: "1. Order processing and dispatch",
           body: [
             `Standard in-stock orders are prepared and dispatched within ${policy.dispatchHoursMin} to ${policy.dispatchHoursMax} hours of payment confirmation.`,
-            `Complimentary promotional tote bag included with orders above ₹${TOTE_MIN_SUBTOTAL.toLocaleString("en-IN")}; subject to stock availability.`,
+            `Complimentary promotional tote bag included with orders above ₹${TOTE_MIN_SUBTOTAL.toLocaleString("en-IN")}.`,
             "The tote bag is a gift with the order. It is added to your order at no charge and is packed with your parcel. The order value for this offer is the price of your items before any discount, without shipping.",
             `Personalised, engraved, or custom-made designs need an additional ${policy.customExtraDaysMin} to ${policy.customExtraDaysMax} working days for craftsmanship. If your order contains both standard and personalised jewellery, we may split the shipment so your ready-to-wear pieces are not held back.`,
             ...(canCancel

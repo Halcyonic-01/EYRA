@@ -158,13 +158,14 @@ test.describe("complimentary tote bag", () => {
   test("the shipping policy says it, in the agreed words", async ({ page }) => {
     await page.goto("/shipping-policy");
     await expect(page.locator("main")).toContainText(
-      "Complimentary promotional tote bag included with orders above ₹1,499; subject to stock availability."
+      "Complimentary promotional tote bag included with orders above ₹1,499."
     );
   });
 
-  test("the product page says it is subject to stock availability", async ({ page }) => {
+  test("the product page shows the tote bag line without the stock caveat", async ({ page }) => {
     await page.goto("/products/luna-anklet");
-    await expect(page.getByText(/complimentary tote bag above ₹1,499, subject to stock availability/)).toBeVisible();
+    await expect(page.getByText(/complimentary tote bag above ₹1,499\./)).toBeVisible();
+    await expect(page.getByText(/subject to stock availability/)).toHaveCount(0);
   });
 });
 
