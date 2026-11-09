@@ -9,7 +9,7 @@
  * static mock data in lib/products.ts so the UI remains fully functional.
  */
 
-import type { Product, ProductChoice, ProductVariant } from "@/components/products/types";
+import type { Audience, Product, ProductChoice, ProductVariant } from "@/components/products/types";
 import { canonicalProductType } from "@/lib/product-type";
 import type { DetailProduct } from "@/lib/products";
 
@@ -43,6 +43,12 @@ interface MedusaProductType {
 interface MedusaProductTag {
   id: string;
   value: string;
+}
+
+interface MedusaProductCategory {
+  id: string;
+  name: string;
+  handle: string;
 }
 
 interface MedusaOptionValue {
@@ -87,6 +93,7 @@ interface MedusaProduct {
   images: MedusaImage[];
   type: MedusaProductType | null;
   tags: MedusaProductTag[] | null;
+  categories?: MedusaProductCategory[] | null;
   options: MedusaProductOption[];
   variants: MedusaVariant[];
   metadata: Record<string, unknown> | null;
@@ -174,17 +181,17 @@ async function getRegionId(): Promise<string | undefined> {
  * missing or unknown it falls back to keyword matching on title/handle before
  * defaulting to "ring".
  */
-function normalizeType(p: MedusaProduct): "ring" | "chain" | "bracelet" | "anklet" {
+function normalizeType(p: MedusaProduct): "ring" | "pendant" | "bracelet" | "anklet" {
   const known = canonicalProductType(p.type?.value);
   if (known) return known;
   const text = `${p.title} ${p.handle}`.toLowerCase();
   // Anklets are checked first: an "ankle bracelet" is an anklet, not a bracelet.
   if (text.includes("anklet") || text.includes("ankle bracelet")) return "anklet";
-  // Bracelets are checked before chains: a "bracelet chain" is a bracelet.
+  // Bracelets are checked before pendants: a "bracelet chain" is a bracelet.
   if (text.includes("bracelet") || text.includes("bangle") || text.includes("cuff bracelet")) {
     return "bracelet";
   }
-  if (text.includes("chain") || text.includes("link") || text.includes("necklace") || text.includes("pendant")) return "chain";
+  if (text.includes("chain") || text.includes("link") || text.includes("necklace") || text.includes("pendant")) return "pendant";
   return "ring";
 }
 
@@ -237,6 +244,24 @@ function variantStock(v: MedusaVariant): number {
   return v.inventory_quantity ?? 0;
 }
 
+/** Medusa category names (lower case) that mean "who the product is for". */
+const AUDIENCE_BY_CATEGORY: Record<string, Audience> = {
+  men: "men",
+  women: "women",
+  couple: "couple",
+  couples: "couple",
+};
+
+/** The audiences a product belongs to, from its Medusa categories. */
+function audiencesOf(p: MedusaProduct): Audience[] {
+  const found = new Set<Audience>();
+  for (const category of p.categories ?? []) {
+    const audience = AUDIENCE_BY_CATEGORY[category.name.trim().toLowerCase()];
+    if (audience) found.add(audience);
+  }
+  return [...found];
+}
+
 /**
  * Convert a raw Medusa product to the lean Product shape used in listings
  * and the cart/wishlist stores. The `id` field is set to the Medusa handle so
@@ -260,6 +285,7 @@ function toProduct(p: MedusaProduct): Product {
     images: extractImages(p),
     inStock,
     type: normalizeType(p),
+    audiences: audiencesOf(p),
     variantId: cheapestVariantId,
     hasPriceRange: prices.size > 1,
     needsChoice: p.variants.length > 1,
@@ -286,9 +312,9 @@ function toDetailProduct(p: MedusaProduct): DetailProduct {
     : [];
 
   // Quality badges come from Medusa product tags; fall back to sensible defaults
-  const defaultSpecs: Record<"ring" | "chain" | "bracelet" | "anklet", string[]> = {
+  const defaultSpecs: Record<"ring" | "pendant" | "bracelet" | "anklet", string[]> = {
     ring: ["925 Sterling", "Hallmarked", "BIS Certified", "Anti-tarnish"],
-    chain: ["925 Sterling", "Nickel Free", "Hallmarked", "Anti-tarnish"],
+    pendant: ["925 Sterling", "Nickel Free", "Hallmarked", "Anti-tarnish"],
     bracelet: ["925 Sterling", "Hallmarked", "BIS Certified", "Anti-tarnish"],
     anklet: ["925 Sterling", "Hallmarked", "BIS Certified", "Anti-tarnish"],
   };
@@ -393,7 +419,7 @@ export async function getProducts(): Promise<Product[]> {
       ...(regionId ? { region_id: regionId } : {}),
       fields: [
         "id", "title", "handle", "description", "thumbnail", "metadata",
-        "*images", "*type", "*tags", "*variants", "+variants.inventory_quantity", "*variants.calculated_price",
+        "*images", "*type", "*tags", "*categories", "*variants", "+variants.inventory_quantity", "*variants.calculated_price",
       ].join(","),
     },
     { next: { tags: ["products"] } }
@@ -416,7 +442,7 @@ export async function getProducts(): Promise<Product[]> {
 export async function getProductByHandle(handle: string): Promise<DetailProduct | null> {
   const expandFields = [
     "id", "title", "handle", "description", "thumbnail", "metadata",
-    "*images", "*type", "*tags",
+    "*images", "*type", "*tags", "*categories",
     "*options", "*options.values",
     "*variants", "+variants.inventory_quantity", "*variants.options", "*variants.calculated_price",
   ].join(",");

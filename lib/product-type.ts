@@ -6,13 +6,14 @@
  * matter, so a type added in the admin later needs no code change. Free of
  * server-only code so it can be tested on its own.
  */
-export type UiProductType = "ring" | "chain" | "bracelet" | "anklet";
+export type UiProductType = "ring" | "pendant" | "bracelet" | "anklet";
 
+// "chain" and "necklace" still resolve to pendant, so older Medusa type names keep working.
 const UI_TYPES: Record<string, UiProductType> = {
   ring: "ring",
-  chain: "chain",
-  necklace: "chain",
-  pendant: "chain",
+  pendant: "pendant",
+  chain: "pendant",
+  necklace: "pendant",
   bracelet: "bracelet",
   bangle: "bracelet",
   anklet: "anklet",
@@ -25,8 +26,12 @@ export function canonicalProductType(raw: string | null | undefined): UiProductT
   return UI_TYPES[singular(raw)] ?? null;
 }
 
-/** Necklaces weigh like chains and bangles like bracelets; pendants and earrings have their own weights. */
-const SAME_WEIGHT_AS: Record<string, string> = { necklace: "chain", bangle: "bracelet" };
+/** Necklaces and chains weigh like pendants, and bangles like bracelets; earrings and totes have their own weights. */
+const SAME_WEIGHT_AS: Record<string, string> = {
+  necklace: "pendant",
+  chain: "pendant",
+  bangle: "bracelet",
+};
 
 /** The key into the parcel weight table (config/storeConfig.ts) for a type name. */
 export function weightKey(raw: string | null | undefined): string {

@@ -1,3 +1,6 @@
+/** Who a product is made for. Set by the product's category in Medusa. */
+export type Audience = "men" | "women" | "couple";
+
 /** One purchasable variant of a product, priced by Medusa. */
 export interface ProductVariant {
   id: string;
@@ -23,7 +26,9 @@ export interface Product {
   description: string;
   images: string[];
   inStock: number;
-  type: "ring" | "chain" | "bracelet" | "anklet";
+  type: "ring" | "pendant" | "bracelet" | "anklet";
+  /** Who the product is for, from its Medusa categories. Empty when none are set. */
+  audiences?: Audience[];
   /** Medusa variant ID for the cheapest/default variant. Undefined for mock data. */
   variantId?: string;
   /** True when variants differ in price, so listings show "From ₹x". */

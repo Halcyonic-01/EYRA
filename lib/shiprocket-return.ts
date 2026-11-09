@@ -31,7 +31,8 @@ export interface ReversePickupRequest {
     phone: string;
     email: string;
   };
-  items: { name: string; sku: string; quantity: number; price: number; packSize: number }[];
+  /** `type` is the product type ("ring", "pendant", ...), used to estimate the parcel weight. */
+  items: { name: string; sku: string; quantity: number; price: number; packSize: number; type?: string }[];
 }
 
 /** Where the item is brought to: the warehouse the courier delivers returns to. */

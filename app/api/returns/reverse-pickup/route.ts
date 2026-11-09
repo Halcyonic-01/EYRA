@@ -2,6 +2,7 @@ import type { NextRequest } from "next/server";
 
 import { storeConfig } from "@/config/storeConfig";
 import { checkShipmentRequest } from "@/lib/internal-auth";
+import { itemWeightKg } from "@/lib/parcel-weight";
 import {
   buildReturnOrderPayload,
   createReturnOrder,
@@ -66,7 +67,7 @@ export async function POST(request: NextRequest) {
   const weightKg = Math.max(
     storeConfig.shipping.minChargeableWeightKg,
     body.items.reduce(
-      (sum, item) => sum + ((storeConfig.shipping.itemWeightsG.ring ?? storeConfig.shipping.defaultItemWeightG) / 1000) * item.quantity * Math.max(1, item.packSize),
+      (sum, item) => sum + itemWeightKg(item.type) * item.quantity * Math.max(1, item.packSize),
       0
     )
   );

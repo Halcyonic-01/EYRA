@@ -1,12 +1,13 @@
-import type { Product } from "@/components/products/types";
+import type { Audience, Product } from "@/components/products/types";
 
 /**
  * Every browsable collection on the storefront.
  *
- * A collection is defined by the product `type`s it includes, so a collection
- * can never point at inventory that does not exist. When a new product type is
- * added to the catalogue, add it here and the route, the index page, the
- * footer, and the homepage grid all pick it up automatically.
+ * A collection is defined by the product `type`s it includes, the `audiences`
+ * (Medusa categories MEN, WOMEN, COUPLE) it includes, or both. A product must
+ * match every rule the collection sets. When a new product type is added to
+ * the catalogue, add it here and the route, the index page, the footer, and the
+ * homepage grid all pick it up automatically.
  */
 export interface Collection {
   slug: string;
@@ -14,8 +15,10 @@ export interface Collection {
   label: string;
   /** Short editorial line shown under the heading on the collection page. */
   description: string;
-  /** Product types included in this collection. */
-  types: ReadonlyArray<Product["type"]>;
+  /** Product types included in this collection. Omit to include every type. */
+  types?: ReadonlyArray<Product["type"]>;
+  /** Audiences included in this collection. Omit to include every audience. */
+  audiences?: ReadonlyArray<Audience>;
   /** Tile image used on the collections index and the homepage grid. */
   image: string;
 }
@@ -34,7 +37,7 @@ export const COLLECTIONS: readonly Collection[] = [
     label: "Necklaces & Pendants",
     description:
       "Rope twists, serpentine links, and everyday pendants built to layer.",
-    types: ["chain"],
+    types: ["pendant"],
     image: "/images/collection-2.jpg",
   },
   {
@@ -58,7 +61,7 @@ export const COLLECTIONS: readonly Collection[] = [
     label: "For Her",
     description:
       "Delicate rings and fine anklets designed for effortless everyday wear.",
-    types: ["ring", "anklet"],
+    audiences: ["women", "couple"],
     image: "/images/for-her.jpg",
   },
   {
@@ -66,7 +69,7 @@ export const COLLECTIONS: readonly Collection[] = [
     label: "For Him",
     description:
       "Clean lines and structured weight, cut for a bold and modern look.",
-    types: ["chain", "ring"],
+    audiences: ["men", "couple"],
     image: "/images/for-him.jpg",
   },
 ] as const;
@@ -117,5 +120,10 @@ export function filterByCollection(
   products: Product[],
   collection: Collection
 ): Product[] {
-  return products.filter((p) => collection.types.includes(p.type));
+  const { types, audiences } = collection;
+  return products.filter(
+    (p) =>
+      (!types || types.includes(p.type)) &&
+      (!audiences || (p.audiences ?? []).some((a) => audiences.includes(a)))
+  );
 }

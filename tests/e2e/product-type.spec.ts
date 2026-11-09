@@ -7,21 +7,25 @@ import { canonicalProductType, weightKey } from "../../lib/product-type";
 test.describe("product type to page grouping", () => {
   test("the production admin's names map to the site's groups", () => {
     expect(canonicalProductType("Rings")).toBe("ring");
-    expect(canonicalProductType("Pendants")).toBe("chain");
+    expect(canonicalProductType("Pendants")).toBe("pendant");
     expect(canonicalProductType("Anklets")).toBe("anklet");
     expect(canonicalProductType("Bracelets")).toBe("bracelet");
   });
 
   test("the lower case single words used before still work", () => {
-    for (const name of ["ring", "chain", "bracelet", "anklet"] as const) {
+    for (const name of ["ring", "pendant", "bracelet", "anklet"] as const) {
       expect(canonicalProductType(name)).toBe(name);
     }
   });
 
+  test("older names for pendants still resolve to pendant", () => {
+    expect(canonicalProductType("chain")).toBe("pendant");
+    expect(canonicalProductType("Chains")).toBe("pendant");
+    expect(canonicalProductType("Necklaces")).toBe("pendant");
+  });
+
   test("case, spaces and plurals do not matter", () => {
     expect(canonicalProductType("  RING ")).toBe("ring");
-    expect(canonicalProductType("Chains")).toBe("chain");
-    expect(canonicalProductType("Necklaces")).toBe("chain");
     expect(canonicalProductType("Bangles")).toBe("bracelet");
   });
 
@@ -43,13 +47,14 @@ test.describe("product type to parcel weight key", () => {
   });
 
   test("the keys the backend sends and the complimentary tote pass through unchanged", () => {
-    for (const key of ["ring", "chain", "bracelet", "anklet", "pendant", "earring", "tote"]) {
+    for (const key of ["ring", "bracelet", "anklet", "pendant", "earring", "tote"]) {
       expect(weightKey(key)).toBe(key);
     }
   });
 
-  test("necklaces weigh like chains and bangles like bracelets", () => {
-    expect(weightKey("Necklaces")).toBe("chain");
+  test("necklaces and chains weigh like pendants, and bangles like bracelets", () => {
+    expect(weightKey("Necklaces")).toBe("pendant");
+    expect(weightKey("chain")).toBe("pendant");
     expect(weightKey("Bangles")).toBe("bracelet");
   });
 });

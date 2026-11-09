@@ -12,7 +12,6 @@
  *   COD_GST_RATE              GST % on the Cash on Delivery charge (default: 18)
  *   SHIP_WEIGHT_TOTE_G        Complimentary tote bag weight in grams (default: 120)
  *   SHIP_WEIGHT_RING_G        Ring weight in grams (default: 6)
- *   SHIP_WEIGHT_CHAIN_G       Chain/necklace weight in grams (default: 15)
  *   SHIP_WEIGHT_BRACELET_G    Bracelet weight in grams (default: 12)
  *   SHIP_WEIGHT_ANKLET_G      Anklet weight in grams (default: 10; a pair counts twice)
  *   SHIP_WEIGHT_PENDANT_G     Pendant weight in grams (default: 12)
@@ -67,7 +66,6 @@ export const storeConfig = {
     /** Per-product-type manufacturing weights (g). */
     itemWeightsG: {
       ring: envFloat("SHIP_WEIGHT_RING_G", 6),
-      chain: envFloat("SHIP_WEIGHT_CHAIN_G", 15),
       bracelet: envFloat("SHIP_WEIGHT_BRACELET_G", 12),
       anklet: envFloat("SHIP_WEIGHT_ANKLET_G", 10),
       pendant: envFloat("SHIP_WEIGHT_PENDANT_G", 12),

@@ -7,7 +7,7 @@ import { ProductCard } from "./ProductCard";
 import { Dropdown } from "@/components/ui/Dropdown";
 import type { Product } from "./types";
 
-type ProductType = "ring" | "chain" | "bracelet" | "anklet";
+type ProductType = "ring" | "pendant" | "bracelet" | "anklet";
 type SortOption = "trending" | "price-asc" | "price-desc" | "newest";
 type PriceRange = "all" | "under-1500" | "1500-2500" | "2500-4000" | "above-4000";
 
@@ -28,7 +28,7 @@ const SORT_OPTIONS: { label: string; value: SortOption }[] = [
 
 const TYPE_OPTIONS: { label: string; value: ProductType }[] = [
   { label: "Rings", value: "ring" },
-  { label: "Chains", value: "chain" },
+  { label: "Pendants", value: "pendant" },
   { label: "Bracelets", value: "bracelet" },
   { label: "Anklets", value: "anklet" },
 ];

@@ -1,5 +1,5 @@
 import type { NextRequest } from "next/server";
-import { weightKey } from "@/lib/product-type";
+import { itemWeightKg } from "@/lib/parcel-weight";
 import { storeConfig } from "@/config/storeConfig";
 import { rememberOrderForShipment } from "@/lib/shiprocket-store";
 import { splitName } from "@/lib/medusa-order";
@@ -24,7 +24,7 @@ const MEDUSA_BASE = (
 export interface ShipmentItem {
   name: string;
   sku: string;
-  type: string;       // "ring" | "chain" | "bracelet" | "anklet"
+  type: string;       // "ring" | "pendant" | "bracelet" | "anklet"
   quantity: number;
   price: number;      // unit price in rupees
   /** Pieces in one unit: 2 for a pair of anklets. Counts toward weight only. */
@@ -123,11 +123,6 @@ function orderDate(): string {
     .toISOString()
     .replace("T", " ")
     .slice(0, 16);
-}
-
-function itemWeightKg(type: string): number {
-  const { itemWeightsG, defaultItemWeightG } = storeConfig.shipping;
-  return (itemWeightsG[weightKey(type)] ?? defaultItemWeightG) / 1000;
 }
 
 function totalParcelWeightKg(items: ShipmentItem[]): number {
