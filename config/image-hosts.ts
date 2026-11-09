@@ -3,9 +3,14 @@
  *
  * Next only optimises images from hosts it is told about, and every host here
  * is a place a stranger could point the optimiser at, so the list is short and
- * exact: EYRA's own domain, the local Medusa during development, and the
- * hostnames listed in MEDUSA_IMAGE_HOSTS (build-time env), which is where the
- * S3 bucket or its CDN goes. Wildcard hosts are never accepted.
+ * exact: EYRA's own domain, media.eyra.org.in (where uploaded product images are
+ * served from, through Cloudflare, out of our own S3 bucket), the local Medusa
+ * during development, and any extra hostnames in MEDUSA_IMAGE_HOSTS (build-time
+ * env). Wildcard hosts are never accepted.
+ *
+ * media.eyra.org.in is built in because the backend writes that address into
+ * every uploaded image (S3_FILE_URL), and leaving it to an env var meant a
+ * build without it broke every product photo with a 400.
  *
  *   MEDUSA_IMAGE_HOSTS=eyra-media.s3.ap-south-1.amazonaws.com
  *   MEDUSA_IMAGE_HOSTS=eyra-media.s3.ap-south-1.amazonaws.com,images.eyra.org.in
@@ -28,6 +33,8 @@ export function imageRemotePatterns(env: Record<string, string | undefined>): Im
     // EYRA's own domain: seed products reference images by absolute URL here.
     { protocol: "https", hostname: "eyra.org.in", pathname: "/**" },
     { protocol: "https", hostname: "www.eyra.org.in", pathname: "/**" },
+    // Uploaded product images: our S3 bucket behind Cloudflare.
+    { protocol: "https", hostname: "media.eyra.org.in", pathname: "/**" },
     // Medusa's local file storage, for development only. It serves /static.
     { protocol: "http", hostname: "localhost", port: "9000", pathname: "/static/**" },
   ];
