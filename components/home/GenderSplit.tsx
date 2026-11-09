@@ -20,12 +20,12 @@ const PANELS = [
 
 export function GenderSplit() {
   return (
-    <section className="bg-white">
-      <div className="grid grid-cols-2">
+    <section className="bg-white py-6 sm:py-10">
+      <div className="grid grid-cols-2 gap-3 px-3 sm:gap-6 sm:px-6 lg:px-16">
         {PANELS.map((panel) => (
           <div
             key={panel.tag}
-            className="group relative overflow-hidden"
+            className="group relative overflow-hidden rounded-2xl ring-1 ring-black/5 shadow-[0_6px_20px_rgba(0,0,0,0.08)]"
             style={{ height: "clamp(280px, 60vw, 680px)" }}
           >
             <Image

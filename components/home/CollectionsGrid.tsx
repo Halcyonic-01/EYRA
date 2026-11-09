@@ -44,7 +44,7 @@ export function CollectionsGrid() {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
           {COLLECTIONS.map((col, i) => (
             <FadeIn key={col.label} delay={i * 80}>
-              <Link href={col.href} className="group block relative overflow-hidden bg-pewter aspect-[3/4]">
+              <Link href={col.href} className="group block relative overflow-hidden rounded-2xl bg-pewter aspect-[3/4]">
                 <Image
                   src={col.src}
                   alt={col.label}
