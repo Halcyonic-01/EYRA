@@ -2,24 +2,20 @@ import { FadeIn } from "@/components/ui/FadeIn";
 
 const VALUES = [
   {
-    title: "PREMIUM CRAFTSMANSHIP",
-    body: "Every Eyra piece is thoughtfully handcrafted with attention to detail, precision, and timeless finishing.",
+    title: "Uncompromised Purity",
+    body: "Certified 925 sterling silver hallmarked for absolute authenticity and lasting brilliance.",
   },
   {
-    title: "SKIN FRIENDLY",
-    body: "Lightweight, smooth and comfortable jewellery designed for sensitive skin and all-day wear.",
+    title: "Everyday Durability",
+    body: "Advanced anti-tarnish and water-resistant engineering designed for your daily routine.",
   },
   {
-    title: "TARNISH RESISTANT",
-    body: "Crafted to maintain brilliance and elegance through everyday moments and timeless styling.",
+    title: "Mindful Craftsmanship",
+    body: "Sustainably produced luxury jewelry that honors ethical practices and environmental responsibility.",
   },
   {
-    title: "PREMIUM CRAFTSMANSHIP",
-    body: "Every Eyra piece is thoughtfully handcrafted with attention to detail, precision, and timeless finishing.",
-  },
-  {
-    title: "PREMIUM CRAFTSMANSHIP",
-    body: "Every Eyra piece is thoughtfully handcrafted with attention to detail, precision, and timeless finishing.",
+    title: "Modern Expression",
+    body: "Contemporary minimalism meeting classic silhouettes to empower your unique personal style.",
   },
 ];
 
@@ -46,30 +42,15 @@ export function ValuesSection() {
           </p>
         </FadeIn>
 
-        {/* Row 1, 3 columns */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-10 lg:gap-14 mb-12">
-          {VALUES.slice(0, 3).map((v, i) => (
-            <FadeIn key={v.title + i} delay={i * 80} className="flex flex-col items-center text-center gap-4">
+        {/* 2 x 2 grid: two values per row at every screen size */}
+        <div className="grid grid-cols-2 gap-x-6 gap-y-12 sm:gap-x-10 lg:gap-x-14 max-w-3xl mx-auto">
+          {VALUES.map((v, i) => (
+            <FadeIn key={v.title} delay={i * 80} className="flex flex-col items-center text-center gap-4">
               <StarIcon />
-              <p className="font-sans font-medium text-[0.78rem] tracking-[0.12em] uppercase text-jet">
+              <p className="font-sans font-medium text-[0.7rem] sm:text-[0.78rem] tracking-[0.12em] uppercase text-jet">
                 {v.title}
               </p>
-              <p className="font-sans font-light text-[0.82rem] leading-relaxed text-carbon">
-                {v.body}
-              </p>
-            </FadeIn>
-          ))}
-        </div>
-
-        {/* Row 2, 2 columns centred */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-10 lg:gap-14 max-w-2xl mx-auto">
-          {VALUES.slice(3).map((v, i) => (
-            <FadeIn key={v.title + i + 3} delay={i * 80 + 240} className="flex flex-col items-center text-center gap-4">
-              <StarIcon />
-              <p className="font-sans font-medium text-[0.78rem] tracking-[0.12em] uppercase text-jet">
-                {v.title}
-              </p>
-              <p className="font-sans font-light text-[0.82rem] leading-relaxed text-carbon">
+              <p className="font-sans font-light text-[0.75rem] sm:text-[0.82rem] leading-relaxed text-carbon">
                 {v.body}
               </p>
             </FadeIn>
