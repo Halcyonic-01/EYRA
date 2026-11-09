@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { DeliveryCheckWidget } from "./DeliveryCheckWidget";
 import { PromoCodeDrawer } from "./PromoCodeDrawer";
 
@@ -19,13 +20,20 @@ export function HeroSection() {
       <PromoCodeDrawer />
 
       {/* ── Display heading ──────────────────────────── */}
-      <div className="max-w-screen-xl mx-auto px-6 lg:px-16 pt-14 pb-4 text-center">
-        <h1 className="font-display font-light leading-[1.05] tracking-[-0.01em] text-[clamp(3.2rem,8.5vw,8rem)] text-jet">
+      <div className="max-w-screen-xl mx-auto px-6 lg:px-16 pt-10 sm:pt-14 lg:pt-16 pb-8 sm:pb-10 text-center">
+        <h1 className="font-display font-light leading-[1.1] sm:leading-[1.05] tracking-[-0.01em] text-balance text-[clamp(2.5rem,7.5vw,7.5rem)] text-jet">
           Timeless{" "}
           <span className="italic text-pearl">Silver.</span>
-          <br />
+          {/* Forced break on larger screens only. On phones the line wraps naturally. */}
+          <br className="hidden sm:block" />
           Modern Expression.
         </h1>
+        <Link
+          href="/collections"
+          className="mt-7 sm:mt-9 inline-block font-sans text-[0.68rem] sm:text-[0.72rem] font-medium tracking-[0.22em] uppercase text-jet border-b border-jet/30 pb-1.5 hover:border-jet transition-colors duration-200"
+        >
+          Explore the collection
+        </Link>
       </div>
 
       {/* ── Hero image / video container ─────────────── */}

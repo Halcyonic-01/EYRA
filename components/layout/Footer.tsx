@@ -14,11 +14,14 @@ const SHOP_LINKS = [
   ...COLLECTIONS.filter((c) =>
     ["rings", "necklaces", "anklets", "bracelets"].includes(c.slug)
   ).map((c) => ({ label: c.label, href: `/collections/${c.slug}` })),
+  { label: "All Collections", href: "/collections" },
   { label: "New Arrivals", href: "/new-arrivals" },
   { label: "Best Sellers", href: "/best-sellers" },
 ];
 
 const SUPPORT_LINKS = [
+  { label: "My Account", href: "/account" },
+  { label: "My Wallet", href: "/wallet" },
   { label: "Track Your Order", href: "/orders" },
   { label: "Shipping & Delivery Policy", href: "/shipping-policy" },
   { label: "Returns, Exchanges & Refunds", href: "/refund-policy" },

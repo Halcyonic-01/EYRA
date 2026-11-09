@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Menu, X, Search, ShoppingBag, User, Heart, LogOut } from "lucide-react";
+import { X, Search, ShoppingBag, User, Heart, LogOut } from "lucide-react";
 import { useAuth } from "@clerk/nextjs";
 import { Logo } from "@/components/ui/Logo";
 import { useSignOut } from "@/components/auth/useSignOut";
@@ -22,9 +22,14 @@ const NAV_ITEMS = [
   { label: "Contact",     href: "/contact"      },
 ] as const;
 
+/* Mobile-only category row, shown under the primary bar below lg. */
+const CATEGORY_ITEMS = [
+  { label: "For Her", href: "/collections/for-her" },
+  { label: "For Him", href: "/collections/for-him" },
+] as const;
+
 export function Navbar() {
   const [scrolled,  setScrolled]  = useState(false);
-  const [menuOpen,  setMenuOpen]  = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -62,14 +67,6 @@ export function Navbar() {
     return () => window.removeEventListener("scroll", onScroll);
   }, [isHome]);
 
-  /* Prevent body scroll while mobile menu is open */
-  useEffect(() => {
-    document.body.style.overflow = menuOpen ? "hidden" : "";
-    return () => { document.body.style.overflow = ""; };
-  }, [menuOpen]);
-
-  const closeMenu = () => setMenuOpen(false);
-
   // The header is fixed over the page's own content, and at the top of the
   // homepage that content is the white announcement strip and heading, not a
   // dark hero image. A transparent header with light/pearl text there was
@@ -83,17 +80,20 @@ export function Navbar() {
       {/* ── Fixed top bar ─────────────────────────────── */}
       <header
         className={[
-          "fixed top-0 inset-x-0 z-50 transition-all duration-300",
+          "fixed top-0 inset-x-0 z-50 flex flex-col transition-all duration-300",
           darkTheme
             ? "bg-charcoal/95 backdrop-blur-md border-b border-white/10"
             : "bg-white/90 backdrop-blur-md border-b border-[#CFCFCF]",
         ].join(" ")}
         style={{ height: "var(--nav-height)" }}
       >
-        <div className={[
-          "max-w-screen-xl mx-auto px-6 lg:px-10 h-full flex items-center justify-between",
-          darkTheme ? "text-white" : "text-black",
-        ].join(" ")}>
+        <div
+          className={[
+            "max-w-screen-xl mx-auto px-6 lg:px-10 w-full flex items-center justify-between",
+            darkTheme ? "text-white" : "text-black",
+          ].join(" ")}
+          style={{ height: "var(--bar-height)" }}
+        >
           {/* Logo */}
           <Logo variant={darkTheme ? "light" : "dark"} size="xl" />
 
@@ -201,24 +201,37 @@ export function Navbar() {
               )}
             </Link>
 
-            {/* Hamburger, mobile only */}
-            <button
-              aria-label={menuOpen ? "Close menu" : "Open menu"}
-              aria-expanded={menuOpen}
-              aria-controls="mobile-nav"
-              className={[
-                "p-2.5 transition-colors duration-200 lg:hidden",
-                darkTheme ? "text-pearl hover:text-white" : "text-[#333] hover:text-black",
-              ].join(" ")}
-              onClick={() => setMenuOpen((prev) => !prev)}
-            >
-              {menuOpen
-                ? <X    size={19} strokeWidth={1.5} />
-                : <Menu size={19} strokeWidth={1.5} />
-              }
-            </button>
           </div>
         </div>
+
+        {/* Category row, mobile only. Desktop shows these in the primary nav. */}
+        <nav
+          className="lg:hidden flex items-center justify-center gap-9"
+          style={{ height: "var(--subnav-height)" }}
+          aria-label="Shop by category"
+        >
+          {CATEGORY_ITEMS.map(({ label, href }) => {
+            const active = pathname?.startsWith(href) ?? false;
+            return (
+              <Link
+                key={href}
+                href={href}
+                aria-current={active ? "page" : undefined}
+                className={[
+                  "font-display text-[0.95rem] tracking-[0.12em] underline underline-offset-[6px] decoration-[0.5px] transition-colors duration-200",
+                  active
+                    ? darkTheme ? "text-white decoration-white" : "text-black decoration-black"
+                    : [
+                        "decoration-transparent",
+                        darkTheme ? "text-pearl hover:text-white" : "text-[#7A7A7A] hover:text-black",
+                      ].join(" "),
+                ].join(" ")}
+              >
+                {label}
+              </Link>
+            );
+          })}
+        </nav>
       </header>
 
       {/* ── Search panel ──────────────────────────────── */}
@@ -258,85 +271,6 @@ export function Navbar() {
           </div>
         </>
       )}
-
-      {/* ── Mobile full-screen overlay ─────────────────── */}
-      <div
-        id="mobile-nav"
-        role="dialog"
-        aria-modal="true"
-        aria-label="Navigation menu"
-        aria-hidden={!menuOpen}
-        className={[
-          "fixed inset-0 z-40 bg-charcoal flex flex-col",
-          "transition-transform duration-300 ease-in-out",
-          menuOpen ? "translate-x-0" : "-translate-x-full",
-        ].join(" ")}
-      >
-        <nav
-          className="flex flex-col gap-7 px-8 pb-12"
-          style={{ paddingTop: "calc(var(--nav-height) + 3rem)" }}
-          aria-label="Mobile navigation"
-        >
-          {NAV_ITEMS.map(({ label, href }) => (
-            <Link
-              key={href}
-              href={href}
-              onClick={closeMenu}
-              className="text-[2rem] font-display font-light tracking-[0.2em] uppercase text-white hover:text-silver transition-colors duration-200"
-            >
-              {label}
-            </Link>
-          ))}
-        </nav>
-
-        {/* Account actions. Signed-out guests use the person icon in the
-            header above, visible behind this drawer, rather than a duplicate
-            set of buttons here. Signed-in shortcuts stay since "My orders"
-            isn't otherwise reachable from the header icons. */}
-        {isLoaded && isSignedIn && (
-          <div className="px-8">
-            <div className="flex flex-col gap-4">
-              <Link
-                href="/account"
-                onClick={closeMenu}
-                className="w-full text-center px-8 py-3.5 rounded-full bg-white text-black font-sans font-normal text-[0.72rem] tracking-[0.2em] uppercase hover:bg-pearl transition-colors duration-200"
-              >
-                My account
-              </Link>
-              <Link
-                href="/orders"
-                onClick={closeMenu}
-                className="w-full text-center px-8 py-3.5 rounded-full border border-white/50 text-white font-sans font-normal text-[0.72rem] tracking-[0.2em] uppercase hover:border-white transition-colors duration-200"
-              >
-                My orders
-              </Link>
-              <Link
-                href="/wallet"
-                onClick={closeMenu}
-                className="w-full text-center px-8 py-3.5 rounded-full border border-white/50 text-white font-sans font-normal text-[0.72rem] tracking-[0.2em] uppercase hover:border-white transition-colors duration-200"
-              >
-                {wallet && wallet.balance > 0 ? `My wallet · ${formatRupees(wallet.balance)}` : "My wallet"}
-              </Link>
-              <button
-                type="button"
-                onClick={() => {
-                  closeMenu();
-                  signOut();
-                }}
-                className="w-full text-center px-8 py-3.5 rounded-full text-pearl font-sans font-normal text-[0.72rem] tracking-[0.2em] uppercase underline underline-offset-4 hover:text-white transition-colors duration-200"
-              >
-                Sign out
-              </button>
-            </div>
-          </div>
-        )}
-
-        <div className="mt-auto px-8 pb-12 border-t border-stone/40 pt-6">
-          <p className="text-[0.68rem] font-sans tracking-[0.2em] uppercase text-stone">
-            Premium Sterling Silver
-          </p>
-        </div>
-      </div>
     </>
   );
 }
