@@ -5,19 +5,47 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useWishlistStore, useCartStore } from "@/store/useStore";
 import type { WishlistItem } from "@/store/useStore";
+import { COD_CHARGE, rupees } from "@/config/offers";
+import type { ProductPolicy } from "@/components/products/ProductDetailClient";
 
-function TrashIcon() {
+/* ── Inline SVG icons (same set as the product page) ─ */
+
+function HeartIcon({ filled }: { filled: boolean }) {
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#DE2E2E" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <polyline points="3 6 5 6 21 6" />
-      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
-      <path d="M10 11v6M14 11v6" />
-      <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+    <svg width="19" height="19" viewBox="0 0 24 24" fill={filled ? "#E74C3C" : "none"} stroke={filled ? "#E74C3C" : "#545454"} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
     </svg>
   );
 }
 
-export function WishlistClient() {
+function ReturnIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#696969" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+      <path d="M3 3v5h5" />
+    </svg>
+  );
+}
+
+function ExchangeIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#696969" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M7 16H3v-4" /><path d="M3 12a9 9 0 0 1 14.12-7.37" />
+      <path d="M17 8h4v4" /><path d="M21 12a9 9 0 0 1-14.12 7.37" />
+    </svg>
+  );
+}
+
+function CodIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#696969" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M6 3h12" /><path d="M6 8h8" /><path d="M6 13l8.5 8" />
+      <path d="M6 13h3a4 4 0 0 0 0-8" />
+    </svg>
+  );
+}
+
+export function WishlistClient({ policy }: { policy: ProductPolicy }) {
   const router = useRouter();
   const items = useWishlistStore((s) => s.items);
   const removeFromWishlist = useWishlistStore((s) => s.remove);
@@ -40,6 +68,12 @@ export function WishlistClient() {
     removeFromWishlist(item.product.id);
   }
 
+  const serviceItems = [
+    { icon: <ReturnIcon />, label: `${policy.returnDays} Days Return` },
+    { icon: <ExchangeIcon />, label: `${policy.exchangeDays} Days Exchange` },
+    { icon: <CodIcon />, label: `Cash On Delivery (+${rupees(COD_CHARGE)})` },
+  ];
+
   if (items.length === 0) {
     return (
       <div className="max-w-screen-xl mx-auto px-6 lg:px-10 py-24 flex flex-col items-center gap-6">
@@ -58,105 +92,151 @@ export function WishlistClient() {
   }
 
   return (
-    <div className="max-w-screen-xl mx-auto px-6 lg:px-10 py-10 pb-20">
-      {/* Breadcrumb */}
-      <nav className="flex items-center gap-1 font-sans font-normal text-[16px] leading-[24px] mb-8">
-        <Link href="/" className="text-[#5F5F5F] hover:text-black transition-colors duration-200">Home</Link>
-        <span className="text-[#5F5F5F] mx-1">›</span>
-        <span className="text-black">Wishlist</span>
-      </nav>
+    <>
+      {/* Breadcrumb + heading, above the grey panel as on the product page */}
+      <div className="max-w-screen-xl mx-auto px-6 lg:px-10 pt-10">
+        <nav className="flex items-center gap-1 font-sans font-normal text-[16px] leading-[24px] mb-8">
+          <Link href="/" className="text-[#5F5F5F] hover:text-black transition-colors duration-200">Home</Link>
+          <span className="text-[#5F5F5F] mx-1">›</span>
+          <span className="text-black">Wishlist</span>
+        </nav>
 
-      <h1 className="font-sans font-medium text-[24px] leading-[36px] text-black mb-8">
-        Wishlist ({items.length} {items.length === 1 ? "item" : "items"})
-      </h1>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 border-t border-l border-[#CFCFCF]">
-        {items.map((item) => {
-          const { product, variantId } = item;
-          // Match the size too, not just the product. Rings carry one variant
-          // per size, so "this product is somewhere in the cart" would disable
-          // "Move to cart" for a size-8 ring merely because a size-12 of the
-          // same ring was already in there. ProductCard draws the same
-          // distinction for the same reason.
-          const inCart = cartItems.some(
-            (c) =>
-              c.product.id === product.id &&
-              (product.type === "ring" ? c.size === (item.size ?? null) : true)
-          );
-
-          return (
-            <div key={product.id} className="relative border-b border-r border-[#CFCFCF] flex flex-col items-center gap-4 py-8 px-6 group hover:bg-[#F7F7F7] transition-colors duration-200">
-              {/* Quick-view button, visible on hover */}
-              <Link
-                href={`/products/${product.id}`}
-                aria-label="View product"
-                className="absolute top-3 right-3 w-[42px] h-[42px] rounded-full bg-white border border-[#B4B4B4] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10"
-              >
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <path d="M7 17L17 7M17 7H7M17 7v10" />
-                </svg>
-              </Link>
-
-              {/* Product image */}
-              <Link href={`/products/${product.id}`} className="relative w-full aspect-square flex items-center justify-center overflow-hidden">
-                <div className="relative w-[70%] h-[70%]">
-                  <Image
-                    src={product.images[0]}
-                    alt={product.name}
-                    fill
-                    className="object-contain transition-transform duration-500 group-hover:scale-105"
-                    sizes="(max-width: 640px) 80vw, (max-width: 1024px) 40vw, 25vw"
-                  />
-                </div>
-              </Link>
-
-              {/* Info */}
-              <div className="flex flex-col items-center gap-1 w-full text-center">
-                <Link href={`/products/${product.id}`} className="font-sans font-normal text-[20px] leading-[30px] text-black hover:underline underline-offset-2">
-                  {product.name}
-                </Link>
-                <p className="font-sans font-normal text-[15px] leading-[22px] text-[#A0A0A0] line-clamp-2">
-                  {product.description}
-                </p>
-                <div className="flex items-center gap-3 mt-1">
-                  <span className="font-sans font-medium text-[22px] leading-[33px] text-black">
-                    ₹{product.price.toLocaleString("en-IN")}
-                  </span>
-                  <span className="font-sans font-normal text-[18px] leading-[27px] text-[#AAAAAA] line-through">
-                    ₹{product.originalPrice.toLocaleString("en-IN")}
-                  </span>
-                </div>
-                {/* Surface when no variant could be resolved so the user knows to pick a size on PDP */}
-                {!variantId && (
-                  <p className="font-sans text-[11px] text-[#909090] mt-0.5">
-                    Visit product page to select a size before adding to cart.
-                  </p>
-                )}
-              </div>
-
-              {/* Actions */}
-              <div className="flex items-center gap-3 w-full mt-auto">
-                <button
-                  onClick={() => moveToCart(item)}
-                  disabled={inCart}
-                  className="flex-1 max-w-[310px] flex items-center justify-center px-8 py-[14px] bg-black text-white font-sans font-medium text-[16px] leading-[20px] rounded-full hover:bg-[#1a1a1a] disabled:opacity-60 disabled:cursor-not-allowed transition-colors duration-200"
-                  style={{ boxShadow: "inset 0px 6px 10px rgba(211,211,211,0.3)" }}
-                >
-                  {inCart ? "In cart" : variantId ? "Move to cart" : "Select size"}
-                </button>
-                <button
-                  aria-label="Remove from wishlist"
-                  onClick={() => removeFromWishlist(product.id)}
-                  className="w-[50px] h-[50px] flex-shrink-0 rounded-full bg-white flex items-center justify-center hover:bg-[#FFF0F0] transition-colors duration-200"
-                  style={{ border: "1px solid #C1C1C1" }}
-                >
-                  <TrashIcon />
-                </button>
-              </div>
-            </div>
-          );
-        })}
+        <h1 className="font-sans font-medium text-[24px] leading-[36px] text-black">
+          Wishlist ({items.length} {items.length === 1 ? "item" : "items"})
+        </h1>
       </div>
-    </div>
+
+      {/* ── Wishlist items: same two-column block as the product page ── */}
+      <section className="bg-[#F7F7F7] py-10 lg:py-14 mt-8">
+        <div className="max-w-screen-xl mx-auto px-6 lg:px-10 flex flex-col gap-12 lg:gap-16">
+          {items.map((item) => {
+            const { product, variantId } = item;
+            // Match the size too, not just the product. Rings carry one variant
+            // per size, so "this product is somewhere in the cart" would disable
+            // "Move to cart" for a size-8 ring merely because a size-12 of the
+            // same ring was already in there.
+            const inCart = cartItems.some(
+              (c) =>
+                c.product.id === product.id &&
+                (product.type === "ring" ? c.size === (item.size ?? null) : true)
+            );
+
+            return (
+              <div key={product.id} className="flex flex-col lg:flex-row gap-8 lg:gap-14 items-start">
+
+                {/* Left: image panel, framed like the product gallery */}
+                <div className="w-full lg:w-[45%] flex-shrink-0">
+                  <div className="relative bg-white border border-[#CFCFCF] flex flex-col" style={{ minHeight: 436 }}>
+
+                    {/* Top controls */}
+                    <div className="flex items-start justify-end px-[18px] pt-5">
+                      <button
+                        aria-label="Remove from wishlist"
+                        onClick={() => removeFromWishlist(product.id)}
+                        className="w-[42px] h-[42px] rounded-full bg-white border border-[#DDDDDD] flex items-center justify-center hover:border-black transition-colors duration-200"
+                      >
+                        <HeartIcon filled />
+                      </button>
+                    </div>
+
+                    {/* Image */}
+                    <Link
+                      href={`/products/${product.id}`}
+                      className="relative flex-1 mx-2.5 mt-4 mb-5"
+                      style={{ minHeight: 360 }}
+                    >
+                      <Image
+                        src={product.images[0]}
+                        alt={product.name}
+                        fill
+                        className="object-contain p-4 transition-transform duration-500 hover:scale-105"
+                        sizes="(max-width: 1024px) 90vw, 45vw"
+                      />
+                    </Link>
+                  </div>
+                </div>
+
+                {/* Right: product info, same type scale as the product page */}
+                <div className="w-full lg:flex-1 flex flex-col gap-6">
+                  <div className="flex flex-col gap-[7px]">
+                    <Link
+                      href={`/products/${product.id}`}
+                      className="font-sans font-medium text-[20px] leading-[30px] text-black hover:underline underline-offset-2"
+                    >
+                      {product.name}
+                    </Link>
+                    <p className="font-sans font-normal text-[16px] leading-[24px] text-[#A0A0A0]">
+                      {product.description}
+                    </p>
+
+                    {/* Price row */}
+                    <div className="flex items-center flex-wrap gap-3 mt-2">
+                      <span className="font-sans font-medium text-[24px] leading-[36px] text-black">
+                        ₹{product.price.toLocaleString("en-IN")}
+                      </span>
+                      <span className="font-sans font-normal text-[20px] leading-[30px] text-[#AAAAAA] line-through">
+                        ₹{product.originalPrice.toLocaleString("en-IN")}
+                      </span>
+                    </div>
+                    <p className="font-sans font-normal text-[15px] leading-[22px] text-[#BABABA]">
+                      Inclusive of all taxes
+                    </p>
+
+                    {/* Chosen ring size, or a prompt when none was picked */}
+                    {product.type === "ring" && (
+                      <p className="font-sans font-medium text-[14px] leading-[21px] text-black mt-2">
+                        {item.size ? `Ring Size: ${item.size}` : "Ring size not selected"}
+                      </p>
+                    )}
+                    {/* Surface when no variant could be resolved so the user knows to pick a size on PDP */}
+                    {!variantId && (
+                      <p className="font-sans text-[13px] leading-[20px] text-[#909090]">
+                        Visit product page to select a size before adding to cart.
+                      </p>
+                    )}
+                  </div>
+
+                  {/* CTA buttons, same pair and styling as the product page */}
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => moveToCart(item)}
+                      disabled={inCart}
+                      className="flex-1 flex items-center justify-center px-4 sm:px-8 py-3 sm:py-[14px] bg-black text-white font-sans font-medium text-[15px] sm:text-[18px] leading-[20px] whitespace-nowrap rounded-full hover:bg-[#1a1a1a] disabled:opacity-60 disabled:cursor-not-allowed transition-colors duration-200"
+                      style={{ boxShadow: "inset 0px 6px 10px rgba(211,211,211,0.3)" }}
+                    >
+                      {inCart ? "In cart" : variantId ? "Move to cart" : "Select size"}
+                    </button>
+                    <Link
+                      href={`/products/${product.id}`}
+                      className="flex-1 flex items-center justify-center px-4 sm:px-8 py-3 sm:py-[14px] font-sans font-medium text-[15px] sm:text-[18px] leading-[20px] whitespace-nowrap rounded-full border bg-white text-black border-[#DBDBDB] hover:border-black transition-colors duration-200"
+                      style={{ boxShadow: "inset 0px 6px 10px rgba(211,211,211,0.3)" }}
+                    >
+                      View product
+                    </Link>
+                  </div>
+
+                  {/* Service badges */}
+                  <div className="flex border border-[#C5C5C5] rounded-[20px] overflow-hidden">
+                    {serviceItems.map((service, i) => (
+                      <div
+                        key={service.label}
+                        className={`flex-1 flex flex-col items-center gap-[5px] py-3 ${
+                          i < serviceItems.length - 1 ? "border-r border-[#C5C5C5]" : ""
+                        }`}
+                      >
+                        {service.icon}
+                        <span className="font-sans font-normal text-[12px] leading-[18px] text-[#696969] text-center">
+                          {service.label}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </section>
+    </>
   );
 }

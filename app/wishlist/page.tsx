@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
 import { WishlistClient } from "@/components/wishlist/WishlistClient";
+import { CtaBanner } from "@/components/home/CtaBanner";
+import { NewsletterBanner } from "@/components/home/NewsletterBanner";
+import { storeConfig } from "@/config/storeConfig";
 
 export const metadata: Metadata = {
   title: "Wishlist",
@@ -7,5 +10,16 @@ export const metadata: Metadata = {
 };
 
 export default function WishlistPage() {
-  return <WishlistClient />;
+  return (
+    <>
+      <WishlistClient
+        policy={{
+          returnDays: storeConfig.policy.returnDays,
+          exchangeDays: storeConfig.policy.exchangeDays,
+        }}
+      />
+      <CtaBanner />
+      <NewsletterBanner />
+    </>
+  );
 }
