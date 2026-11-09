@@ -158,30 +158,25 @@ export function MobileNav({
         </nav>
 
         {isLoaded && (
-          <div className="shrink-0 px-6 pb-8 pt-6">
-            <div className="rounded-lg bg-charcoal p-5 text-white">
-              <div className="flex items-center gap-3">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/25 text-pearl">
-                  <User size={18} strokeWidth={1.5} aria-hidden="true" />
+          <div className="shrink-0 px-6 pb-6 pt-4">
+            <div className="rounded-lg border border-[#E2E2E2] bg-white px-3 py-2.5 text-jet">
+              <div className="flex items-center gap-2.5">
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-ivory text-[#5F5F5F]">
+                  <User size={14} strokeWidth={1.5} aria-hidden="true" />
                 </span>
                 <div className="min-w-0">
-                  <p className="font-display text-[1.125rem] leading-tight">
+                  <p className="font-display text-[0.95rem] leading-tight text-jet">
                     {isSignedIn ? "Signed in" : "Guest User"}
-                  </p>
-                  <p className="font-sans text-[0.75rem] text-pearl">
-                    {isSignedIn
-                      ? "Your orders, wishlist and wallet"
-                      : "Sign in to track orders and wishlist"}
                   </p>
                 </div>
               </div>
 
               {isSignedIn ? (
-                <div className="mt-5 flex flex-col gap-2">
+                <div className="mt-2.5 flex flex-col gap-1.5">
                   <Link
                     href="/account"
                     onClick={onClose}
-                    className="flex w-full items-center justify-center rounded-full border border-white/40 py-2.5 font-sans text-[0.85rem] font-medium hover:bg-white hover:text-black transition-colors duration-200"
+                    className="flex w-full items-center justify-center rounded-full border border-[#CFCFCF] bg-white py-1.5 font-sans text-[0.75rem] font-medium text-jet hover:border-jet transition-colors duration-200"
                   >
                     View account
                   </Link>
@@ -191,7 +186,7 @@ export function MobileNav({
                       onClose();
                       signOut();
                     }}
-                    className="py-2 font-sans text-[0.8rem] text-pearl hover:text-white transition-colors duration-200"
+                    className="py-1 font-sans text-[0.72rem] text-[#5F5F5F] hover:text-jet transition-colors duration-200"
                   >
                     Sign out
                   </button>
@@ -200,7 +195,7 @@ export function MobileNav({
                 <Link
                   href="/sign-in"
                   onClick={onClose}
-                  className="mt-5 flex w-full items-center justify-center rounded-full border border-white/40 py-2.5 font-sans text-[0.85rem] font-medium hover:bg-white hover:text-black transition-colors duration-200"
+                  className="mt-2.5 flex w-full items-center justify-center rounded-full border border-[#CFCFCF] bg-white py-1.5 font-sans text-[0.75rem] font-medium text-jet hover:border-jet transition-colors duration-200"
                 >
                   Tap to sign in / Login
                 </Link>

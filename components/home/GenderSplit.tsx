@@ -23,7 +23,7 @@ export function GenderSplit() {
     <section className="bg-white py-6 sm:py-10">
       <div className="px-3 sm:px-6 lg:px-16">
         <p className="mb-5 sm:mb-8 text-center font-display italic font-light leading-[1.05] text-[clamp(1.8rem,4vw,3rem)] text-jet">
-          Category
+          Shop by Category
         </p>
       </div>
       <div className="grid grid-cols-2 gap-3 px-3 sm:gap-6 sm:px-6 lg:px-16">
