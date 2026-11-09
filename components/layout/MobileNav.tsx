@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ChevronDown, User, X } from "lucide-react";
 import { useAuth } from "@clerk/nextjs";
 import { useSignOut } from "@/components/auth/useSignOut";
+import { Logo } from "@/components/ui/Logo";
 
 const PRODUCT_TYPES = [
   { label: "Rings", href: "/collections/rings" },
@@ -87,9 +88,7 @@ export function MobileNav({
           className="flex shrink-0 items-center justify-between px-6"
           style={{ height: "var(--bar-height)" }}
         >
-          <p className="font-display text-[1.4rem] tracking-[0.14em] text-jet">
-            EYRA
-          </p>
+          <Logo variant="dark" size="lg" onNavigate={onClose} />
           <button
             ref={closeRef}
             type="button"

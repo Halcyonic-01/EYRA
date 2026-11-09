@@ -77,6 +77,19 @@ body {
   .banner-text { animation: banner-in 500ms ease-out; }
 }
 
+/* ── Announcement ticker (desktop) ─────────────────────── */
+/* The track holds two identical groups, so sliding it by half its width lands
+   exactly on the start of the other group (seamless). Right to left. */
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+.marquee-track { animation: marquee 55s linear infinite; }
+.marquee:hover .marquee-track { animation-play-state: paused; }
+@media (prefers-reduced-motion: reduce) {
+  .marquee-track { animation: none; }
+}
+
 /* ── Carousel scrollbar ───────────────────────────────── */
 /* Visible, slim scrollbar so a horizontal carousel reads as scrollable. */
 .carousel-scroll { scrollbar-width: thin; scrollbar-color: #909090 #e2e2e2; }

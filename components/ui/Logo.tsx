@@ -5,6 +5,8 @@ interface LogoProps {
   className?: string;
   variant?: "dark" | "light";
   size?: "sm" | "md" | "lg" | "xl";
+  /** Called when the logo link is followed, e.g. to close a menu that sits over the page. */
+  onNavigate?: () => void;
 }
 
 /*
@@ -24,7 +26,7 @@ const sizes = {
   xl: { markH: 46 },
 } as const;
 
-export function Logo({ className = "", variant = "dark", size = "md" }: LogoProps) {
+export function Logo({ className = "", variant = "dark", size = "md", onNavigate }: LogoProps) {
   const { markH } = sizes[size];
   const markW = Math.round(markH * WORDMARK_ASPECT);
 
@@ -32,6 +34,7 @@ export function Logo({ className = "", variant = "dark", size = "md" }: LogoProp
     <Link
       href="/"
       aria-label="EYRA Home"
+      onClick={onNavigate}
       className={`inline-flex items-start ${className} hover:opacity-80 transition-opacity duration-200`}
     >
       <Image
