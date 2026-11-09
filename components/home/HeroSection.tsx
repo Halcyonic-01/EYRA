@@ -18,11 +18,11 @@ export function HeroSection() {
 
       {/* ── Display heading ──────────────────────────── */}
       <div className="max-w-screen-xl mx-auto px-6 lg:px-16 pt-10 sm:pt-14 lg:pt-16 pb-8 sm:pb-10 text-center">
-        <h1 className="font-display font-light leading-[1.1] sm:leading-[1.05] tracking-[-0.01em] text-balance text-[clamp(2.5rem,7.5vw,7.5rem)] text-jet">
+        <h1 className="font-display font-light leading-[1.1] sm:leading-[1.05] tracking-[-0.01em] text-balance text-[clamp(2.1rem,7.5vw,7.5rem)] text-jet whitespace-nowrap sm:whitespace-normal">
           Timeless{" "}
           <span className="italic text-pearl">Silver.</span>
-          {/* Forced break on larger screens only. On phones the line wraps naturally. */}
-          <br className="hidden sm:block" />
+          {/* Forced break at every size so the heading is always two lines. */}
+          <br />
           Modern Expression.
         </h1>
         <Link
