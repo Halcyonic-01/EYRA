@@ -19,18 +19,6 @@ export default async function CollectionsPage() {
     <>
       <section className="bg-white">
         <div className="max-w-screen-xl mx-auto px-6 lg:px-10 pt-10 pb-16">
-          {/* Breadcrumb */}
-          <nav
-            aria-label="Breadcrumb"
-            className="flex items-center gap-1 font-sans font-normal text-[16px] leading-[24px] mb-8"
-          >
-            <Link href="/" className="text-[#909090] hover:text-black transition-colors duration-200">
-              Home
-            </Link>
-            <span className="text-[#909090]">/</span>
-            <span className="text-black">Collections</span>
-          </nav>
-
           {/* Heading */}
           <div className="max-w-[560px] mb-12">
             <h1 className="font-display font-light italic text-[clamp(2.25rem,5vw,3.5rem)] leading-[1.1] text-black mb-4">

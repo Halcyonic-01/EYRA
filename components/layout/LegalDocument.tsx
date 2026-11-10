@@ -32,7 +32,6 @@ export function LegalDocument({
         title={title}
         standfirst={standfirst}
         eyebrow={eyebrow}
-        crumbs={[{ label: title }]}
       />
 
       <div className="max-w-screen-xl mx-auto px-6 lg:px-10">

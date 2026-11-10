@@ -31,7 +31,6 @@ export default function AuthenticityAndCarePage() {
           eyebrow="Authenticity and care"
           title="925 Silver, hallmarking, and how to look after it"
           standfirst="What our purity mark actually means, how we protect the finish, and the sizing chart to get your fit right the first time."
-          crumbs={[{ label: "Authenticity and Care" }]}
         />
       </section>
 

@@ -36,7 +36,6 @@ export default function AboutPage() {
           eyebrow="Our story"
           title="Silver for people who wear their identity"
           standfirst="EYRA began with a simple frustration: good sterling silver was either priced like a luxury import or made so cheaply it turned your skin green within a month. We wanted the middle to exist."
-          crumbs={[{ label: "About" }]}
         />
 
         {/* Opening image */}

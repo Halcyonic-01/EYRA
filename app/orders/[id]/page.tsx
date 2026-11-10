@@ -345,17 +345,6 @@ export default async function OrderDetailPage({
   return (
     <div className="max-w-screen-lg mx-auto px-6 lg:px-10 py-12">
 
-      {/* Breadcrumb */}
-      <div className="flex items-center gap-2 mb-8 font-sans text-[13px]">
-        <Link href="/orders" className="text-[#909090] hover:text-black transition-colors duration-200">
-          My Orders
-        </Link>
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#CFCFCF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-          <path d="M9 18l6-6-6-6" />
-        </svg>
-        <span className="text-black font-medium">#{order.display_id}</span>
-      </div>
-
       {/* Order title + status */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-8">
         <div>

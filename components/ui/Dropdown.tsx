@@ -24,12 +24,18 @@ export function Dropdown({
   active,
   icon,
   iconClassName = "",
+  compact = false,
   children,
 }: {
   label: string;
   /** When set, the trigger is an icon-only button; `label` becomes its accessible name. */
   icon?: React.ReactNode;
   iconClassName?: string;
+  /**
+   * Smaller text and padding below sm, and the trigger shares the row width
+   * (label truncates) so several triggers fit on one phone-width line.
+   */
+  compact?: boolean;
   /** Shown as a filled dot next to the label when a non-default value is selected. */
   active?: boolean;
   children: (close: () => void) => React.ReactNode;
@@ -115,18 +121,20 @@ export function Dropdown({
         aria-haspopup="true"
         aria-expanded={open}
         className={[
-          "flex items-center gap-2 shrink-0 whitespace-nowrap font-sans font-normal text-[14px] leading-[21px] px-4 py-2.5 rounded-full border transition-colors duration-200",
+          compact
+            ? "flex min-w-0 flex-1 items-center justify-center gap-1 sm:flex-none sm:gap-2 sm:shrink-0 whitespace-nowrap font-sans font-normal text-[12px] leading-[18px] px-2 py-2 sm:text-[14px] sm:leading-[21px] sm:px-4 sm:py-2.5 rounded-full border transition-colors duration-200"
+            : "flex items-center gap-2 shrink-0 whitespace-nowrap font-sans font-normal text-[14px] leading-[21px] px-4 py-2.5 rounded-full border transition-colors duration-200",
           open
             ? "border-black text-black"
             : "border-[#CFCFCF] text-[#3D3D3D] hover:border-black hover:text-black",
         ].join(" ")}
       >
         {active && <span className="w-1.5 h-1.5 rounded-full bg-black shrink-0" aria-hidden="true" />}
-        {label}
+        <span className={compact ? "min-w-0 truncate" : undefined}>{label}</span>
         <ChevronDown
-          size={14}
+          size={compact ? 12 : 14}
+          className={`shrink-0 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
           strokeWidth={1.75}
-          className={`transition-transform duration-200 ${open ? "rotate-180" : ""}`}
         />
       </button>
       )}

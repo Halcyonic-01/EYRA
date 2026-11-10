@@ -120,49 +120,49 @@ export function ProductCard({ product }: { product: Product }) {
           ))}
         </Link>
 
-        {/* Desktop arrows. Touch screens swipe instead, so these are hidden below lg. */}
+        {/* Arrows and dots share one row at the bottom, so they sit on the same line. Hidden for single-image products. */}
         {imageCount > 1 && (
-          <>
+          <div className="absolute bottom-1 left-1 right-1 flex items-center justify-between z-10">
+            {/* Desktop arrows. Touch screens swipe instead, so these are hidden below lg. */}
             <button
               type="button"
               onClick={() => setImageIndex((i) => Math.max(i - 1, 0))}
               disabled={imageIndex === 0}
               aria-label="Previous image"
-              className="hidden lg:flex absolute left-1 top-1/2 -translate-y-1/2 z-10 w-7 h-7 items-center justify-center rounded-full bg-white border border-[#CFCFCF] text-black transition-opacity duration-200 disabled:opacity-30 disabled:cursor-default"
+              className="hidden lg:flex w-8 h-8 shrink-0 items-center justify-center rounded-full bg-white border border-[#CFCFCF] text-black transition-opacity duration-200 disabled:opacity-30 disabled:cursor-default"
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <path d="M15 18l-6-6 6-6" />
               </svg>
             </button>
+
+            {/* One dot per image */}
+            <div className="flex items-center gap-1.5 mx-auto">
+              {product.images.map((_, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => setImageIndex(i)}
+                  aria-label={`Show image ${i + 1} of ${imageCount}`}
+                  aria-current={i === imageIndex}
+                  className={`w-1.5 h-1.5 rounded-full transition-colors duration-200 ${
+                    i === imageIndex ? "bg-black" : "bg-[#CFCFCF]"
+                  }`}
+                />
+              ))}
+            </div>
+
             <button
               type="button"
               onClick={() => setImageIndex((i) => Math.min(i + 1, imageCount - 1))}
               disabled={imageIndex === imageCount - 1}
               aria-label="Next image"
-              className="hidden lg:flex absolute right-1 top-1/2 -translate-y-1/2 z-10 w-7 h-7 items-center justify-center rounded-full bg-white border border-[#CFCFCF] text-black transition-opacity duration-200 disabled:opacity-30 disabled:cursor-default"
+              className="hidden lg:flex w-8 h-8 shrink-0 items-center justify-center rounded-full bg-white border border-[#CFCFCF] text-black transition-opacity duration-200 disabled:opacity-30 disabled:cursor-default"
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <path d="M9 18l6-6-6-6" />
               </svg>
             </button>
-          </>
-        )}
-
-        {/* One dot per image. Hidden for single-image products. */}
-        {imageCount > 1 && (
-          <div className="absolute bottom-1 left-0 right-0 flex items-center justify-center gap-1.5 z-10">
-            {product.images.map((_, i) => (
-              <button
-                key={i}
-                type="button"
-                onClick={() => setImageIndex(i)}
-                aria-label={`Show image ${i + 1} of ${imageCount}`}
-                aria-current={i === imageIndex}
-                className={`w-1.5 h-1.5 rounded-full transition-colors duration-200 ${
-                  i === imageIndex ? "bg-black" : "bg-[#CFCFCF]"
-                }`}
-              />
-            ))}
           </div>
         )}
       </div>

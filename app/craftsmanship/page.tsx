@@ -56,7 +56,6 @@ export default function CraftsmanshipPage() {
           eyebrow="How it is made"
           title="Craftsmanship"
           standfirst="Good silver is mostly patience. Here is what actually happens between raw sterling stock and the piece that arrives in your box."
-          crumbs={[{ label: "Craftsmanship" }]}
         />
 
         <div className="max-w-screen-xl mx-auto px-6 lg:px-10 mt-12">

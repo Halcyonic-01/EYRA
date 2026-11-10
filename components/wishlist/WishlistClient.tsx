@@ -94,14 +94,7 @@ export function WishlistClient({ policy }: { policy: ProductPolicy }) {
 
   return (
     <>
-      {/* Breadcrumb + heading, above the grey panel as on the product page */}
       <div className="max-w-screen-xl mx-auto px-6 lg:px-10 pt-10">
-        <nav className="flex items-center gap-1 font-sans font-normal text-[16px] leading-[24px] mb-8">
-          <Link href="/" className="text-[#5F5F5F] hover:text-black transition-colors duration-200">Home</Link>
-          <span className="text-[#5F5F5F] mx-1">›</span>
-          <span className="text-black">Wishlist</span>
-        </nav>
-
         <h1 className="font-sans font-medium text-[24px] leading-[36px] text-black">
           Wishlist ({items.length} {items.length === 1 ? "item" : "items"})
         </h1>

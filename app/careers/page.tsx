@@ -47,7 +47,6 @@ export default function CareersPage() {
           eyebrow="Join us"
           title="Careers"
           standfirst="We are a small team building a silver brand that treats its customers like adults. If that sounds like your kind of work, talk to us."
-          crumbs={[{ label: "Careers" }]}
         />
 
         {/* Open roles */}

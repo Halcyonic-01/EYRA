@@ -19,7 +19,7 @@ export function CollectionFilter({
   if (options.length === 0) return null;
 
   return (
-    <nav aria-label={`Filter ${base.label}`} className="flex flex-wrap gap-2 mt-6">
+    <nav aria-label={`Filter ${base.label}`} className="flex flex-nowrap gap-1.5 sm:gap-2 mt-6">
       {options.map((option) => {
         const isActive = active?.slug === option.slug;
         const href = isActive
@@ -33,8 +33,8 @@ export function CollectionFilter({
             aria-current={isActive ? "true" : undefined}
             className={
               isActive
-                ? "font-sans font-light text-[13px] tracking-[0.15em] uppercase px-5 py-2 border border-black bg-black text-white transition-colors duration-200"
-                : "font-sans font-light text-[13px] tracking-[0.15em] uppercase px-5 py-2 border border-black/20 text-[#505050] hover:border-black hover:text-black transition-colors duration-200"
+                ? "flex-1 min-w-0 whitespace-nowrap text-center font-sans font-light text-[11px] tracking-[0.06em] sm:text-[13px] sm:tracking-[0.15em] uppercase px-2 py-1.5 sm:px-5 sm:py-2 border border-black bg-black text-white transition-colors duration-200"
+                : "flex-1 min-w-0 whitespace-nowrap text-center font-sans font-light text-[11px] tracking-[0.06em] sm:text-[13px] sm:tracking-[0.15em] uppercase px-2 py-1.5 sm:px-5 sm:py-2 border border-black/20 text-[#505050] hover:border-black hover:text-black transition-colors duration-200"
             }
           >
             {option.label}

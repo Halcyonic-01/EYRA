@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
 import { Search, X } from "lucide-react";
 import { ProductCard } from "./ProductCard";
 import { Dropdown } from "@/components/ui/Dropdown";
@@ -68,7 +67,7 @@ function CheckboxRow({
           </svg>
         )}
       </span>
-      <span className="font-sans font-light text-[14px] leading-[21px] text-[#3D3D3D] group-hover:text-black transition-colors duration-150">
+      <span className="font-sans font-light text-[12px] leading-[18px] sm:text-[14px] sm:leading-[21px] text-[#3D3D3D] group-hover:text-black transition-colors duration-150">
         {label}
       </span>
     </button>
@@ -169,16 +168,6 @@ export function ProductsClient({
 
   return (
     <div className="max-w-screen-xl mx-auto px-6 lg:px-10">
-      {/* Breadcrumb */}
-      <div className="py-5">
-        <nav aria-label="Breadcrumb" className="flex items-center gap-1 font-sans font-normal text-[16px] leading-[24px]">
-          <Link href="/" className="text-[#5F5F5F] hover:text-black transition-colors duration-200 text-center">
-            Home
-          </Link>
-          <span className="text-[#5F5F5F] mx-1">›</span>
-          <span className="text-black">Products</span>
-        </nav>
-      </div>
 
       <div className="w-full h-px bg-[#CFCFCF]" />
 
@@ -214,8 +203,8 @@ export function ProductsClient({
       </div>
 
       {/* Filter bar */}
-      <div className="flex items-center gap-3 pb-5 overflow-x-auto">
-        <Dropdown label={typeLabel ?? "Type"} active={selectedTypes.length > 0}>
+      <div className="flex items-center gap-2 sm:gap-3 pb-5 overflow-x-auto">
+        <Dropdown label={typeLabel ?? "Type"} active={selectedTypes.length > 0} compact>
           {() => (
             <div className="flex flex-col min-w-[180px]">
               {TYPE_OPTIONS.map(({ label, value }) => (
@@ -230,7 +219,7 @@ export function ProductsClient({
           )}
         </Dropdown>
 
-        <Dropdown label={priceLabel ?? "Price"} active={priceRange !== "all"}>
+        <Dropdown label={priceLabel ?? "Price"} active={priceRange !== "all"} compact>
           {(close) => (
             <div className="flex flex-col min-w-[190px]">
               {PRICE_RANGES.map(({ label, value }) => (
@@ -248,7 +237,7 @@ export function ProductsClient({
           )}
         </Dropdown>
 
-        <Dropdown label={sortLabel ?? "Sort by"} active={sortBy !== "trending"}>
+        <Dropdown label={sortLabel ?? "Sort by"} active={sortBy !== "trending"} compact>
           {(close) => (
             <div className="flex flex-col min-w-[190px]">
               {SORT_OPTIONS.map(({ label, value }) => (
@@ -268,7 +257,7 @@ export function ProductsClient({
 
         {hasActiveFilters && (
           <button
-            className="font-sans font-light text-[13px] text-[#909090] hover:text-black underline underline-offset-2 transition-colors duration-200 shrink-0"
+            className="font-sans font-light text-[12px] sm:text-[13px] text-[#909090] hover:text-black underline underline-offset-2 transition-colors duration-200 shrink-0 whitespace-nowrap"
             onClick={clearFilters}
           >
             Clear all

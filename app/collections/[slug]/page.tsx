@@ -93,12 +93,12 @@ export default async function CollectionPage({
 
           {/* Count + link to full catalogue */}
           <div className="flex items-end justify-between mb-6">
-            <p className="font-sans font-normal text-[16px] text-[#626262]">
+            <p className="font-sans font-normal text-[14px] sm:text-[16px] text-[#626262]">
               {products.length} {products.length === 1 ? "result" : "results"}
             </p>
             <Link
               href="/products"
-              className="font-sans font-light text-[16px] text-[#505050] underline underline-offset-2 hover:text-black transition-colors duration-200"
+              className="font-sans font-light text-[14px] sm:text-[16px] text-[#505050] underline underline-offset-2 hover:text-black transition-colors duration-200"
             >
               View all jewellery
             </Link>

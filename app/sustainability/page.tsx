@@ -54,7 +54,6 @@ export default function SustainabilityPage() {
           eyebrow="Our footprint"
           title="Sustainability"
           standfirst="Jewellery has a real environmental cost. Here is what we do about ours, and where we still fall short."
-          crumbs={[{ label: "Sustainability" }]}
         />
 
         <div className="max-w-screen-xl mx-auto px-6 lg:px-10 mt-12">

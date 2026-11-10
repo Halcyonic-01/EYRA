@@ -44,7 +44,6 @@ export default function ContactPage() {
           eyebrow="Talk to us"
           title="Contact"
           standfirst="A real person reads every message. We reply within one working day, usually sooner."
-          crumbs={[{ label: "Contact" }]}
         />
 
         <div className="max-w-screen-xl mx-auto px-6 lg:px-10 mt-12">
