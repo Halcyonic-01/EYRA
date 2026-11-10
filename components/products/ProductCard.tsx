@@ -154,10 +154,13 @@ export function ProductCard({ product }: { product: Product }) {
           </span>
         </div>
         {bestOffer && (
-          <p className="font-sans font-normal text-[12px] leading-[16px] text-[#3D3D3D] text-center">
-            Get it for {product.hasPriceRange ? "from " : ""}
-            <span className="font-medium text-black">{rupees(product.price - bestOffer.amount)}</span>
-            <span className="text-[#909090]"> with {bestOffer.code}</span>
+          // Flows as one horizontal line and only breaks between the two parts, so it takes less height.
+          <p className="flex flex-wrap items-baseline justify-center gap-x-1 font-sans font-normal text-[12px] leading-[16px] text-[#3D3D3D] text-center">
+            <span className="whitespace-nowrap">
+              Get it for {product.hasPriceRange ? "from " : ""}
+              <span className="font-medium text-black">{rupees(product.price - bestOffer.amount)}</span>
+            </span>
+            <span className="whitespace-nowrap text-[#909090]">with {bestOffer.code}</span>
           </p>
         )}
       </div>
