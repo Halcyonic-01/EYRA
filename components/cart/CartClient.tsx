@@ -235,7 +235,7 @@ export function CartClient() {
                       onClick={() => moveToWishlist(item)}
                       className="order-first sm:order-none flex items-center gap-1.5 font-sans font-normal text-[13px] text-[#626262] hover:text-black transition-colors duration-200"
                     >
-                      <HeartIcon />
+                      <span className="text-[#D81B60]"><HeartIcon /></span>
                       Move to wishlist
                     </button>
                   </div>

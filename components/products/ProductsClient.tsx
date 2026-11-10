@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { Search, X } from "lucide-react";
 import { ProductCard } from "./ProductCard";
 import { Dropdown } from "@/components/ui/Dropdown";
-import type { Product } from "./types";
+import type { Audience, Product } from "./types";
 
 type ProductType = "ring" | "pendant" | "bracelet" | "anklet";
 type SortOption = "trending" | "price-asc" | "price-desc" | "newest";
@@ -30,6 +30,11 @@ const TYPE_OPTIONS: { label: string; value: ProductType }[] = [
   { label: "Pendants", value: "pendant" },
   { label: "Bracelets", value: "bracelet" },
   { label: "Anklets", value: "anklet" },
+];
+
+const AUDIENCE_OPTIONS: { label: string; value: Audience }[] = [
+  { label: "Men", value: "men" },
+  { label: "Women", value: "women" },
 ];
 
 function priceInRange(price: number, range: PriceRange): boolean {
@@ -110,6 +115,7 @@ export function ProductsClient({
   initialQuery?: string;
 }) {
   const [selectedTypes, setSelectedTypes] = useState<ProductType[]>([]);
+  const [selectedAudiences, setSelectedAudiences] = useState<Audience[]>([]);
   const [priceRange, setPriceRange] = useState<PriceRange>("all");
   const [sortBy, setSortBy] = useState<SortOption>("trending");
   const [query, setQuery] = useState(initialQuery);
@@ -129,6 +135,9 @@ export function ProductsClient({
     if (selectedTypes.length > 0) {
       result = result.filter((p) => selectedTypes.includes(p.type));
     }
+    if (selectedAudiences.length > 0) {
+      result = result.filter((p) => (p.audiences ?? []).some((a) => selectedAudiences.includes(a)));
+    }
     result = result.filter((p) => priceInRange(p.price, priceRange));
     if (sortBy === "price-asc") result.sort((a, b) => a.price - b.price);
     if (sortBy === "price-desc") result.sort((a, b) => b.price - a.price);
@@ -139,7 +148,7 @@ export function ProductsClient({
     // decides what counts as new.
     if (sortBy === "newest") result.reverse();
     return result;
-  }, [products, query, selectedTypes, priceRange, sortBy]);
+  }, [products, query, selectedTypes, selectedAudiences, priceRange, sortBy]);
 
   function toggleType(type: ProductType) {
     setSelectedTypes((prev) =>
@@ -147,8 +156,15 @@ export function ProductsClient({
     );
   }
 
+  function toggleAudience(audience: Audience) {
+    setSelectedAudiences((prev) =>
+      prev.includes(audience) ? prev.filter((a) => a !== audience) : [...prev, audience]
+    );
+  }
+
   function clearFilters() {
     setSelectedTypes([]);
+    setSelectedAudiences([]);
     setPriceRange("all");
     setSortBy("trending");
     setQuery("");
@@ -156,13 +172,16 @@ export function ProductsClient({
 
   // clearFilters resets sortBy too, so sort has to count as "active" here or
   // the only control that undoes it stays hidden while it is in effect.
+  const typeCount = selectedTypes.length + selectedAudiences.length;
   const hasActiveFilters =
-    selectedTypes.length > 0 || priceRange !== "all" || query.trim() !== "" || sortBy !== "trending";
-  const typeLabel = selectedTypes.length === 0
+    typeCount > 0 || priceRange !== "all" || query.trim() !== "" || sortBy !== "trending";
+  const typeLabel = typeCount === 0
     ? "Type"
-    : selectedTypes.length === 1
-      ? TYPE_OPTIONS.find((t) => t.value === selectedTypes[0])?.label
-      : `Type (${selectedTypes.length})`;
+    : typeCount === 1
+      ? [...TYPE_OPTIONS, ...AUDIENCE_OPTIONS].find(
+          (o) => o.value === selectedTypes[0] || o.value === selectedAudiences[0]
+        )?.label
+      : `Type (${typeCount})`;
   const priceLabel = priceRange === "all" ? "Price" : PRICE_RANGES.find((p) => p.value === priceRange)?.label;
   const sortLabel = sortBy === "trending" ? "Sort by" : SORT_OPTIONS.find((s) => s.value === sortBy)?.label;
 
@@ -204,7 +223,7 @@ export function ProductsClient({
 
       {/* Filter bar */}
       <div className="flex items-center gap-2 sm:gap-3 pb-5 overflow-x-auto">
-        <Dropdown label={typeLabel ?? "Type"} active={selectedTypes.length > 0} compact>
+        <Dropdown label={typeLabel ?? "Type"} active={typeCount > 0} compact>
           {() => (
             <div className="flex flex-col min-w-[180px]">
               {TYPE_OPTIONS.map(({ label, value }) => (
@@ -213,6 +232,15 @@ export function ProductsClient({
                   label={label}
                   checked={selectedTypes.includes(value)}
                   onClick={() => toggleType(value)}
+                />
+              ))}
+              <div className="my-1.5 h-px bg-[#CFCFCF]" aria-hidden="true" />
+              {AUDIENCE_OPTIONS.map(({ label, value }) => (
+                <CheckboxRow
+                  key={value}
+                  label={label}
+                  checked={selectedAudiences.includes(value)}
+                  onClick={() => toggleAudience(value)}
                 />
               ))}
             </div>

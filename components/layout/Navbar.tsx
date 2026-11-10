@@ -158,7 +158,7 @@ export function Navbar() {
                 darkTheme ? "text-pearl hover:text-white" : "text-[#333] hover:text-black",
               ].join(" ")}
             >
-              <Heart size={17} strokeWidth={1.5} />
+              <Heart size={17} strokeWidth={1.5} className="text-[#D81B60]" />
               {wishlistCount > 0 && (
                 <span className={[
                   "absolute top-1 right-1 w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-sans font-medium leading-none",
