@@ -8,6 +8,39 @@ import { getProducts } from "@/lib/medusa";
 const TRENDING_COUNT = 8;
 
 /**
+ * Display order for the most loved pieces, most loved first. Matched against
+ * product titles, ignoring case, punctuation, and a leading "The". Products not
+ * on this list follow in their catalogue order.
+ */
+const MOST_LOVED_ORDER = [
+  "The Contour Split Ring",
+  "The Rope Crossover Band",
+  "The Classic Bridge Band",
+  "The Inset Crest Ring",
+  "The Diamond Cut Square Silver Bracelet",
+  "The Daisy Bloom Pendant",
+  "The Radial Butterfly Pendant",
+  "The Halo Evil Eye Rose Gold Pendant",
+];
+
+/** Lowercase, drop a leading "the", and strip everything but letters and digits. */
+function normalizeTitle(title: string): string {
+  return title
+    .toLowerCase()
+    .replace(/^\s*the\s+/, "")
+    .replace(/[^a-z0-9]+/g, "");
+}
+
+const MOST_LOVED_KEYS = MOST_LOVED_ORDER.map(normalizeTitle);
+
+/** Position of a product in MOST_LOVED_ORDER, or Infinity when it is not listed. */
+function mostLovedRank(name: string): number {
+  const key = normalizeTitle(name);
+  const index = MOST_LOVED_KEYS.indexOf(key);
+  return index === -1 ? Infinity : index;
+}
+
+/**
  * "Most Loved Pieces" carousel.
  *
  * This previously rendered a hardcoded list with invented handles and prices,
@@ -16,7 +49,16 @@ const TRENDING_COUNT = 8;
  * what is actually for sale.
  */
 export async function TrendingCarousel() {
-  const products = (await getProducts()).slice(0, TRENDING_COUNT);
+  // Sort before slicing so the favourites lead, then fill any remaining slots.
+  const products = (await getProducts())
+    .map((product, catalogueIndex) => ({ product, catalogueIndex }))
+    .sort(
+      (a, b) =>
+        mostLovedRank(a.product.name) - mostLovedRank(b.product.name) ||
+        a.catalogueIndex - b.catalogueIndex
+    )
+    .map(({ product }) => product)
+    .slice(0, TRENDING_COUNT);
 
   if (products.length === 0) return null;
 
