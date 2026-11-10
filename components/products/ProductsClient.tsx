@@ -35,6 +35,7 @@ const TYPE_OPTIONS: { label: string; value: ProductType }[] = [
 const AUDIENCE_OPTIONS: { label: string; value: Audience }[] = [
   { label: "Men", value: "men" },
   { label: "Women", value: "women" },
+  { label: "Couple", value: "couple" },
 ];
 
 function priceInRange(price: number, range: PriceRange): boolean {
@@ -223,7 +224,7 @@ export function ProductsClient({
 
       {/* Filter bar */}
       <div className="flex items-center gap-2 sm:gap-3 pb-5 overflow-x-auto">
-        <Dropdown label={typeLabel ?? "Type"} active={typeCount > 0} compact>
+        <Dropdown label={typeLabel ?? "Type"} active={typeCount > 0} compact closeArrow>
           {() => (
             <div className="flex flex-col min-w-[180px]">
               {TYPE_OPTIONS.map(({ label, value }) => (
@@ -247,7 +248,7 @@ export function ProductsClient({
           )}
         </Dropdown>
 
-        <Dropdown label={priceLabel ?? "Price"} active={priceRange !== "all"} compact>
+        <Dropdown label={priceLabel ?? "Price"} active={priceRange !== "all"} compact closeArrow>
           {(close) => (
             <div className="flex flex-col min-w-[190px]">
               {PRICE_RANGES.map(({ label, value }) => (
@@ -265,7 +266,7 @@ export function ProductsClient({
           )}
         </Dropdown>
 
-        <Dropdown label={sortLabel ?? "Sort by"} active={sortBy !== "trending"} compact>
+        <Dropdown label={sortLabel ?? "Sort by"} active={sortBy !== "trending"} compact closeArrow>
           {(close) => (
             <div className="flex flex-col min-w-[190px]">
               {SORT_OPTIONS.map(({ label, value }) => (

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { ChevronDown } from "lucide-react";
+import { ArrowRight, ChevronDown } from "lucide-react";
 
 /**
  * A trigger button that opens a panel below it, closing on an outside click
@@ -25,6 +25,7 @@ export function Dropdown({
   icon,
   iconClassName = "",
   compact = false,
+  closeArrow = false,
   children,
 }: {
   label: string;
@@ -36,6 +37,8 @@ export function Dropdown({
    * (label truncates) so several triggers fit on one phone-width line.
    */
   compact?: boolean;
+  /** Adds a round arrow at the panel's bottom-right that closes it. */
+  closeArrow?: boolean;
   /** Shown as a filled dot next to the label when a non-default value is selected. */
   active?: boolean;
   children: (close: () => void) => React.ReactNode;
@@ -144,10 +147,20 @@ export function Dropdown({
           <div
             ref={panelRef}
             role="menu"
-            className="fixed z-30 min-w-[240px] bg-white border border-[#CFCFCF] rounded-2xl shadow-[0_8px_24px_rgba(0,0,0,0.08)] p-5"
+            className={`fixed z-30 min-w-[240px] bg-white border border-[#CFCFCF] rounded-2xl shadow-[0_8px_24px_rgba(0,0,0,0.08)] p-5 ${closeArrow ? "pb-14" : ""}`}
             style={{ top: coords.top, left: coords.left }}
           >
             {children(() => setOpen(false))}
+            {closeArrow && (
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                aria-label="Close"
+                className="absolute bottom-3 right-3 w-8 h-8 flex items-center justify-center rounded-full bg-white border border-[#CFCFCF] text-black hover:border-black transition-colors duration-200"
+              >
+                <ArrowRight size={16} strokeWidth={1.75} />
+              </button>
+            )}
           </div>,
           document.body
         )}
