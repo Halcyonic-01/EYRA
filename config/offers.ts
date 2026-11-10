@@ -16,6 +16,9 @@ export const COD_CHARGE = 99;
  */
 export const TOTE_MIN_SUBTOTAL = 1499;
 
+/** The product-wise code every product card advertises, with its price after the discount. */
+export const PRODUCT_OFFER_CODE = "WELCOME200";
+
 /** ₹1,499 does not qualify; ₹1,500 does. */
 export function qualifiesForTote(itemsSubtotal: number): boolean {
   return itemsSubtotal > TOTE_MIN_SUBTOTAL;

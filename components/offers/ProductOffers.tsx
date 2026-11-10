@@ -106,36 +106,35 @@ export function ProductOffers({
               <div className="min-w-0 flex-1">
                 <p className="font-sans text-[14px] font-medium text-jet">{card.title}</p>
                 <p className="mt-0.5 font-sans text-[12px] leading-snug text-smoke">{card.terms}</p>
-                <p
-                  className={`mt-1.5 font-sans text-[12px] ${
-                    card.unlocked ? "text-jet" : "text-smoke"
-                  }`}
-                >
-                  {card.status}
-                </p>
-              </div>
-              {card.code && (
-                <button
-                  type="button"
-                  onClick={() => handleCopy(card.code!)}
-                  aria-label={copied ? `${card.code} copied` : `Copy code ${card.code}`}
-                  className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 font-mono text-[11px] font-semibold tracking-[0.12em] transition-colors duration-200 ${
-                    copied
-                      ? "border-jet bg-jet text-white"
-                      : "border-cloud text-jet hover:border-jet"
-                  }`}
-                >
-                  {copied ? (
-                    <>
-                      Copied <Check aria-hidden="true" className="size-3" />
-                    </>
-                  ) : (
-                    <>
-                      {card.code} <Copy aria-hidden="true" className="size-3" />
-                    </>
+                {/* Status and code share one row, so the card's height stays low. */}
+                <div className="mt-1.5 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+                  <p className={`font-sans text-[12px] ${card.unlocked ? "text-jet" : "text-smoke"}`}>
+                    {card.status}
+                  </p>
+                  {card.code && (
+                    <button
+                      type="button"
+                      onClick={() => handleCopy(card.code!)}
+                      aria-label={copied ? `${card.code} copied` : `Copy code ${card.code}`}
+                      className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 font-mono text-[11px] font-semibold tracking-[0.12em] transition-colors duration-200 ${
+                        copied
+                          ? "border-jet bg-jet text-white"
+                          : "border-cloud text-jet hover:border-jet"
+                      }`}
+                    >
+                      {copied ? (
+                        <>
+                          Copied <Check aria-hidden="true" className="size-3" />
+                        </>
+                      ) : (
+                        <>
+                          {card.code} <Copy aria-hidden="true" className="size-3" />
+                        </>
+                      )}
+                    </button>
                   )}
-                </button>
-              )}
+                </div>
+              </div>
             </li>
           );
         })}

@@ -6,7 +6,7 @@ import { useRef, useState, type MouseEvent, type TouchEvent } from "react";
 import { useRouter } from "next/navigation";
 import type { Product } from "./types";
 import { useCartStore, useWishlistStore } from "@/store/useStore";
-import { bestOfferFor, rupees } from "@/config/offers";
+import { DISCOUNT_OFFERS, PRODUCT_OFFER_CODE, rupees } from "@/config/offers";
 
 /** A horizontal swipe must travel this far (px) and beat the vertical movement to count. */
 const SWIPE_MIN_PX = 40;
@@ -30,7 +30,8 @@ export function ProductCard({ product }: { product: Product }) {
   );
   const toggleWishlist = useWishlistStore((s) => s.toggle);
   const imageCount = product.images.length;
-  const bestOffer = bestOfferFor(product.price);
+  // Every product carries the WELCOME200 offer, so each card shows it.
+  const productOffer = DISCOUNT_OFFERS.find((o) => o.code === PRODUCT_OFFER_CODE) ?? null;
 
   function handleTouchStart(e: TouchEvent) {
     const t = e.touches[0];
@@ -140,7 +141,7 @@ export function ProductCard({ product }: { product: Product }) {
 
       {/* Product info */}
       <div className="flex flex-col items-center gap-1 w-full">
-        <h3 className="font-sans font-normal text-[14px] leading-[20px] text-center text-black w-full line-clamp-1">
+        <h3 className="font-sans font-normal text-[14px] leading-[20px] text-center text-black w-full line-clamp-2">
           <Link href={`/products/${product.id}`} className="hover:underline underline-offset-2">
             {product.name}
           </Link>
@@ -153,14 +154,14 @@ export function ProductCard({ product }: { product: Product }) {
             ₹{product.originalPrice.toLocaleString("en-IN")}
           </span>
         </div>
-        {bestOffer && (
+        {productOffer && (
           // Flows as one horizontal line and only breaks between the two parts, so it takes less height.
           <p className="flex flex-wrap items-baseline justify-center gap-x-1 font-sans font-normal text-[12px] leading-[16px] text-[#3D3D3D] text-center">
             <span className="whitespace-nowrap">
               Get it for {product.hasPriceRange ? "from " : ""}
-              <span className="font-medium text-black">{rupees(product.price - bestOffer.amount)}</span>
+              <span className="font-medium text-black">{rupees(product.price - productOffer.amount)}</span>
             </span>
-            <span className="whitespace-nowrap text-[#909090]">with {bestOffer.code}</span>
+            <span className="whitespace-nowrap text-[#909090]">with {productOffer.code}</span>
           </p>
         )}
       </div>

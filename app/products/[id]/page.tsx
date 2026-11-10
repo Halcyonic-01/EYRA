@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ProductDetailClient } from "@/components/products/ProductDetailClient";
+import { ProductGrid } from "@/components/products/ProductGrid";
 import { CtaBanner } from "@/components/home/CtaBanner";
 import { NewsletterBanner } from "@/components/home/NewsletterBanner";
 import { getProducts, getProductByHandle, getSimilarProducts } from "@/lib/medusa";
@@ -66,42 +66,8 @@ export default async function ProductDetailPage({
             </Link>
           </div>
 
-          {/* 4-column grid, 2 rows */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
-            {similar.map((p) => (
-              <Link
-                key={p.id}
-                href={`/products/${p.id}`}
-                className="group flex flex-col gap-3"
-              >
-                {/* Image */}
-                <div className="relative w-full overflow-hidden bg-white" style={{ aspectRatio: "292/210" }}>
-                  <Image
-                    src={p.images[0]}
-                    alt={p.name}
-                    fill
-                    className="object-contain p-3 transition-transform duration-500 group-hover:scale-105"
-                    sizes="(max-width: 640px) 50vw, 25vw"
-                  />
-                </div>
-
-                {/* Info */}
-                <div className="flex flex-col gap-1">
-                  <p className="font-sans font-normal text-[14px] leading-[21px] text-black group-hover:underline underline-offset-2 transition-all">
-                    {p.name}
-                  </p>
-                  <div className="flex items-center gap-3 flex-wrap">
-                    <span className="font-sans font-medium text-[24px] leading-[36px] text-black">
-                      ₹{p.price.toLocaleString("en-IN")}
-                    </span>
-                    <span className="font-sans font-normal text-[20px] leading-[30px] text-[#AAAAAA] line-through">
-                      ₹{p.originalPrice.toLocaleString("en-IN")}
-                    </span>
-                  </div>
-                </div>
-              </Link>
-            ))}
-          </div>
+          {/* Same cards as the products page: hover, swipe, offer line */}
+          <ProductGrid products={similar} />
 
           {/* Mobile "view more" link */}
           <div className="mt-8 flex justify-center sm:hidden">
