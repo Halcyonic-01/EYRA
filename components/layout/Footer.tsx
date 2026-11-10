@@ -54,12 +54,12 @@ function NavColumn({
       <h3 className="text-[0.72rem] font-sans font-semibold tracking-[0.18em] uppercase text-white mb-6">
         {heading}
       </h3>
-      <ul className="flex flex-col gap-3.5">
+      <ul className="flex flex-col w-full">
         {links.map(({ label, href }) => (
-          <li key={label + href}>
+          <li key={label + href} className="border-b border-stone/30 last:border-b-0">
             <Link
               href={href}
-              className="text-[0.86rem] font-normal text-pearl hover:text-white transition-colors duration-200 tracking-[0.02em]"
+              className="block w-full py-3 text-[0.86rem] font-normal text-pearl hover:text-white transition-colors duration-200 tracking-[0.02em]"
             >
               {label}
             </Link>
