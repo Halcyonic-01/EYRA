@@ -456,15 +456,24 @@ export function ProductDetailClient({
                   product.sizeOptionTitle,
                   hasSizes ? selectedSize : null
                 );
+                // A pair of anklets is priced below two singles; say how much below.
+                const single = options.find((o) => o.value === "Single" && o.inStock);
+                const pairSaving = (price: number, value: string) =>
+                  value === "Pair" && single ? single.price * 2 - price : 0;
                 return (
                   <div key={choice.title} className="flex flex-col gap-3">
                     <span className="font-sans font-medium text-[14px] leading-[21px] text-black">
                       {choice.title}
                       {selection[choice.title] ? `: ${selection[choice.title]}` : ""}
                     </span>
-                    <div className="flex flex-wrap gap-2" role="radiogroup" aria-label={choice.title}>
+                    <div
+                      className={options.length === 2 ? "grid grid-cols-2 gap-2 sm:max-w-[360px]" : "flex flex-wrap gap-2"}
+                      role="radiogroup"
+                      aria-label={choice.title}
+                    >
                       {options.map((option) => {
                         const active = selection[choice.title] === option.value;
+                        const saving = option.inStock ? pairSaving(option.price, option.value) : 0;
                         return (
                           <button
                             key={option.value}
@@ -482,6 +491,7 @@ export function ProductDetailClient({
                             <span className="text-[14px] font-medium">{option.value}</span>
                             <span className={`text-[13px] ${active ? "text-[#E5E5E5]" : "text-[#909090]"}`}>
                               {option.inStock ? `₹${option.price.toLocaleString("en-IN")}` : "Sold out"}
+                              {saving > 0 && ` · Save ₹${saving.toLocaleString("en-IN")}`}
                             </span>
                           </button>
                         );

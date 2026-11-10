@@ -33,7 +33,12 @@ export function lineKey(item: { product: { id: string }; size: ChosenSize; varia
 export function variantLabelFor(variant: ProductVariant | undefined): string | null {
   if (!variant) return null;
   const parts = Object.entries(variant.options)
-    .filter(([title, value]) => !/size/i.test(title) && !(title === "Title" && value === "Default Title"))
+    .filter(
+      ([title, value]) =>
+        !/size/i.test(title) &&
+        !(title === "Title" && value === "Default Title") &&
+        value !== "Default option value"
+    )
     .map(([, value]) => value);
   return parts.length ? parts.join(" · ") : null;
 }
