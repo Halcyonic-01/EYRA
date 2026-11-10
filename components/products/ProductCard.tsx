@@ -6,7 +6,7 @@ import { useRef, useState, type MouseEvent, type TouchEvent } from "react";
 import { useRouter } from "next/navigation";
 import type { Product } from "./types";
 import { useCartStore, useWishlistStore } from "@/store/useStore";
-import { DISCOUNT_OFFERS, PRODUCT_OFFER_CODE, rupees } from "@/config/offers";
+import { productOfferFor, rupees } from "@/config/offers";
 
 /** A horizontal swipe must travel this far (px) and beat the vertical movement to count. */
 const SWIPE_MIN_PX = 40;
@@ -30,8 +30,8 @@ export function ProductCard({ product }: { product: Product }) {
   );
   const toggleWishlist = useWishlistStore((s) => s.toggle);
   const imageCount = product.images.length;
-  // Every product carries the WELCOME200 offer, so each card shows it.
-  const productOffer = DISCOUNT_OFFERS.find((o) => o.code === PRODUCT_OFFER_CODE) ?? null;
+  // The offer depends on this product's own price: WELCOME200, EYRA350 or EYRA650.
+  const productOffer = productOfferFor(product.price);
 
   function handleTouchStart(e: TouchEvent) {
     const t = e.touches[0];

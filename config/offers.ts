@@ -16,8 +16,14 @@ export const COD_CHARGE = 99;
  */
 export const TOTE_MIN_SUBTOTAL = 1499;
 
-/** The product-wise code every product card advertises, with its price after the discount. */
-export const PRODUCT_OFFER_CODE = "WELCOME200";
+/**
+ * The product-wise code a product card advertises, by the product's own price:
+ * up to ₹2,999 gets WELCOME200, ₹3,000 to ₹5,000 gets EYRA350, above ₹5,000 gets EYRA650.
+ */
+export function productOfferFor(price: number): DiscountOffer | null {
+  const code = price <= 2999 ? "WELCOME200" : price <= 5000 ? "EYRA350" : "EYRA650";
+  return DISCOUNT_OFFERS.find((o) => o.code === code) ?? null;
+}
 
 /** ₹1,499 does not qualify; ₹1,500 does. */
 export function qualifiesForTote(itemsSubtotal: number): boolean {
