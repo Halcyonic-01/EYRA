@@ -62,7 +62,7 @@ export function ProductCard({ product }: { product: Product }) {
   }
 
   return (
-    <article className="group flex flex-col items-center gap-3 p-4 h-full bg-white border border-[#CFCFCF] rounded-2xl">
+    <article className="group flex flex-col items-center gap-3 p-2 sm:p-4 h-full bg-white border border-[#CFCFCF] rounded-2xl">
       {/* Image container: white, the same as the card, so photos never sit in a different tone */}
       <div
         className="relative w-full aspect-square bg-white flex items-center justify-center overflow-hidden touch-pan-y"
@@ -74,7 +74,7 @@ export function ProductCard({ product }: { product: Product }) {
           onClick={() => toggleWishlist(product, needsChoice ? undefined : product.variantId)}
           aria-label={wishlisted ? "Remove from wishlist" : "Add to wishlist"}
           aria-pressed={wishlisted}
-          className="absolute top-0 left-0 p-1 flex items-center justify-center z-10"
+          className="absolute top-0 left-0 p-1 flex items-center justify-center z-10 text-[#D81B60]"
         >
           <svg width="24" height="24" viewBox="0 0 24 24" fill={wishlisted ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1.1L12 21.3l7.8-7.8 1-1.1a5.5 5.5 0 0 0 0-7.8z" />
