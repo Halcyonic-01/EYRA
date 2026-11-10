@@ -30,7 +30,7 @@ export const COLLECTIONS: readonly Collection[] = [
     description:
       "Stacking bands, signets, and statement silhouettes in 925 sterling silver.",
     types: ["ring"],
-    image: "/images/collection-1.jpg",
+    image: "/images/collection-2.jpg",
   },
   {
     slug: "pendants",
@@ -38,7 +38,7 @@ export const COLLECTIONS: readonly Collection[] = [
     description:
       "Rope twists, serpentine links, and everyday pendants built to layer.",
     types: ["pendant"],
-    image: "/images/collection-2.jpg",
+    image: "/images/collection-1.jpg",
   },
   {
     slug: "anklets",
