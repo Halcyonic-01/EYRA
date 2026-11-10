@@ -23,12 +23,13 @@ export interface WishlistEntry {
   productId: string;
   variantId?: string;
   /**
-   * Ring size the entry was saved at, when one was chosen. variantId alone
+   * Size the entry was saved at, when one was chosen: text as written in
+   * Medusa ("7", "7.5", "S"), or a number on entries saved before sizes were text. variantId alone
    * identifies the SKU for Medusa but carries no human-readable size, so
    * without this the cart line created from a wishlist entry could not show
    * the customer which size they were about to buy.
    */
-  size?: number | null;
+  size?: string | number | null;
 }
 
 async function adminFetch<T>(path: string, init?: RequestInit): Promise<T | null> {
@@ -67,7 +68,10 @@ function isWishlistEntry(v: unknown): v is WishlistEntry {
   if (variantId !== undefined && typeof variantId !== "string") return false;
   // Entries written before size was stored simply have none, so absent and
   // null both stay valid rather than dropping the whole entry.
-  if (size !== undefined && size !== null && typeof size !== "number") return false;
+  // Sizes are text now ("7", "7.5", "S"); numbers are entries saved before that.
+  if (size !== undefined && size !== null && typeof size !== "number" && !(typeof size === "string" && size.length <= 40)) {
+    return false;
+  }
   return true;
 }
 

@@ -1,6 +1,12 @@
 /** Who a product is made for. Set by the product's category in Medusa. */
 export type Audience = "men" | "women" | "couple";
 
+/**
+ * A size the customer chose, exactly as written in Medusa ("7", "7.5", "S").
+ * A number is an older cart or wishlist line saved before sizes were text.
+ */
+export type ChosenSize = string | number | null;
+
 /** One purchasable variant of a product, priced by Medusa. */
 export interface ProductVariant {
   id: string;

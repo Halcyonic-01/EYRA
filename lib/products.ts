@@ -10,18 +10,19 @@ if (process.env.NODE_ENV === "production") {
 
 export interface DetailProduct extends Product {
   specs: string[];
-  sizes: number[];
+  /** Size values exactly as entered in Medusa ("7", "7.5", "S"), in display order. */
+  sizes: string[];
   rating: number;
   reviewCount: number;
   /** Maps size option value (e.g. "7") → Medusa variant ID. Undefined for mock data. */
   sizeVariantMap?: Record<string, string>;
   /** Choices other than ring size, such as Single or Pair, or with or without a chain. */
   choices?: ProductChoice[];
-  /** Title of the ring size option in Medusa, for matching variants. */
+  /** Title of the size option in Medusa (any product type), for matching variants. */
   sizeOptionTitle?: string;
 }
 
-const RING_SIZES = [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20];
+const RING_SIZES = ["6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20"];
 const RING_SPECS = ["925 Sterling", "Hallmarked", "BIS Certified", "Anti-tarnish"];
 const CHAIN_SPECS = ["925 Sterling", "Nickel Free", "Hallmarked", "Anti-tarnish"];
 

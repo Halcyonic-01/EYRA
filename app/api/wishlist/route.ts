@@ -9,7 +9,7 @@ import { applyRateLimit } from "@/lib/rateLimit";
 interface HydratedWishlistItem {
   product: Product;
   variantId: string | undefined;
-  size: number | null;
+  size: string | number | null;
 }
 
 async function resolveMedusaCustomerId(): Promise<string | null> {

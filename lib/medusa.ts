@@ -11,6 +11,7 @@
 
 import type { Audience, Product, ProductChoice, ProductVariant } from "@/components/products/types";
 import { canonicalProductType } from "@/lib/product-type";
+import { orderSizes } from "@/lib/variant-selection";
 import type { DetailProduct } from "@/lib/products";
 
 /* ── Config ───────────────────────────────────────────────── */
@@ -303,16 +304,13 @@ const PLACEHOLDER_OPTION_VALUES = new Set(["Default Title", "Default", "Default 
 function toDetailProduct(p: MedusaProduct): DetailProduct {
   const base = toProduct(p);
 
-  // Ring sizes come from a product option titled "Size" or "Ring Size"
+  // Sizes come from a product option whose title has "size" in it ("Size",
+  // "Ring Size"), on any product type. Values are kept as entered, so "7.5" and
+  // "S" work as well as "7"; numbers are shown smallest first.
   const sizeOption = p.options.find((o) =>
     o.title.toLowerCase().includes("size")
   );
-  const sizes: number[] = sizeOption
-    ? sizeOption.values
-        .map((v) => parseInt(v.value, 10))
-        .filter((n) => !isNaN(n))
-        .sort((a, b) => a - b)
-    : [];
+  const sizes = sizeOption ? orderSizes(sizeOption.values.map((v) => v.value)) : [];
 
   // Quality badges come from Medusa product tags; fall back to sensible defaults
   const defaultSpecs: Record<"ring" | "pendant" | "bracelet" | "anklet", string[]> = {
@@ -444,7 +442,7 @@ export async function getProducts(): Promise<Product[]> {
 /**
  * Fetch a single product by its URL handle (or, as a fallback, by Medusa product ID).
  *
- * Expanding options and their values is required so ring sizes can be parsed.
+ * Expanding options and their values is required so sizes can be read.
  * Tags are expanded so quality spec badges appear correctly.
  */
 export async function getProductByHandle(handle: string): Promise<DetailProduct | null> {

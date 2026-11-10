@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useWishlistStore, useCartStore } from "@/store/useStore";
 import type { WishlistItem } from "@/store/useStore";
+import { sameSize } from "@/lib/variant-selection";
 import { COD_CHARGE, rupees } from "@/config/offers";
 import type { ProductPolicy } from "@/components/products/ProductDetailClient";
 
@@ -118,7 +119,7 @@ export function WishlistClient({ policy }: { policy: ProductPolicy }) {
             const inCart = cartItems.some(
               (c) =>
                 c.product.id === product.id &&
-                (product.type === "ring" ? c.size === (item.size ?? null) : true)
+                sameSize(c.size, item.size)
             );
 
             return (
@@ -182,10 +183,12 @@ export function WishlistClient({ policy }: { policy: ProductPolicy }) {
                       Inclusive of all taxes
                     </p>
 
-                    {/* Chosen ring size, or a prompt when none was picked */}
-                    {product.type === "ring" && (
+                    {/* Chosen size, or a prompt when a ring was saved without one */}
+                    {(item.size || product.type === "ring") && (
                       <p className="font-sans font-medium text-[14px] leading-[21px] text-black mt-2">
-                        {item.size ? `Ring Size: ${item.size}` : "Ring size not selected"}
+                        {item.size
+                          ? `${product.type === "ring" ? "Ring Size" : "Size"}: ${item.size}`
+                          : "Ring size not selected"}
                       </p>
                     )}
                     {/* Surface when no variant could be resolved so the user knows to pick a size on PDP */}
