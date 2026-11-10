@@ -61,6 +61,20 @@ export const DISCOUNT_OFFERS: readonly DiscountOffer[] = [
   },
 ];
 
+/**
+ * The discount code that takes the most off an order of this value, or null
+ * when none applies. Uses the same strict "above" rule as the backend.
+ */
+export function bestOfferFor(itemsSubtotal: number): DiscountOffer | null {
+  let best: DiscountOffer | null = null;
+  for (const offer of DISCOUNT_OFFERS) {
+    if (itemsSubtotal > offer.minOrderAbove && (best === null || offer.amount > best.amount)) {
+      best = offer;
+    }
+  }
+  return best;
+}
+
 /** What is offered without a code: shown on the page so nobody has to ask for them. */
 export const AUTOMATIC_BENEFITS: readonly { title: string; terms: string }[] = [
   {

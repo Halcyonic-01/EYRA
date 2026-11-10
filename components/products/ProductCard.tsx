@@ -2,12 +2,21 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useRef, useState, type MouseEvent, type TouchEvent } from "react";
 import { useRouter } from "next/navigation";
 import type { Product } from "./types";
 import { useCartStore, useWishlistStore } from "@/store/useStore";
+import { bestOfferFor, rupees } from "@/config/offers";
+
+/** A horizontal swipe must travel this far (px) and beat the vertical movement to count. */
+const SWIPE_MIN_PX = 40;
 
 export function ProductCard({ product }: { product: Product }) {
   const router = useRouter();
+  const [imageIndex, setImageIndex] = useState(0);
+  const touchStart = useRef<{ x: number; y: number } | null>(null);
+  // Set when a swipe just happened, so the link under the finger doesn't navigate.
+  const swipedRef = useRef(false);
   const addToCart = useCartStore((s) => s.addToCart);
   // A product with several variants (a ring's sizes, an anklet's single or
   // pair) can't say "in cart" for the product as a whole, or adding a
@@ -20,10 +29,45 @@ export function ProductCard({ product }: { product: Product }) {
     s.items.some((i) => i.product.id === product.id)
   );
   const toggleWishlist = useWishlistStore((s) => s.toggle);
+  const imageCount = product.images.length;
+  const bestOffer = bestOfferFor(product.price);
+
+  function handleTouchStart(e: TouchEvent) {
+    const t = e.touches[0];
+    touchStart.current = { x: t.clientX, y: t.clientY };
+    swipedRef.current = false;
+  }
+
+  function handleTouchEnd(e: TouchEvent) {
+    const start = touchStart.current;
+    touchStart.current = null;
+    if (!start || imageCount < 2) return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - start.x;
+    const dy = t.clientY - start.y;
+    if (Math.abs(dx) < SWIPE_MIN_PX || Math.abs(dx) <= Math.abs(dy)) return;
+    swipedRef.current = true;
+    // Swipe left goes to the next image, swipe right to the previous one. No wrap-around.
+    setImageIndex((i) =>
+      dx < 0 ? Math.min(i + 1, imageCount - 1) : Math.max(i - 1, 0)
+    );
+  }
+
+  function handleImageLinkClick(e: MouseEvent) {
+    if (swipedRef.current) {
+      e.preventDefault();
+      swipedRef.current = false;
+    }
+  }
+
   return (
     <article className="group flex flex-col items-center gap-3 p-4 h-full bg-white hover:bg-[#F7F7F7] border border-[#CFCFCF] rounded-2xl transition-colors duration-200">
       {/* Image container */}
-      <div className="relative w-full aspect-square flex items-center justify-center overflow-hidden">
+      <div
+        className="relative w-full aspect-square flex items-center justify-center overflow-hidden touch-pan-y"
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+      >
         <button
           type="button"
           onClick={() => toggleWishlist(product, needsChoice ? undefined : product.variantId)}
@@ -55,32 +99,67 @@ export function ProductCard({ product }: { product: Product }) {
           </svg>
         </Link>
 
-        <Link href={`/products/${product.id}`} className="relative w-[85%] h-[85%]">
-          <Image
-            src={product.images[0]}
-            alt={product.name}
-            fill
-            className="object-contain"
-            sizes="(max-width: 640px) 40vw, (max-width: 1024px) 25vw, 206px"
-          />
+        <Link
+          href={`/products/${product.id}`}
+          onClick={handleImageLinkClick}
+          className="relative w-[85%] h-[85%]"
+        >
+          {product.images.map((src, i) => (
+            <Image
+              key={src + i}
+              src={src}
+              alt={i === 0 ? product.name : ""}
+              aria-hidden={i === 0 ? undefined : true}
+              fill
+              className={`object-contain transition-opacity duration-300 ${
+                i === imageIndex ? "opacity-100" : "opacity-0"
+              }`}
+              sizes="(max-width: 640px) 40vw, (max-width: 1024px) 25vw, 206px"
+            />
+          ))}
         </Link>
+
+        {/* One dot per image. Hidden for single-image products. */}
+        {imageCount > 1 && (
+          <div className="absolute bottom-1 left-0 right-0 flex items-center justify-center gap-1.5 z-10">
+            {product.images.map((_, i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={() => setImageIndex(i)}
+                aria-label={`Show image ${i + 1} of ${imageCount}`}
+                aria-current={i === imageIndex}
+                className={`w-1.5 h-1.5 rounded-full transition-colors duration-200 ${
+                  i === imageIndex ? "bg-black" : "bg-[#CFCFCF]"
+                }`}
+              />
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Product info */}
       <div className="flex flex-col items-center gap-1 w-full">
-        <h3 className="font-sans font-normal text-[16px] leading-[24px] text-center text-black w-full line-clamp-1">
+        <h3 className="font-sans font-normal text-[14px] leading-[20px] text-center text-black w-full line-clamp-1">
           <Link href={`/products/${product.id}`} className="hover:underline underline-offset-2">
             {product.name}
           </Link>
         </h3>
-        <div className="flex items-center gap-[13px] mt-1">
-          <span className="font-sans font-medium text-[18px] leading-[28px] text-black">
+        <div className="flex items-center gap-[10px] mt-0.5">
+          <span className="font-sans font-medium text-[15px] leading-[22px] text-black">
             {product.hasPriceRange ? "From " : ""}₹{product.price.toLocaleString("en-IN")}
           </span>
-          <span className="font-sans font-normal text-[15px] leading-[22px] text-[#AAAAAA] line-through">
+          <span className="font-sans font-normal text-[13px] leading-[20px] text-[#AAAAAA] line-through">
             ₹{product.originalPrice.toLocaleString("en-IN")}
           </span>
         </div>
+        {bestOffer && (
+          <p className="font-sans font-normal text-[12px] leading-[16px] text-[#3D3D3D] text-center">
+            Get it for {product.hasPriceRange ? "from " : ""}
+            <span className="font-medium text-black">{rupees(product.price - bestOffer.amount)}</span>
+            <span className="text-[#909090]"> with {bestOffer.code}</span>
+          </p>
+        )}
       </div>
 
       {/* Add to cart */}
@@ -98,7 +177,7 @@ export function ProductCard({ product }: { product: Product }) {
             }
             if (!inCart) addToCart(product, null, product.variantId);
           }}
-          className={`w-full max-w-[310px] flex items-center justify-center px-4 sm:px-8 py-2.5 font-sans font-medium text-[14px] sm:text-[16px] leading-[20px] whitespace-nowrap rounded-full transition-colors duration-200 ${inCart
+          className={`w-full max-w-[200px] flex items-center justify-center px-5 py-1.5 font-sans font-medium text-[11px] leading-[16px] whitespace-nowrap rounded-full transition-colors duration-200 ${inCart
               ? "bg-black text-white"
               : "bg-black text-white hover:bg-[#1a1a1a]"
             }`}
