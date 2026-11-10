@@ -96,7 +96,7 @@ export async function TrendingCarousel() {
                     src={product.images[0]}
                     alt={product.name}
                     fill
-                    className="object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+                    className="object-contain p-4 sm:p-6 transition-transform duration-700 ease-out group-hover:scale-105"
                     sizes="(max-width: 640px) 150px, 220px"
                   />
                 </div>
