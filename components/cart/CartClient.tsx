@@ -153,7 +153,7 @@ export function CartClient() {
                   <div className="flex gap-4 flex-1 min-w-0">
                     {/* Product image */}
                     <div
-                      className="relative w-[79px] h-[79px] flex-shrink-0 rounded-2xl overflow-hidden bg-[#F9F9F9]"
+                      className="relative w-[79px] h-[79px] flex-shrink-0 rounded-2xl overflow-hidden bg-white"
                       style={{ border: "1px solid #E1E1E1", boxShadow: "0px 2px 8px rgba(0,0,0,0.06)" }}
                     >
                       <Image

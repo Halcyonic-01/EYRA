@@ -61,10 +61,10 @@ export function ProductCard({ product }: { product: Product }) {
   }
 
   return (
-    <article className="group flex flex-col items-center gap-3 p-4 h-full bg-white hover:bg-[#F7F7F7] border border-[#CFCFCF] rounded-2xl transition-colors duration-200">
-      {/* Image container */}
+    <article className="group flex flex-col items-center gap-3 p-4 h-full bg-white border border-[#CFCFCF] rounded-2xl">
+      {/* Image container: white, the same as the card, so photos never sit in a different tone */}
       <div
-        className="relative w-full aspect-square flex items-center justify-center overflow-hidden touch-pan-y"
+        className="relative w-full aspect-square bg-white flex items-center justify-center overflow-hidden touch-pan-y"
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >

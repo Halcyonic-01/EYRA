@@ -75,7 +75,7 @@ export default async function ProductDetailPage({
                 className="group flex flex-col gap-3"
               >
                 {/* Image */}
-                <div className="relative w-full overflow-hidden bg-[#F5F5F5]" style={{ aspectRatio: "292/210" }}>
+                <div className="relative w-full overflow-hidden bg-white" style={{ aspectRatio: "292/210" }}>
                   <Image
                     src={p.images[0]}
                     alt={p.name}
