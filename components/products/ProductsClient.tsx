@@ -248,7 +248,7 @@ export function ProductsClient({
           )}
         </Dropdown>
 
-        <Dropdown label={priceLabel ?? "Price"} active={priceRange !== "all"} compact closeArrow>
+        <Dropdown label={priceLabel ?? "Price"} active={priceRange !== "all"} compact>
           {(close) => (
             <div className="flex flex-col min-w-[190px]">
               {PRICE_RANGES.map(({ label, value }) => (
@@ -266,7 +266,7 @@ export function ProductsClient({
           )}
         </Dropdown>
 
-        <Dropdown label={sortLabel ?? "Sort by"} active={sortBy !== "trending"} compact closeArrow>
+        <Dropdown label={sortLabel ?? "Sort by"} active={sortBy !== "trending"} compact>
           {(close) => (
             <div className="flex flex-col min-w-[190px]">
               {SORT_OPTIONS.map(({ label, value }) => (

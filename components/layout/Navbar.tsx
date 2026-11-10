@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, ShoppingBag, User, Heart, LogOut } from "lucide-react";
+import { Menu, ShoppingBag, User, Heart, LogOut, Search } from "lucide-react";
 import { DeliveryCheckWidget } from "@/components/home/DeliveryCheckWidget";
 import { useAuth } from "@clerk/nextjs";
 import { Logo } from "@/components/ui/Logo";
@@ -31,6 +31,8 @@ export function Navbar() {
   const closeMenu = useCallback(() => setMenuOpen(false), []);
   const pathname = usePathname();
   const isHome = pathname === "/";
+  // Home and products already show a search box, so the header icon is only for the other pages.
+  const hasSearchBox = pathname === "/" || pathname === "/products";
   const cartCount = useCartStore((s) => s.items.reduce((n, i) => n + i.quantity, 0));
   const wishlistCount = useWishlistStore((s) => s.items.length);
   // Clerk v7 dropped the <SignedIn>/<SignedOut> components, and its <Show> is a
@@ -120,6 +122,18 @@ export function Navbar() {
 
           {/* Action icons */}
           <div className="flex items-center gap-0.5">
+            {!hasSearchBox && (
+              <Link
+                href="/products"
+                aria-label="Search products"
+                className={[
+                  "p-2.5 transition-colors duration-200",
+                  darkTheme ? "text-pearl hover:text-white" : "text-[#333] hover:text-black",
+                ].join(" ")}
+              >
+                <Search size={17} strokeWidth={1.5} />
+              </Link>
+            )}
             <DeliveryCheckWidget dark={darkTheme} />
             {/* Account: signed-in users go to their profile, guests to sign-in.
                 Desktop only. Below lg, account lives in the drawer's guest card. */}
