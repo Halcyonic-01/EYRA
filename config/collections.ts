@@ -19,6 +19,8 @@ export interface Collection {
   types?: ReadonlyArray<Product["type"]>;
   /** Audiences included in this collection. Omit to include every audience. */
   audiences?: ReadonlyArray<Audience>;
+  /** Product types left out even when they match the audience. Omit to leave none out. */
+  excludeTypes?: ReadonlyArray<Product["type"]>;
   /** Tile image used on the collections index and the homepage grid. */
   image: string;
 }
@@ -70,6 +72,7 @@ export const COLLECTIONS: readonly Collection[] = [
     description:
       "Clean lines and structured weight, cut for a bold and modern look.",
     audiences: ["men", "couple"],
+    excludeTypes: ["anklet"],
     image: "/images/for-him.jpg",
   },
 ] as const;
@@ -122,7 +125,13 @@ export function canonicalSlug(slug: string): string | null {
  */
 export function getNarrowingCollections(collection: Collection): Collection[] {
   if (collection.audiences) {
-    return COLLECTIONS.filter((c) => c.types && !c.audiences);
+    const excluded = collection.excludeTypes ?? [];
+    return COLLECTIONS.filter(
+      (c) =>
+        c.types &&
+        !c.audiences &&
+        c.types.every((t) => !excluded.includes(t))
+    );
   }
   if (collection.types) {
     return COLLECTIONS.filter((c) => c.audiences && !c.types);
@@ -135,10 +144,11 @@ export function filterByCollection(
   products: Product[],
   collection: Collection
 ): Product[] {
-  const { types, audiences } = collection;
+  const { types, audiences, excludeTypes } = collection;
   return products.filter(
     (p) =>
       (!types || types.includes(p.type)) &&
+      (!excludeTypes || !excludeTypes.includes(p.type)) &&
       (!audiences || (p.audiences ?? []).some((a) => audiences.includes(a)))
   );
 }
