@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { CollectionFilter } from "@/components/collections/CollectionFilter";
 import { CtaBanner } from "@/components/home/CtaBanner";
 import { NewsletterBanner } from "@/components/home/NewsletterBanner";
 import { ProductGrid } from "@/components/products/ProductGrid";
@@ -9,6 +10,7 @@ import {
   canonicalSlug,
   filterByCollection,
   getCollection,
+  getNarrowingCollections,
 } from "@/config/collections";
 import { getProducts } from "@/lib/medusa";
 
@@ -38,10 +40,13 @@ export async function generateMetadata({
 
 export default async function CollectionPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ filter?: string }>;
 }) {
   const { slug } = await params;
+  const { filter } = await searchParams;
 
   // "New" is a recency view rather than a product type, and lives at its own
   // top-level route. The homepage hero still links here, so keep it resolving.
@@ -55,8 +60,14 @@ export default async function CollectionPage({
   const collection = getCollection(slug);
   if (!collection) notFound();
 
+  // The narrowing buttons: For Her / For Him on a product-type page, and the
+  // product types on an audience page. Only a known option can narrow the list.
+  const narrowers = getNarrowingCollections(collection);
+  const active = narrowers.find((c) => c.slug === filter) ?? null;
+
   const allProducts = await getProducts();
-  const products = filterByCollection(allProducts, collection);
+  let products = filterByCollection(allProducts, collection);
+  if (active) products = filterByCollection(products, active);
 
   return (
     <>
@@ -83,12 +94,20 @@ export default async function CollectionPage({
 
           {/* Heading */}
           <div className="max-w-[560px] mb-10">
-            <h1 className="font-display font-light italic text-[clamp(2.25rem,5vw,3.5rem)] leading-[1.1] text-black mb-4">
-              {collection.label}
+            <h1 className="font-display font-light italic text-[clamp(2.25rem,5vw,3.5rem)] leading-[1.1] text-black">
+              <Link
+                href={`/collections/${collection.slug}`}
+                scroll={false}
+                className="hover:opacity-70 transition-opacity duration-200"
+              >
+                {collection.label}
+              </Link>
             </h1>
-            <p className="font-sans font-light text-[18px] leading-[27px] text-[#505050]">
-              {collection.description}
-            </p>
+            <CollectionFilter
+              base={collection}
+              options={narrowers}
+              active={active}
+            />
           </div>
 
           {/* Count + link to full catalogue */}

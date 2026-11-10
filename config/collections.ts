@@ -115,6 +115,21 @@ export function canonicalSlug(slug: string): string | null {
   return alias && alias !== slug ? alias : null;
 }
 
+/**
+ * The collections a page can be narrowed by. An audience page (For Her, For Him)
+ * narrows by product type, and a product-type page (Rings, Pendants) narrows by
+ * audience. A collection that sets neither returns an empty list.
+ */
+export function getNarrowingCollections(collection: Collection): Collection[] {
+  if (collection.audiences) {
+    return COLLECTIONS.filter((c) => c.types && !c.audiences);
+  }
+  if (collection.types) {
+    return COLLECTIONS.filter((c) => c.audiences && !c.types);
+  }
+  return [];
+}
+
 /** Filter a product list down to the ones belonging to a collection. */
 export function filterByCollection(
   products: Product[],
