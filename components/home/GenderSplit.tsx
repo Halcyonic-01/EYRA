@@ -28,9 +28,11 @@ export function GenderSplit() {
       </div>
       <div className="grid grid-cols-2 gap-3 px-3 sm:gap-6 sm:px-6 lg:px-16">
         {PANELS.map((panel) => (
-          <div
+          <Link
             key={panel.tag}
-            className="group relative overflow-hidden rounded-2xl ring-1 ring-black/5 shadow-[0_6px_20px_rgba(0,0,0,0.08)]"
+            href={panel.href}
+            aria-label={`Shop ${panel.tag}`}
+            className="group relative block overflow-hidden rounded-2xl ring-1 ring-black/5 shadow-[0_6px_20px_rgba(0,0,0,0.08)]"
             style={{ height: "clamp(280px, 60vw, 680px)" }}
           >
             <Image
@@ -51,14 +53,11 @@ export function GenderSplit() {
               <p className="hidden sm:block font-sans font-light text-[0.82rem] leading-relaxed text-white/80 mb-5">
                 {panel.description}
               </p>
-              <Link
-                href={panel.href}
-                className="text-[0.72rem] font-sans font-light tracking-[0.2em] uppercase text-white border-b border-white/60 pb-px hover:border-white transition-colors duration-300"
-              >
+              <span className="text-[0.72rem] font-sans font-light tracking-[0.2em] uppercase text-white border-b border-white/60 pb-px group-hover:border-white transition-colors duration-300">
                 Shop Now
-              </Link>
+              </span>
             </div>
-          </div>
+          </Link>
         ))}
       </div>
     </section>
