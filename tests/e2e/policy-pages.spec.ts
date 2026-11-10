@@ -20,18 +20,22 @@ test.describe("policy pages", () => {
     expect(text).not.toContain("Replacement dispatch begins");
   });
 
-  test("section references point at sections that exist", async ({ page }) => {
-    const text = await pageText(page, "/refund-policy");
-    const refs = [...text.matchAll(/section (\d+)/g)].map((match) => match[1]);
-    expect(refs.length).toBeGreaterThan(0);
-    for (const n of refs) {
-      expect(text).toMatch(new RegExp(`^${n}\\. `, "m"));
-    }
-  });
+  for (const path of ["/refund-policy", "/shipping-policy", "/privacy-policy", "/terms-of-service", "/grievance-redressal"]) {
+    test(`${path} section links point at sections that exist`, async ({ page }) => {
+      await page.goto(path);
+      const ids = await page.locator("main a[href^='#']").evaluateAll((anchors) =>
+        anchors.map((a) => (a.getAttribute("href") ?? "").slice(1))
+      );
+      expect(ids.length).toBeGreaterThan(0);
+      for (const id of ids) {
+        await expect(page.locator(`[id="${id}"]`), `#${id}`).toHaveCount(1);
+      }
+    });
+  }
 
   test("the cancellation section promises a full refund before dispatch and says what to do after", async ({ page }) => {
     const text = await pageText(page, "/refund-policy");
-    test.skip(!text.includes("Cancelling an order, and orders already on their way"), "cancelling is switched off");
+    test.skip(!text.includes("Cancelling before your order ships"), "cancelling is switched off");
     expect(text).toContain("100% refundable");
     expect(text).toContain("can no longer be cancelled");
     expect(text).toContain("refuse the delivery");
