@@ -19,8 +19,8 @@ const MOST_LOVED_ORDER = [
   "The Inset Crest Ring",
   "The Diamond Cut Square Silver Bracelet",
   "The Daisy Bloom Pendant",
-  "The Radial Butterfly Pendant",
-  "The Halo Evil Eye Rose Gold Pendant",
+  "The Radiant Butterfly Pendant",
+  "The Halo Evil Eye Rose Gold Bracelet",
 ];
 
 /** Lowercase, drop a leading "the", and strip everything but letters and digits. */

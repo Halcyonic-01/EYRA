@@ -10,7 +10,7 @@ const AVATARS = [
 
 const STATS = [
   { value: "10K+", label: "Happy Customers" },
-  { value: "2.5K+", label: "Premium Silver Pieces" },
+  { value: "45+", label: "Premium Silver Pieces" },
 ];
 
 export function StatsBar() {
