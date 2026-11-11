@@ -39,7 +39,8 @@ export function variantLabelFor(variant: ProductVariant | undefined): string | n
         !(title === "Title" && value === "Default Title") &&
         value !== "Default option value"
     )
-    .map(([, value]) => value);
+    // An anklet Pair is one unit of two anklets of the same design; say so.
+    .map(([title, value]) => (title === "Pack" && value === "Pair" ? "Pair (2 anklets)" : value));
   return parts.length ? parts.join(" · ") : null;
 }
 
@@ -239,7 +240,10 @@ export const useCartStore = create<CartStore>()(
         // shouldn't erase state the customer already saw confirmed.
         if (err instanceof CartRequestRejected) {
           rollback();
-          set({ syncStatus: "error", syncError: "This item is no longer available in that option." });
+          set({
+            syncStatus: "error",
+            syncError: err.customerMessage ?? "This item is no longer available in that option.",
+          });
         } else {
           set({ syncStatus: "error", syncError: "Cart sync failed. Please try again." });
         }
@@ -299,8 +303,8 @@ export const useCartStore = create<CartStore>()(
         const lineItemId = item?.lineItemId;
         if (!cartId || !lineItemId) return;
 
+        const { updateCartLineItem, CartRequestRejected } = await import("@/lib/medusa-cart");
         try {
-          const { updateCartLineItem } = await import("@/lib/medusa-cart");
           const summary = await updateCartLineItem(cartId, lineItemId, qty);
           if (summary) {
             set({ syncStatus: "idle", syncError: null });
@@ -308,7 +312,16 @@ export const useCartStore = create<CartStore>()(
           }
         } catch (err) {
           console.error("[cart] updateQuantity sync failed:", err);
-          set({ syncStatus: "error", syncError: "Quantity updated locally but could not sync to server." });
+          if (err instanceof CartRequestRejected) {
+            // Refused (not enough stock, say): show the cart as the backend still has it.
+            await get().initCart();
+            set({
+              syncStatus: "error",
+              syncError: err.customerMessage ?? "That quantity is not available, so your cart was not changed.",
+            });
+          } else {
+            set({ syncStatus: "error", syncError: "Quantity updated locally but could not sync to server." });
+          }
         }
       }, 500)
     );

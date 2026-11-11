@@ -13,6 +13,11 @@ import { COD_CHARGE, rupees } from "@/config/offers";
 import { PolicyBadge } from "@/components/products/PolicyBadge";
 import { ProductOffers } from "@/components/offers/ProductOffers";
 
+/** The anklet option: one anklet, or a pair of the same design (see the backend's anklet-pair sync). */
+const PACK = "Pack";
+const SINGLE = "Single";
+const PAIR = "Pair";
+
 /* ── Inline SVG icons ────────────────────────────── */
 
 function StarIcon({ filled }: { filled: boolean }) {
@@ -243,8 +248,17 @@ export function ProductDetailClient({
   // The quantity actually sold: the chosen amount, never more than the stock left.
   const sellQuantity = maxQuantity === null ? quantity : Math.min(quantity, Math.max(1, maxQuantity));
   const atMaxQuantity = maxQuantity !== null && sellQuantity >= maxQuantity;
-  const shownPrice = variants.length > 0 ? resolved.price : product.price;
-  const shownOriginal = variants.length > 0 ? resolved.originalPrice : product.originalPrice;
+  const unitPrice = variants.length > 0 ? resolved.price : product.price;
+  const unitOriginal = variants.length > 0 ? resolved.originalPrice : product.originalPrice;
+  // Anklets come as a Single or a Pair of the same design, and the quantity
+  // counts the chosen option: 2 Pairs are 4 anklets at two pair prices. Their
+  // price is shown for the whole quantity; other products show one piece.
+  const ankletPacks = product.type === "anklet" && choices.some((choice) => choice.title === PACK);
+  const isPairPack = ankletPacks && selection[PACK] === PAIR;
+  const singleUnit = variants.find((v) => v.options[PACK] === SINGLE)?.price ?? null;
+  const shownPrice = ankletPacks ? unitPrice * sellQuantity : unitPrice;
+  const shownOriginal = ankletPacks ? unitOriginal * sellQuantity : unitOriginal;
+  const pairSavingTotal = isPairPack && singleUnit !== null ? Math.max(0, singleUnit * 2 - unitPrice) * sellQuantity : 0;
   const inCart = isInCart(cartItems, variantId) ||
     (variants.length === 0 &&
       cartItems.some((i) => i.product.id === product.id && sameSize(i.size, hasSizes ? selectedSize : null)));
@@ -465,6 +479,14 @@ export function ProductDetailClient({
                     ₹{shownOriginal.toLocaleString("en-IN")}
                   </span>
                 </div>
+                {ankletPacks && (isPairPack || sellQuantity > 1) && (
+                  <p className="font-sans font-medium text-[14px] leading-[21px] text-black">
+                    {isPairPack
+                      ? `${sellQuantity} ${sellQuantity === 1 ? "pair" : "pairs"} · ${sellQuantity * 2} anklets`
+                      : `${sellQuantity} anklets`}
+                    {pairSavingTotal > 0 && ` · You save ₹${pairSavingTotal.toLocaleString("en-IN")}`}
+                  </p>
+                )}
                 <p className="font-sans font-normal text-[15px] leading-[22px] text-[#BABABA]">
                   Inclusive of all taxes
                 </p>
@@ -480,9 +502,9 @@ export function ProductDetailClient({
                   hasSizes ? selectedSize : null
                 );
                 // A pair of anklets is priced below two singles; say how much below.
-                const single = options.find((o) => o.value === "Single" && o.inStock);
+                const single = options.find((o) => o.value === SINGLE && o.inStock);
                 const pairSaving = (price: number, value: string) =>
-                  value === "Pair" && single ? single.price * 2 - price : 0;
+                  value === PAIR && single ? single.price * 2 - price : 0;
                 return (
                   <div key={choice.title} className="flex flex-col gap-3">
                     <span className="font-sans font-medium text-[14px] leading-[21px] text-black">
@@ -608,7 +630,11 @@ export function ProductDetailClient({
                 </div>
                 {maxQuantity !== null && maxQuantity <= 5 && (
                   <p className="font-sans font-normal text-[12px] text-[#909090]">
-                    {maxQuantity > 0 ? `Only ${maxQuantity} left in stock` : "Sold out"}
+                    {maxQuantity === 0
+                      ? "Sold out"
+                      : isPairPack
+                        ? `Only ${maxQuantity} ${maxQuantity === 1 ? "pair" : "pairs"} left in stock`
+                        : `Only ${maxQuantity} left in stock`}
                   </p>
                 )}
               </div>

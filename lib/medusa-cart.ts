@@ -128,9 +128,14 @@ export function clearStoredCartId(): void {
  * "no" from the server, rather than on any inconclusive failure to hear back.
  */
 export class CartRequestRejected extends Error {
-  constructor(public status: number, url: string) {
+  constructor(public status: number, url: string, public serverMessage: string | null = null) {
     super(`Medusa rejected ${url} with ${status}`);
     this.name = "CartRequestRejected";
+  }
+
+  /** The backend's own words when they are meant for the customer (a stock limit), else null. */
+  get customerMessage(): string | null {
+    return this.serverMessage && /^Only \d+ /.test(this.serverMessage) ? this.serverMessage : null;
   }
 }
 
@@ -155,7 +160,13 @@ async function cartFetch<T>(path: string, init?: RequestInit): Promise<T | null>
   }
   if (!res.ok) {
     console.error(`[medusa-cart] ${res.status} ${res.statusText}, ${url}`);
-    throw new CartRequestRejected(res.status, url);
+    let message: string | null = null;
+    try {
+      message = ((await res.json()) as { message?: string }).message ?? null;
+    } catch {
+      // No readable body; the status says enough.
+    }
+    throw new CartRequestRejected(res.status, url, message);
   }
   return (await res.json()) as T;
 }
