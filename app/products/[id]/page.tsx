@@ -8,6 +8,11 @@ import { NewsletterBanner } from "@/components/home/NewsletterBanner";
 import { getProducts, getProductByHandle, getSimilarProducts } from "@/lib/medusa";
 import { storeConfig } from "@/config/storeConfig";
 
+// The root layout reads request headers, so this page is always rendered on
+// demand. Say so explicitly: prerendering it on Vercel fails with
+// DYNAMIC_SERVER_USAGE. Product data is still cached 60s by lib/medusa.ts.
+export const dynamic = "force-dynamic";
+
 export async function generateStaticParams() {
   const products = await getProducts();
   return products.map((p) => ({ id: p.id }));
