@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { SectionIntro } from "@/components/layout/SectionIntro";
 import { CtaBanner } from "@/components/home/CtaBanner";
 import { NewsletterBanner } from "@/components/home/NewsletterBanner";
 import { FadeIn } from "@/components/ui/FadeIn";
@@ -54,6 +55,7 @@ export default function SustainabilityPage() {
           eyebrow="Our footprint"
           title="Sustainability"
           standfirst="Jewellery has a real environmental cost. Here is what we do about ours, and where we still fall short."
+          align="center"
         />
 
         <div className="max-w-screen-xl mx-auto px-6 lg:px-10 mt-12">
@@ -76,15 +78,16 @@ export default function SustainabilityPage() {
       <section className="bg-ivory py-16 lg:py-24">
         <div className="max-w-screen-xl mx-auto px-6 lg:px-10">
           <FadeIn>
-            <h2 className="font-display font-light italic text-[clamp(1.75rem,3.5vw,2.75rem)] leading-[1.15] text-black mb-12 max-w-[520px]">
-              What we commit to
-            </h2>
+            <SectionIntro eyebrow="Our commitments" title="What we commit to" className="mb-12 lg:mb-16" />
           </FadeIn>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-12">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             {COMMITMENTS.map((item, i) => (
               <FadeIn key={item.title} delay={i * 80}>
-                <div className="border-t border-[#CFCFCF] pt-5">
+                <div className="h-full bg-white border border-[#E2E2E2] p-7">
+                  <p className="font-display font-light italic text-[2.25rem] leading-none text-[#B0B0B0] mb-4 tabular-nums">
+                    0{i + 1}
+                  </p>
                   <h3 className="font-sans font-medium text-[18px] leading-[27px] text-black mb-3">
                     {item.title}
                   </h3>
@@ -101,22 +104,19 @@ export default function SustainabilityPage() {
       {/* What we have not solved */}
       <section className="bg-white py-16 lg:py-24">
         <div className="max-w-screen-xl mx-auto px-6 lg:px-10">
-          <div className="max-w-[760px]">
+          <div className="max-w-[960px] mx-auto">
             <FadeIn>
-              <h2 className="font-display font-light italic text-[clamp(1.75rem,3.5vw,2.75rem)] leading-[1.15] text-black mb-4">
-                What we have not solved
-              </h2>
-              <p className="font-sans font-light text-[16px] leading-[26px] text-[#505050] mb-10">
+              <SectionIntro eyebrow="Honest answers" title="What we have not solved" className="mb-12">
                 Most sustainability pages only list wins. These are the questions
                 we get asked and the honest answers.
-              </p>
+              </SectionIntro>
             </FadeIn>
 
-            <div className="flex flex-col gap-8">
+            <div className="flex flex-col border-t border-black">
               {HONEST.map((item, i) => (
                 <FadeIn key={item.q} delay={i * 80}>
-                  <div className="border-t border-[#CFCFCF] pt-5">
-                    <h3 className="font-sans font-medium text-[18px] leading-[27px] text-black mb-3">
+                  <div className="grid grid-cols-1 md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] gap-3 md:gap-12 py-7 border-b border-[#E2E2E2]">
+                    <h3 className="font-sans font-medium text-[18px] leading-[27px] text-black">
                       {item.q}
                     </h3>
                     <p className="font-sans font-light text-[16px] leading-[26px] text-[#505050]">
@@ -128,12 +128,12 @@ export default function SustainabilityPage() {
             </div>
 
             <FadeIn delay={240}>
-              <p className="font-sans font-light text-[16px] leading-[26px] text-[#505050] mt-10">
+              <p className="font-sans font-light text-[16px] leading-[26px] text-[#505050] mt-10 text-center">
                 If you think we are getting something wrong here, we would rather
                 hear it than not.{" "}
                 <Link
                   href="/contact"
-                  className="text-black underline underline-offset-4 hover:text-[#626262] transition-colors duration-200"
+                  className="text-black underline underline-offset-4 decoration-[#B0B0B0] hover:decoration-black transition-colors duration-200"
                 >
                   Tell us
                 </Link>

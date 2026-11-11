@@ -25,15 +25,15 @@ const SUPPORT_LINKS = [
   { label: "Track Your Order", href: "/orders" },
   { label: "Shipping & Delivery Policy", href: "/shipping-policy" },
   { label: "Returns, Exchanges & Refunds", href: "/refund-policy" },
-  { label: "Jewelry Care & Sizing Chart", href: "/authenticity-and-care" },
+  { label: "Jewelry Care & Sizing Chart", href: "/authenticity-and-care#care" },
   { label: "Contact Us", href: "/contact" },
 ];
 
 const ABOUT_LINKS = [
   { label: "Our Story & Craftsmanship", href: "/craftsmanship" },
-  { label: "925 Silver & Hallmarking", href: "/authenticity-and-care" },
+  { label: "925 Silver & Hallmarking", href: "/authenticity-and-care#purity" },
   { label: "Sustainability & Sourcing", href: "/sustainability" },
-  { label: "Press Inquiries", href: "/contact" },
+  { label: "Press Inquiries", href: "/contact#press" },
 ];
 
 const LEGAL_LINKS = [

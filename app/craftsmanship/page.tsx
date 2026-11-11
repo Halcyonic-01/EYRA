@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { SectionIntro } from "@/components/layout/SectionIntro";
 import { CtaBanner } from "@/components/home/CtaBanner";
 import { NewsletterBanner } from "@/components/home/NewsletterBanner";
 import { FadeIn } from "@/components/ui/FadeIn";
@@ -56,6 +57,7 @@ export default function CraftsmanshipPage() {
           eyebrow="How it is made"
           title="Craftsmanship"
           standfirst="Good silver is mostly patience. Here is what actually happens between raw sterling stock and the piece that arrives in your box."
+          align="center"
         />
 
         <div className="max-w-screen-xl mx-auto px-6 lg:px-10 mt-12">
@@ -78,17 +80,17 @@ export default function CraftsmanshipPage() {
       <section className="bg-ivory py-16 lg:py-24">
         <div className="max-w-screen-xl mx-auto px-6 lg:px-10">
           <FadeIn>
-            <h2 className="font-display font-light italic text-[clamp(1.75rem,3.5vw,2.75rem)] leading-[1.15] text-black mb-12 max-w-[520px]">
-              From stock to finished piece
-            </h2>
+            <SectionIntro eyebrow="The process" title="From stock to finished piece" className="mb-12 lg:mb-16">
+              Six stages between raw sterling and your box, with every piece checked against its sample before it is packed.
+            </SectionIntro>
           </FadeIn>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-10 gap-y-12">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {STEPS.map((step, i) => (
               <FadeIn key={step.title} delay={i * 70}>
-                <div className="border-t border-[#CFCFCF] pt-5">
-                  <p className="font-sans font-normal text-[0.68rem] tracking-[0.24em] uppercase text-[#909090] mb-3">
-                    Step 0{i + 1}
+                <div className="h-full bg-white border border-[#E2E2E2] p-7">
+                  <p className="font-display font-light italic text-[2.25rem] leading-none text-[#B0B0B0] mb-4 tabular-nums">
+                    0{i + 1}
                   </p>
                   <h3 className="font-sans font-medium text-[18px] leading-[27px] text-black mb-3">
                     {step.title}
@@ -109,7 +111,10 @@ export default function CraftsmanshipPage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-center">
             <FadeIn>
               <div className="max-w-[520px]">
-                <h2 className="font-display font-light italic text-[clamp(1.75rem,3.5vw,2.75rem)] leading-[1.15] text-black mb-6">
+                <p className="font-sans font-normal text-[0.7rem] tracking-[0.28em] uppercase text-[#909090] mb-4">
+                  Care
+                </p>
+                <h2 className="font-display font-light italic text-[clamp(1.85rem,3.5vw,2.75rem)] leading-[1.15] text-black mb-6">
                   Caring for your silver
                 </h2>
                 <p className="font-sans font-light text-[16px] leading-[26px] text-[#505050] mb-6">
@@ -117,25 +122,33 @@ export default function CraftsmanshipPage() {
                   it reverses with a minute of care. Follow these and your pieces
                   will outlast the trend that sold them to you.
                 </p>
-                <ul className="flex flex-col gap-3 list-disc pl-5">
+                <ul className="flex flex-col border-t border-[#E2E2E2]">
                   {CARE.map((tip) => (
                     <li
                       key={tip}
-                      className="font-sans font-light text-[16px] leading-[26px] text-[#505050]"
+                      className="relative pl-6 py-3 border-b border-[#E2E2E2] font-sans font-light text-[15px] leading-[25px] text-[#505050]"
                     >
+                      <span aria-hidden="true" className="absolute left-0 top-[24px] w-2 h-px bg-[#909090]" />
                       {tip}
                     </li>
                   ))}
                 </ul>
-                <p className="font-sans font-light text-[16px] leading-[26px] text-[#505050] mt-6">
+                <p className="font-sans font-light text-[15px] leading-[25px] text-[#505050] mt-6">
                   Manufacturing defects are covered for{" "}
                   {storeConfig.policy.warrantyMonths} months from delivery. Read
                   the{" "}
                   <Link
-                    href="/refund-policy"
-                    className="text-black underline underline-offset-4 hover:text-[#626262] transition-colors duration-200"
+                    href="/terms-of-service#warranty"
+                    className="text-black underline underline-offset-4 decoration-[#B0B0B0] hover:decoration-black transition-colors duration-200"
                   >
-                    returns and warranty terms
+                    warranty terms
+                  </Link>
+                  , or see the{" "}
+                  <Link
+                    href="/authenticity-and-care#care"
+                    className="text-black underline underline-offset-4 decoration-[#B0B0B0] hover:decoration-black transition-colors duration-200"
+                  >
+                    full care guide and sizing chart
                   </Link>
                   .
                 </p>
