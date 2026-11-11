@@ -21,6 +21,8 @@ export interface Collection {
   audiences?: ReadonlyArray<Audience>;
   /** Product types left out even when they match the audience. Omit to leave none out. */
   excludeTypes?: ReadonlyArray<Product["type"]>;
+  /** Hide the For Her / For Him buttons on this collection's page. */
+  noAudienceFilter?: boolean;
   /** Tile image used on the collections index and the homepage grid. */
   image: string;
 }
@@ -48,6 +50,7 @@ export const COLLECTIONS: readonly Collection[] = [
     description:
       "Fine chains and delicate charms in 925 sterling silver, light enough for every day.",
     types: ["anklet"],
+    noAudienceFilter: true,
     image: "/images/collection-anklets.jpg",
   },
   {
@@ -134,6 +137,7 @@ export function getNarrowingCollections(collection: Collection): Collection[] {
     );
   }
   if (collection.types) {
+    if (collection.noAudienceFilter) return [];
     return COLLECTIONS.filter((c) => c.audiences && !c.types);
   }
   return [];
