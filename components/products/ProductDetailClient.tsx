@@ -237,6 +237,12 @@ export function ProductDetailClient({
   // The variant to sell. Products Medusa has no variant list for (mock data)
   // fall back to the product's own variant.
   const variantId = variants.length > 0 ? resolved.variant?.id : product.variantId;
+  // Stock left for the variant being sold. Null while no variant is picked yet
+  // (a ring with no size), so the stepper is not capped by a guess.
+  const maxQuantity: number | null = variants.length > 0 ? resolved.variant?.inStock ?? null : product.inStock;
+  // The quantity actually sold: the chosen amount, never more than the stock left.
+  const sellQuantity = maxQuantity === null ? quantity : Math.min(quantity, Math.max(1, maxQuantity));
+  const atMaxQuantity = maxQuantity !== null && sellQuantity >= maxQuantity;
   const shownPrice = variants.length > 0 ? resolved.price : product.price;
   const shownOriginal = variants.length > 0 ? resolved.originalPrice : product.originalPrice;
   const inCart = isInCart(cartItems, variantId) ||
@@ -581,24 +587,30 @@ export function ProductDetailClient({
                   <button
                     type="button"
                     aria-label="Decrease quantity"
-                    onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                    disabled={quantity <= 1}
+                    onClick={() => setQuantity(Math.max(1, sellQuantity - 1))}
+                    disabled={sellQuantity <= 1}
                     className="w-11 h-11 flex items-center justify-center text-black hover:bg-[#F7F7F7] disabled:opacity-30 disabled:hover:bg-white transition-colors duration-150"
                   >
                     <MinusIcon />
                   </button>
                   <span className="min-w-[44px] text-center font-sans font-medium text-[15px] tabular-nums text-black" aria-live="polite">
-                    {quantity}
+                    {sellQuantity}
                   </span>
                   <button
                     type="button"
                     aria-label="Increase quantity"
-                    onClick={() => setQuantity((q) => q + 1)}
-                    className="w-11 h-11 flex items-center justify-center text-black hover:bg-[#F7F7F7] transition-colors duration-150"
+                    onClick={() => setQuantity(maxQuantity === null ? sellQuantity + 1 : Math.min(sellQuantity + 1, maxQuantity))}
+                    disabled={atMaxQuantity}
+                    className="w-11 h-11 flex items-center justify-center text-black hover:bg-[#F7F7F7] disabled:opacity-30 disabled:hover:bg-white transition-colors duration-150"
                   >
                     <PlusIcon />
                   </button>
                 </div>
+                {maxQuantity !== null && maxQuantity <= 5 && (
+                  <p className="font-sans font-normal text-[12px] text-[#909090]">
+                    {maxQuantity > 0 ? `Only ${maxQuantity} left in stock` : "Sold out"}
+                  </p>
+                )}
               </div>
 
               {/* CTA buttons */}
@@ -608,7 +620,7 @@ export function ProductDetailClient({
                     const chosen = resolveVariantId();
                     if (chosen === null) return; // no size picked yet
                     if (!inCart) {
-                      addToCart(product, hasSizes ? selectedSize : null, chosen, quantity);
+                      addToCart(product, hasSizes ? selectedSize : null, chosen, sellQuantity);
                     }
                     router.push("/checkout");
                   }}
@@ -622,7 +634,7 @@ export function ProductDetailClient({
                     if (inCart) return;
                     const chosen = resolveVariantId();
                     if (chosen === null) return; // no size picked yet
-                    addToCart(product, hasSizes ? selectedSize : null, chosen, quantity);
+                    addToCart(product, hasSizes ? selectedSize : null, chosen, sellQuantity);
                   }}
                   className={`flex-1 flex items-center justify-center px-6 sm:px-8 py-4 font-sans font-medium text-[15px] tracking-wide leading-[20px] whitespace-nowrap rounded-full border transition-colors duration-200 ${
                     inCart
