@@ -35,9 +35,33 @@ test("search matches whole words, not substrings inside unrelated words", async 
   }
 });
 
-test("search with no matches shows the empty state", async ({ page }) => {
+test("search with no exact match shows the closest products instead of nothing", async ({ page }) => {
   await page.goto("/products?q=zzzznonexistentproductzzzz");
-  await expect(page.getByText(/No products match your filters/i)).toBeVisible();
+  await expect(page.getByRole("status")).toContainText(/No exact matches for/i);
+  expect(await page.locator("article").count()).toBeGreaterThan(0);
+});
+
+test("a typo is corrected and the shopper is told", async ({ page }) => {
+  await page.goto("/products?q=rnig");
+  await expect(page.getByRole("status")).toContainText("Showing results for “ring”");
+  const cardTitles = await page.locator("article h3").allInnerTexts();
+  expect(cardTitles.length).toBeGreaterThan(0);
+  for (const title of cardTitles) {
+    expect(title.toLowerCase()).toContain("ring");
+  }
+});
+
+test("typing in the search box narrows the grid as you type", async ({ page }) => {
+  await page.goto("/products");
+  await page.getByRole("searchbox", { name: "Search products" }).fill("necklace");
+  await expect(page.getByRole("heading", { name: /All Products/i })).not.toContainText("(0 results)");
+  // Chains first (a synonym of necklace); a pendant that mentions a chain may follow.
+  const cardTitles = (await page.locator("article h3").allInnerTexts()).map((t) => t.toLowerCase());
+  expect(cardTitles[0]).toContain("chain");
+  const firstOther = cardTitles.findIndex((t) => !t.includes("chain"));
+  if (firstOther !== -1) {
+    expect(cardTitles.slice(firstOther).some((t) => t.includes("chain"))).toBe(false);
+  }
 });
 
 test("type filter narrows results to the selected category", async ({ page }) => {

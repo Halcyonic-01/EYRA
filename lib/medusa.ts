@@ -95,6 +95,7 @@ interface MedusaProduct {
   type: MedusaProductType | null;
   tags: MedusaProductTag[] | null;
   categories?: MedusaProductCategory[] | null;
+  collection?: { title: string } | null;
   options: MedusaProductOption[];
   variants: MedusaVariant[];
   metadata: Record<string, unknown> | null;
@@ -290,6 +291,10 @@ function toProduct(p: MedusaProduct): Product {
     variantId: cheapestVariantId,
     hasPriceRange: prices.size > 1,
     needsChoice: p.variants.length > 1,
+    typeLabel: p.type?.value ?? undefined,
+    tags: (p.tags ?? []).map((t) => t.value),
+    categories: (p.categories ?? []).map((c) => c.name),
+    collections: p.collection?.title ? [p.collection.title] : [],
   };
 }
 
@@ -425,7 +430,7 @@ export async function getProducts(): Promise<Product[]> {
       ...(regionId ? { region_id: regionId } : {}),
       fields: [
         "id", "title", "handle", "description", "thumbnail", "metadata",
-        "*images", "*type", "*tags", "*categories", "*variants", "+variants.inventory_quantity", "*variants.calculated_price",
+        "*images", "*type", "*tags", "*categories", "*collection", "*variants", "+variants.inventory_quantity", "*variants.calculated_price",
       ].join(","),
     },
     { next: { tags: ["products"] } }

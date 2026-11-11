@@ -106,7 +106,7 @@ export const storeConfig = {
   contact: {
     supportEmail: envString("SUPPORT_PUBLIC_EMAIL", "support@eyra.org.in"),
     /** Where customers write about an order: cancelling, shipping, returns and refunds. */
-    ordersEmail: envString("ORDERS_PUBLIC_EMAIL", "query-orders@eyra.org.in"),
+    ordersEmail: envString("ORDERS_PUBLIC_EMAIL", "orders@eyra.org.in"),
     /** Statutory / corporate mailbox used for legal and data requests. */
     adminEmail: envString("ADMIN_PUBLIC_EMAIL", "admin@eyra.org.in"),
     /** The Grievance and Nodal Officer's mailbox, quoted on the grievance, privacy and terms pages. */

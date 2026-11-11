@@ -43,4 +43,12 @@ export interface Product {
   needsChoice?: boolean;
   /** Every variant. Only filled on the product page, where the choice is made. */
   variants?: ProductVariant[];
+  /** The product type as named in Medusa ("chain"), which `type` may group under another. Used by search. */
+  typeLabel?: string;
+  /** Medusa tags ("925 Sterling", "Anti-tarnish"). Used by search. */
+  tags?: string[];
+  /** Medusa category names. Used by search. */
+  categories?: string[];
+  /** Medusa collection titles. Used by search, with the storefront collections the product falls in. */
+  collections?: string[];
 }
