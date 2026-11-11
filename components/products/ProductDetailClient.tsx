@@ -132,6 +132,22 @@ const QUALITY_BADGES: readonly { icon: React.ReactNode; title: string; descripti
   },
 ];
 
+function PlusIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M12 5v14M5 12h14" />
+    </svg>
+  );
+}
+
+function MinusIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M5 12h14" />
+    </svg>
+  );
+}
+
 function XIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -171,6 +187,7 @@ export function ProductDetailClient({
   const [pincode, setPincode] = useState("");
   const [shareNote, setShareNote] = useState("");
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [quantity, setQuantity] = useState(1);
   const pincodeCheck = usePincodeServiceability();
   const touchStartX = useRef<number>(0);
 
@@ -557,6 +574,33 @@ export function ProductDetailClient({
                 </div>
               )}
 
+              {/* Quantity stepper */}
+              <div className="flex flex-col gap-3">
+                <span className="font-sans font-medium text-[14px] leading-[21px] text-black">Quantity</span>
+                <div className="flex items-center self-start rounded-full border border-[#D4D4D4] bg-white overflow-hidden">
+                  <button
+                    type="button"
+                    aria-label="Decrease quantity"
+                    onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                    disabled={quantity <= 1}
+                    className="w-11 h-11 flex items-center justify-center text-black hover:bg-[#F7F7F7] disabled:opacity-30 disabled:hover:bg-white transition-colors duration-150"
+                  >
+                    <MinusIcon />
+                  </button>
+                  <span className="min-w-[44px] text-center font-sans font-medium text-[15px] tabular-nums text-black" aria-live="polite">
+                    {quantity}
+                  </span>
+                  <button
+                    type="button"
+                    aria-label="Increase quantity"
+                    onClick={() => setQuantity((q) => q + 1)}
+                    className="w-11 h-11 flex items-center justify-center text-black hover:bg-[#F7F7F7] transition-colors duration-150"
+                  >
+                    <PlusIcon />
+                  </button>
+                </div>
+              </div>
+
               {/* CTA buttons */}
               <div className="flex gap-3">
                 <button
@@ -564,7 +608,7 @@ export function ProductDetailClient({
                     const chosen = resolveVariantId();
                     if (chosen === null) return; // no size picked yet
                     if (!inCart) {
-                      addToCart(product, hasSizes ? selectedSize : null, chosen);
+                      addToCart(product, hasSizes ? selectedSize : null, chosen, quantity);
                     }
                     router.push("/checkout");
                   }}
@@ -578,7 +622,7 @@ export function ProductDetailClient({
                     if (inCart) return;
                     const chosen = resolveVariantId();
                     if (chosen === null) return; // no size picked yet
-                    addToCart(product, hasSizes ? selectedSize : null, chosen);
+                    addToCart(product, hasSizes ? selectedSize : null, chosen, quantity);
                   }}
                   className={`flex-1 flex items-center justify-center px-6 sm:px-8 py-4 font-sans font-medium text-[15px] tracking-wide leading-[20px] whitespace-nowrap rounded-full border transition-colors duration-200 ${
                     inCart

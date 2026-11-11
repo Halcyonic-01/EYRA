@@ -52,7 +52,7 @@ interface CartStore {
   /** Set when a discount code stopped applying because the cart changed. */
   promoNotice: string | null;
 
-  addToCart: (product: Product, size?: ChosenSize, variantId?: string) => void;
+  addToCart: (product: Product, size?: ChosenSize, variantId?: string, quantity?: number) => void;
   removeFromCart: (key: string) => void;
   updateQuantity: (key: string, qty: number) => void;
   clearCart: () => void;
@@ -126,7 +126,7 @@ export const useCartStore = create<CartStore>()(
     });
   },
 
-  addToCart(product, size = null, variantId) {
+  addToCart(product, size = null, variantId, quantity = 1) {
     const variant = product.variants?.find((v) => v.id === variantId);
     const unitPrice = variant?.price ?? product.price;
     const originalUnitPrice = variant?.originalPrice ?? product.originalPrice;
@@ -142,7 +142,7 @@ export const useCartStore = create<CartStore>()(
       if (existing) {
         return {
           items: state.items.map((i) =>
-            lineKey(i) === key ? { ...i, quantity: i.quantity + 1 } : i
+            lineKey(i) === key ? { ...i, quantity: i.quantity + quantity } : i
           ),
           syncStatus: "syncing" as const,
         };
@@ -153,7 +153,7 @@ export const useCartStore = create<CartStore>()(
           {
             product,
             size,
-            quantity: 1,
+            quantity,
             variantId,
             variantLabel: variantLabelFor(variant),
             unitPrice,
@@ -180,7 +180,7 @@ export const useCartStore = create<CartStore>()(
         items: existedBefore
           ? state.items
               .map((i) =>
-                lineKey(i) === key ? { ...i, quantity: i.quantity - 1 } : i
+                lineKey(i) === key ? { ...i, quantity: i.quantity - quantity } : i
               )
               .filter((i) => i.quantity > 0)
           : state.items.filter((i) => lineKey(i) !== key),
@@ -210,7 +210,7 @@ export const useCartStore = create<CartStore>()(
           setStoredCartId(cartId); // keep eyra_cart_id in sync as a fallback
         }
 
-        const result = await addCartLineItem(cartId, variantId, 1);
+        const result = await addCartLineItem(cartId, variantId, quantity);
         if (!result) {
           // Same as above: the request never completed, so we genuinely
           // don't know whether Medusa has this item or not. Rolling back

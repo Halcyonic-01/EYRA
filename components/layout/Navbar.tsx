@@ -136,7 +136,7 @@ export function Navbar() {
             )}
             <DeliveryCheckWidget dark={darkTheme} />
             {/* Account: signed-in users go to their profile, guests to sign-in.
-                Desktop only. Below lg, account lives in the drawer's guest card. */}
+                Desktop only. Below lg, account lives in the hamburger menu. */}
             {wallet && wallet.balance > 0 && (
               <WalletChip balance={wallet.balance} hint={walletHint} dark={darkTheme} />
             )}
