@@ -20,7 +20,7 @@ const MOST_LOVED_ORDER = [
   "The Diamond Cut Square Silver Bracelet",
   "The Daisy Bloom Pendant",
   "The Radiant Butterfly Pendant",
-  "The Infinity Knot Pendant",
+  "The Infinity Knot Couple Set",
 ];
 
 /** Lowercase, drop a leading "the", and strip everything but letters and digits. */
