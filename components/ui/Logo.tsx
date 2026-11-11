@@ -38,7 +38,7 @@ export function Logo({ className = "", variant = "dark", size = "md", onNavigate
       className={`inline-flex items-start ${className} hover:opacity-80 transition-opacity duration-200`}
     >
       <Image
-        src={variant === "light" ? "/images/logo-eyra-white.svg" : "/images/logo-eyra-black.svg"}
+        src={variant === "light" ? "/images/Logo_White_Final.svg" : "/images/logo-eyra-black.svg"}
         alt="EYRA"
         width={markW}
         height={markH}

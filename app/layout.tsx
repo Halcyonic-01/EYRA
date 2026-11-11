@@ -41,7 +41,7 @@ const alexBrush = Alex_Brush({
 
 export const metadata: Metadata = {
   title: {
-    default: "EYRA Silver Jewelry",
+    default: "EYRA Jewels",
     template: "%s | EYRA",
   },
   description:

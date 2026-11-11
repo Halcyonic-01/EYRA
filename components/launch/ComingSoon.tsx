@@ -11,7 +11,7 @@ export function ComingSoon() {
       <header className="flex flex-col items-center">
         {/* Same vector EYRA wordmark as the site logo */}
         <Image
-          src="/images/logo-eyra-white.svg"
+          src="/images/Logo_White_Final.svg"
           alt="EYRA"
           width={254}
           height={148}
