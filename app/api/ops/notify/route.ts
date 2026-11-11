@@ -119,6 +119,13 @@ export async function POST(req: NextRequest) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  // Whether every alert this request sent went out; the backend only marks an
+  // alert as done when it did, so a failed one is tried again later.
+  const delivery = { sent: true };
+  const alert = async (subject: string, lines: string[]) => {
+    if (!(await sendOpsAlert(subject, lines))) delivery.sent = false;
+  };
+
   let body: NotifyBody;
   try {
     body = (await req.json()) as NotifyBody;
@@ -126,9 +133,70 @@ export async function POST(req: NextRequest) {
     return Response.json({ error: "Invalid JSON body." }, { status: 400 });
   }
 
+  // Alerts about the backend itself, not about one order.
+  if (body.type === "redis_down" || body.type === "redis_recovered") {
+    const seconds = Number((body as { seconds?: unknown }).seconds ?? 0);
+    await alert(
+      body.type === "redis_down" ? `Backend Redis is not answering (${seconds} s)` : `Backend Redis is back after ${seconds} s`,
+      body.type === "redis_down"
+        ? [
+            "Checkout, Razorpay webhooks and order confirmations answer 503 until Redis is back; Razorpay and the storefront retry.",
+            "Check the Redis service on Railway.",
+          ]
+        : ["Checkout and payment confirmations are working again. Nothing needs doing unless orders are missing."]
+    );
+    return Response.json({ received: true, sent: delivery.sent });
+  }
+
   const orderId = body.order_id;
   if (typeof orderId !== "string" || !orderId.startsWith("order_")) {
     return Response.json({ error: "order_id is required." }, { status: 400 });
+  }
+
+  if (body.type === "order_orphan_voided") {
+    await alert(`Leftover order voided: ${orderId}`, [
+      "An interrupted checkout left this order with no payment, wallet deduction or shipment. It was marked cancelled; nothing was refunded because nothing was paid.",
+      "The customer's real order, if they completed one, is separate. No action needed unless the customer asks.",
+    ]);
+    return Response.json({ received: true, sent: delivery.sent });
+  }
+
+  if (body.type === "stock_not_reserved") {
+    await alert(`Order has no stock reserved: ${orderId}`, [
+      "An interrupted checkout left this order without its stock reservation, and there is no free stock to reserve now.",
+      "Check stock before it ships; it may have been sold twice.",
+    ]);
+    return Response.json({ received: true, sent: delivery.sent });
+  }
+
+  if (body.type === "wallet_redeem_failed") {
+    const error = typeof (body as { error?: unknown }).error === "string" ? (body as { error: string }).error : "unknown";
+    await alert(`Wallet credit not deducted: order ${orderId}`, [
+      "The order used wallet credit, but deducting it failed, so the customer still has that credit.",
+      `Error: ${error}`,
+      "Adjust the wallet in Medusa admin (Wallet) once checked.",
+    ]);
+    return Response.json({ received: true, sent: delivery.sent });
+  }
+
+  if (body.type === "confirmation_email_failed") {
+    const ref = describeOrder(null, body.order_ref, orderId);
+    await alert(`Order confirmation email could not be sent: ${ref}`, [
+      "Retried five times over about eight hours without success.",
+      "Check the email provider (Resend) and contact the customer.",
+    ]);
+    return Response.json({ received: true, sent: delivery.sent });
+  }
+
+  if (body.type === "dispatch_override") {
+    const who = typeof (body as { actor_id?: unknown }).actor_id === "string" ? (body as { actor_id: string }).actor_id : "unknown";
+    const why = typeof (body as { reason?: unknown }).reason === "string" ? (body as { reason: string }).reason : "";
+    await alert(`Dispatch allowed by hand: ${orderId}`, [
+      `By staff user ${who}.`,
+      `Reason given: ${why}`,
+      "This order has no checkout behind it; its payment was recorded in Medusa admin.",
+    ]);
+    return Response.json({ received: true, sent: delivery.sent });
   }
 
   if (body.type === "order_held") {
@@ -174,30 +242,30 @@ export async function POST(req: NextRequest) {
       adminUrl: `${MEDUSA_BASE}/app/orders/${orderId}`,
     };
     await sendOrderHeldNotification(notice);
-    return Response.json({ received: true });
+    return Response.json({ received: true, sent: delivery.sent });
   }
 
   if (body.type === "dispatch_failed") {
     const ref = describeOrder(null, body.order_ref, orderId);
     const attempts = Number(body.attempts) || 0;
     const max = Number(body.max_attempts) || 0;
-    await sendOpsAlert(`Shipment could not be created: order ${ref}`, [
+    await alert(`Shipment could not be created: order ${ref}`, [
       `Medusa order: ${orderId}`,
       `Attempt ${attempts}${max ? ` of ${max}` : ""} failed: ${String(body.error ?? "unknown error").slice(0, 300)}`,
       body.will_retry
         ? "It will be retried automatically."
         : "It will not be retried again. Open the order in Medusa admin and click Try again now, or create the shipment in the Shiprocket dashboard.",
     ]);
-    return Response.json({ received: true });
+    return Response.json({ received: true, sent: delivery.sent });
   }
 
   if (body.type === "cancelled_after_shipment") {
-    await sendOpsAlert(`Order cancelled after its shipment was created: ${orderId}`, [
+    await alert(`Order cancelled after its shipment was created: ${orderId}`, [
       `Medusa order: ${orderId}`,
       `Shipping state when it was cancelled: ${body.state ?? "unknown"}`,
       "The parcel may already be with the courier. Cancel the shipment in the Shiprocket dashboard, or stop the parcel before it leaves.",
     ]);
-    return Response.json({ received: true });
+    return Response.json({ received: true, sent: delivery.sent });
   }
 
   if (body.type === "order_cancelled") {
@@ -216,83 +284,104 @@ export async function POST(req: NextRequest) {
       refundError: body.refund_error ?? null,
       adminUrl: `${MEDUSA_BASE}/app/orders/${orderId}`,
     });
-    return Response.json({ received: true });
+    return Response.json({ received: true, sent: delivery.sent });
   }
 
   if (body.type === "cancellation_stalled") {
-    await sendOpsAlert(`A cancellation was interrupted: order ${orderId}`, [
+    await alert(`A cancellation was interrupted: order ${orderId}`, [
       `Medusa order: ${orderId}`,
       "A customer's cancellation started but did not finish. Money may or may not have moved.",
       ...(body.detail ? [String(body.detail).slice(0, 300)] : []),
       "The order is held and will not ship. Open it in Medusa admin, check the payment in Razorpay, then use Retry refund: it sends nothing if the refund already exists.",
     ]);
-    return Response.json({ received: true });
+    return Response.json({ received: true, sent: delivery.sent });
   }
 
   if (body.type === "shipment_orphaned") {
     const ref = describeOrder(null, body.order_ref, orderId);
-    await sendOpsAlert(`Shipment created for an order that had moved on: ${ref}`, [
+    await alert(`Shipment created for an order that had moved on: ${ref}`, [
       `Medusa order: ${orderId}`,
       `Shipping state now: ${body.state ?? "unknown"}`,
       `Shiprocket shipment: ${body.shipment_id ?? "(unknown)"}, AWB: ${body.awb_code ?? "(none)"}`,
       "This shipment may be a duplicate, or for a cancelled order. Check the order in Shiprocket and cancel this shipment there if it is not wanted.",
     ]);
-    return Response.json({ received: true });
+    return Response.json({ received: true, sent: delivery.sent });
   }
 
   if (body.type === "refund_missing_after_cancel") {
     const ref = describeOrder(null, body.order_ref, orderId);
-    await sendOpsAlert(`Cancelled order may not have been refunded: ${ref}`, [
+    await alert(`Cancelled order may not have been refunded: ${ref}`, [
       `Medusa order: ${orderId}`,
       body.checked
         ? `Razorpay shows ${body.refunded ?? 0} refunded of ${body.amount ?? "?"} paid.`
         : "Razorpay could not be checked, so the refund could not be confirmed.",
       "The order was cancelled in Medusa admin. Open the payment in the Razorpay dashboard and refund what is still owed to the customer.",
     ]);
-    return Response.json({ received: true });
+    return Response.json({ received: true, sent: delivery.sent });
   }
 
   if (body.type === "payment_not_captured") {
     const ref = describeOrder(null, body.order_ref, orderId);
-    await sendOpsAlert(`Payment not recorded as captured in Medusa: order ${ref}`, [
+    await alert(`Payment not recorded as captured in Medusa: order ${ref}`, [
       `Medusa order: ${orderId}`,
       "The customer paid through Razorpay but Medusa still shows the payment as authorised only.",
       "Check that the Razorpay webhook for payment.captured points to Medusa (/hooks/payment/razorpay_razorpay). Until it does, the customer cannot cancel this order and Cancel in Medusa admin will fail.",
     ]);
-    return Response.json({ received: true });
+    return Response.json({ received: true, sent: delivery.sent });
+  }
+
+  if (body.type === "order_payment_unconfirmed") {
+    const ref = describeOrder(null, body.order_ref, orderId);
+    await alert(`Order without a confirmed payment: ${ref}`, [
+      `Medusa order: ${orderId}`,
+      `Reason: ${typeof (body as { reason?: unknown }).reason === "string" ? (body as { reason: string }).reason : "unknown"}`,
+      "The order was created but no payment is recorded for it, usually because the server stopped part-way through checkout.",
+      "It will not be shipped. Check Razorpay for a payment against this order before contacting the customer.",
+    ]);
+    return Response.json({ received: true, sent: delivery.sent });
+  }
+
+  if (body.type === "order_orphaned") {
+    const ref = describeOrder(null, body.order_ref, orderId);
+    await alert(`Order left over from an interrupted checkout: ${ref}`, [
+      `Medusa order: ${orderId}`,
+      "This order is not linked to any checkout and has no payment. The customer's real order, if any, is a separate one.",
+      "It will not be shipped. Cancel it in Medusa admin once checked.",
+    ]);
+    return Response.json({ received: true, sent: delivery.sent });
   }
 
   if (body.type === "invoice_pdf_failed") {
     const ref = describeOrder(null, body.order_ref, orderId);
-    await sendOpsAlert(`Invoice PDF could not be created: order ${ref}`, [
+    await alert(`Invoice PDF could not be created: order ${ref}`, [
       `Medusa order: ${orderId}`,
       `Tried ${Number(body.attempts) || 0} times. Last error: ${String(body.error ?? "unknown error").slice(0, 300)}`,
       "The parcel has shipped and the invoice number is issued. Only the PDF file is missing; the invoice page on the site still shows the invoice.",
       "Most often the seller GSTIN (SELLER_GSTIN) is not set on the storefront, or file storage (S3) is not set up on the backend. Fix that, then open the order in Medusa admin and press View PDF to create it.",
     ]);
-    return Response.json({ received: true });
+    return Response.json({ received: true, sent: delivery.sent });
   }
 
   if (body.type === "dispatch_not_started") {
-    await sendOpsAlert(`Shipping could not be started for order ${orderId}`, [
+    await alert(`Shipping could not be started for order ${orderId}`, [
       `Medusa order: ${orderId}`,
       `Error: ${String(body.error ?? "unknown error").slice(0, 300)}`,
       "The dispatch job retries this within a few minutes and emails you again when it does. If no second email arrives, open the order in Medusa admin and use Ship now.",
     ]);
-    return Response.json({ received: true });
+    return Response.json({ received: true, sent: delivery.sent });
   }
 
   if (body.type === "dispatch_recovered") {
     const ref = describeOrder(null, body.order_ref, orderId);
     const until = body.cancel_until ? new Date(body.cancel_until) : null;
-    await sendOpsAlert(`Order ${ref} was added to shipping late`, [
+    await alert(`Order ${ref} was added to shipping late`, [
       `Medusa order: ${orderId}`,
       "This order had no shipping record, so it would never have shipped. One has now been created.",
       until && !Number.isNaN(until.getTime())
         ? `The customer can still cancel until ${until.toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })}; it ships after that.`
         : "Its shipment is being created now.",
     ]);
-    return Response.json({ received: true });
+    return Response.json({ received: true, sent: delivery.sent });
   }
 
   const adminLink = `${MEDUSA_BASE}/app/return-requests`;
@@ -301,7 +390,7 @@ export async function POST(req: NextRequest) {
 
   if (body.type === "rto_received") {
     const ref = describeOrder(null, body.order_ref, orderId);
-    await sendOpsAlert(
+    await alert(
       body.status === "refunded" || body.status === "nothing_to_refund"
         ? `Parcel returned to us: order ${ref}`
         : `Parcel returned to us, and the refund needs a person: order ${ref}`,
@@ -314,30 +403,30 @@ export async function POST(req: NextRequest) {
         "Check the parcel into stock when it arrives.",
       ].filter((line): line is string => Boolean(line))
     );
-    return Response.json({ received: true });
+    return Response.json({ received: true, sent: delivery.sent });
   }
 
   if (body.type === "return_parcel_arrived") {
-    await sendOpsAlert(`A return parcel reached us: order ${orderId}`, [
+    await alert(`A return parcel reached us: order ${orderId}`, [
       `Medusa order: ${orderId}`,
       requestLine,
       "Inspect it. If it passes, open the request in Medusa admin and press Mark received: that issues the credit note and the store credit (or sends the replacement for an exchange). If it fails, decline the request with the reason.",
     ].filter((line): line is string => Boolean(line)));
-    return Response.json({ received: true });
+    return Response.json({ received: true, sent: delivery.sent });
   }
 
   if (body.type === "reverse_pickup_problem") {
-    await sendOpsAlert(`A return pickup needs attention: order ${orderId}`, [
+    await alert(`A return pickup needs attention: order ${orderId}`, [
       `Medusa order: ${orderId}`,
       requestLine,
       errorLine ?? `The courier reported: ${body.status ?? "a problem"}`,
       "The customer's request is saved and waiting. Fix the cause (often the pickup address, or the return warehouse phone number SHIPROCKET_RETURN_PHONE), then open the request in Medusa admin and press Retry pickup, or book it in the Shiprocket dashboard.",
     ].filter((line): line is string => Boolean(line)));
-    return Response.json({ received: true });
+    return Response.json({ received: true, sent: delivery.sent });
   }
 
   if (body.type === "credit_note_failed" || body.type === "credit_note_pdf_failed") {
-    await sendOpsAlert(
+    await alert(
       body.type === "credit_note_failed"
         ? `A credit note could not be issued: order ${orderId}`
         : `A credit note PDF could not be created: ${body.credit_note_number ?? orderId}`,
@@ -350,42 +439,42 @@ export async function POST(req: NextRequest) {
           : "The credit note and its number exist; only the PDF file is missing. Most often file storage (S3) is not set up on the backend, or the storefront was down. The job retries on its own; once fixed, open the credit note's PDF in Medusa admin to create it.",
       ].filter((line): line is string => Boolean(line))
     );
-    return Response.json({ received: true });
+    return Response.json({ received: true, sent: delivery.sent });
   }
 
   if (body.type === "return_not_finished") {
-    await sendOpsAlert(`A received return could not be completed: order ${orderId}`, [
+    await alert(`A received return could not be completed: order ${orderId}`, [
       `Medusa order: ${orderId}`,
       requestLine,
       errorLine,
       "The item was marked received but the credit note, store credit or replacement did not all go through. Nothing is ever issued twice, so it is safe to retry: the backend tries again every few minutes, or press Mark received again.",
     ].filter((line): line is string => Boolean(line)));
-    return Response.json({ received: true });
+    return Response.json({ received: true, sent: delivery.sent });
   }
 
   if (body.type === "return_completed") {
     // Good news, nothing to do: not worth an email.
-    return Response.json({ received: true });
+    return Response.json({ received: true, sent: delivery.sent });
   }
 
   if (body.type === "exchange_payment_short") {
-    await sendOpsAlert(`An exchange payment was paid short: order ${orderId}`, [
+    await alert(`An exchange payment was paid short: order ${orderId}`, [
       `Medusa order: ${orderId}`,
       requestLine,
       `Asked for ₹${Number(body.asked) || 0}, paid ₹${Number(body.paid) || 0}.`,
       "The exchange was not started. Ask the customer to pay the rest, or decline the request and refund what they paid in Razorpay.",
     ].filter((line): line is string => Boolean(line)));
-    return Response.json({ received: true });
+    return Response.json({ received: true, sent: delivery.sent });
   }
 
   if (body.type === "replacement_stock_not_reserved") {
-    await sendOpsAlert(`A replacement order has no stock reserved: ${orderId}`, [
+    await alert(`A replacement order has no stock reserved: ${orderId}`, [
       `Replacement order: ${orderId}`,
       requestLine,
       errorLine,
       "The replacement was created and is being shipped, but its stock was not set aside, so the count may be off. Check the inventory for that item.",
     ].filter((line): line is string => Boolean(line)));
-    return Response.json({ received: true });
+    return Response.json({ received: true, sent: delivery.sent });
   }
 
   return Response.json({ error: "Unknown notification type." }, { status: 400 });

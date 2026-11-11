@@ -26,7 +26,8 @@ function esc(value: string): string {
     .replace(/"/g, "&quot;");
 }
 
-export async function sendOpsAlert(subject: string, lines: string[]): Promise<void> {
+/** Sends the alert email. Resolves true when it went out, so callers can say so. */
+export async function sendOpsAlert(subject: string, lines: string[]): Promise<boolean> {
   try {
     const html = `
       <div style="font-family: sans-serif; font-size: 14px; color: #222; line-height: 1.6;">
@@ -42,8 +43,10 @@ export async function sendOpsAlert(subject: string, lines: string[]): Promise<vo
     `;
     const sent = await sendEmail({ to: recipient(), subject: `[EYRA ops] ${subject}`, html });
     if (!sent) console.error("[ops-alert] sendEmail returned false for:", subject);
+    return sent;
   } catch (err) {
     console.error("[ops-alert] failed to send alert for:", subject, err);
+    return false;
   }
 }
 

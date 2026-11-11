@@ -18,15 +18,12 @@
 import "server-only";
 
 import { redis } from "@/lib/redis";
+import { claimPaymentIn, markProcessedIn, releaseIn, type PaymentClaim } from "@/lib/payment-claim";
 
 /** Carts outlive a checkout session but not indefinitely. */
 const CART_TTL_SECONDS = 60 * 60 * 24 * 7; // 7 days
 
-/** Keep processed payment IDs well past Razorpay's retry window. */
-const PAYMENT_TTL_SECONDS = 60 * 60 * 24 * 30; // 30 days
-
 const cartKey = (razorpayOrderId: string) => `eyra:rzp:cart:${razorpayOrderId}`;
-const paymentKey = (paymentId: string) => `eyra:rzp:payment:${paymentId}`;
 
 /* ── Cart mapping ─────────────────────────────────────────── */
 
@@ -69,46 +66,35 @@ export async function lookupCartForRazorpayOrder(
 
 /* ── Payment idempotency ──────────────────────────────────── */
 
-export type PaymentClaim =
-  /** This process now owns the payment and should proceed. */
-  | "claimed"
-  /** Another delivery already handled it, the caller must not act again. */
-  | "already_processed"
-  /** No Redis configured; caller must rely on a secondary idempotency check. */
-  | "unavailable";
+// The logic lives in payment-claim.ts so it can be tested without Redis.
+export type { PaymentClaim } from "@/lib/payment-claim";
+
+const store = redis
+  ? {
+      set: (key: string, value: string, options: { nx?: boolean; ex: number }) =>
+        options.nx
+          ? redis!.set(key, value, { nx: true, ex: options.ex })
+          : redis!.set(key, value, { ex: options.ex }),
+      get: (key: string) => redis!.get<string>(key),
+      del: (key: string) => redis!.del(key),
+    }
+  : null;
 
 /**
- * Atomically claim a payment ID for processing (SET NX).
- *
- * Release the claim via `releasePayment` on any path that did NOT reach a
- * terminal outcome, otherwise a transient Medusa outage would permanently
- * swallow the order, Razorpay's retry would be deduped against a claim that
- * never resulted in a completed cart.
+ * Claim a payment for processing. The claim is temporary (a few minutes) until
+ * markPaymentProcessed makes it permanent, so a delivery that dies part-way
+ * never blocks Razorpay's redeliveries for long.
  */
-export async function claimPayment(paymentId: string): Promise<PaymentClaim> {
-  if (!redis) return "unavailable";
-  try {
-    const result = await redis.set(paymentKey(paymentId), new Date().toISOString(), {
-      nx: true,
-      ex: PAYMENT_TTL_SECONDS,
-    });
-    return result === "OK" ? "claimed" : "already_processed";
-  } catch (err) {
-    console.error("[razorpay-store] Idempotency claim failed for", paymentId, ":", err);
-    return "unavailable";
-  }
+export function claimPayment(paymentId: string): Promise<PaymentClaim> {
+  return claimPaymentIn(store, paymentId);
 }
 
-/** Release a claim so a Razorpay retry (or manual replay) can try again. */
-export async function releasePayment(paymentId: string): Promise<void> {
-  if (!redis) return;
-  try {
-    await redis.del(paymentKey(paymentId));
-  } catch (err) {
-    console.error(
-      "[razorpay-store] Failed to release idempotency claim for", paymentId,
-      "retries of this webhook will be deduped and the order may need manual completion:",
-      err
-    );
-  }
+/** Call once the order exists and its Razorpay ids and email are handled. */
+export function markPaymentProcessed(paymentId: string): Promise<void> {
+  return markProcessedIn(store, paymentId);
+}
+
+/** Release a temporary claim so a Razorpay retry (or manual replay) can try again. */
+export function releasePayment(paymentId: string): Promise<void> {
+  return releaseIn(store, paymentId);
 }

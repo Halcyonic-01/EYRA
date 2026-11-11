@@ -807,6 +807,16 @@ export function CheckoutClient() {
     };
   }, [pricing, serverTotals, items]);
 
+  // Each row shows the price the server charges. The cart store keeps the price a
+  // line had when it was added, which is stale once a sale ends.
+  const displayItems = useMemo(() => {
+    if (!pricing) return items;
+    const charged = new Map(pricing.items.filter((line) => line.variant_id).map((line) => [line.variant_id, line.unit_price]));
+    return items.map((item) =>
+      item.variantId && charged.has(item.variantId) ? { ...item, unitPrice: charged.get(item.variantId) as number } : item
+    );
+  }, [pricing, items]);
+
   /* Step machine */
   const [step, setStep] = useState<CheckoutStep>(1);
 
@@ -1147,6 +1157,12 @@ export function CheckoutClient() {
         };
         razorpayOrderId = data.razorpayOrderId ?? null;
         razorpayAmount = typeof data.amount === "number" ? data.amount : null;
+        if (data.error === "checkout_refused") {
+          // e.g. prices changed since the cart was priced, or this cart is already paid.
+          setRazorpayError(data.message || "Please review your cart and try again.");
+          setPayLoading(false);
+          return;
+        }
         if (data.error === "wallet_unavailable" || data.error === "fully_covered_by_wallet") {
           setRazorpayError(
             data.error === "fully_covered_by_wallet"
@@ -1309,7 +1325,7 @@ export function CheckoutClient() {
             )}
             {step === 2 && (
               <ReviewStep
-                items={items}
+                items={displayItems}
                 shippingForm={form}
                 totals={displayTotals}
                 onBack={() => setStep(1)}
@@ -1340,7 +1356,7 @@ export function CheckoutClient() {
 
           {/* Right: sticky order summary */}
           <OrderSidebar
-            items={items}
+            items={displayItems}
             totals={displayTotals}
           />
         </div>

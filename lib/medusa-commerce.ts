@@ -14,6 +14,9 @@ const BASE_URL = (
   process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL ?? "http://localhost:9000"
 ).replace(/\/$/, "");
 
+// Fail instead of hanging when the backend (or its Redis) does not answer; callers retry.
+const MEDUSA_TIMEOUT_MS = 25000;
+
 const PUB_KEY = process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY ?? "";
 
 function storeHeaders(): Record<string, string> {
@@ -30,6 +33,7 @@ export type CommerceResult =
 async function post(path: string, body: unknown): Promise<CommerceResult> {
   try {
     const res = await fetch(`${BASE_URL}${path}`, {
+      signal: AbortSignal.timeout(MEDUSA_TIMEOUT_MS),
       method: "POST",
       headers: storeHeaders(),
       body: JSON.stringify(body),
@@ -54,6 +58,7 @@ async function post(path: string, body: unknown): Promise<CommerceResult> {
 export async function getCartSummary(cartId: string): Promise<CommerceResult> {
   try {
     const res = await fetch(`${BASE_URL}/store/carts/${encodeURIComponent(cartId)}/summary`, {
+      signal: AbortSignal.timeout(MEDUSA_TIMEOUT_MS),
       headers: storeHeaders(),
       cache: "no-store",
     });
@@ -83,6 +88,7 @@ export function setCartDiscountCode(cartId: string, code: string | null): Promis
 export async function setCartEmail(cartId: string, email: string): Promise<boolean> {
   try {
     const res = await fetch(`${BASE_URL}/store/carts/${encodeURIComponent(cartId)}`, {
+      signal: AbortSignal.timeout(MEDUSA_TIMEOUT_MS),
       method: "POST",
       headers: storeHeaders(),
       body: JSON.stringify({ email }),

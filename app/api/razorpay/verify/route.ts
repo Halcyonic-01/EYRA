@@ -1,7 +1,7 @@
 import { createHmac, timingSafeEqual } from "crypto";
 import type { NextRequest } from "next/server";
 
-import { completeCart, persistRazorpayPaymentId } from "@/lib/medusa-order";
+import { completeCart, confirmRazorpayPayment } from "@/lib/medusa-order";
 import { lookupCartForRazorpayOrder } from "@/lib/razorpay-store";
 import { sendOrderConfirmationEmail } from "@/lib/order-email";
 import { applyRateLimit } from "@/lib/rateLimit";
@@ -113,7 +113,14 @@ export async function POST(request: NextRequest) {
     });
   }
 
-  await persistRazorpayPaymentId(medusaOrderId, razorpay_order_id, razorpay_payment_id);
+  // Both are safe to repeat; the webhook does the same if this request dies here.
+  const confirmed = await confirmRazorpayPayment(trustedCartId, razorpay_order_id, razorpay_payment_id);
+  if (!confirmed.ok) {
+    console.error(
+      `[razorpay/verify] Razorpay ids not recorded for order ${medusaOrderId} (${confirmed.message}); ` +
+      "the webhook will try again."
+    );
+  }
   await sendOrderConfirmationEmail(medusaOrderId);
 
   return Response.json({

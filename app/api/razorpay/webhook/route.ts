@@ -20,17 +20,20 @@
 import { createHmac, timingSafeEqual } from "crypto";
 import type { NextRequest } from "next/server";
 
-import { completeCart, fetchCartSnapshot, persistRazorpayPaymentId } from "@/lib/medusa-order";
+import { completeCart, confirmRazorpayPayment, fetchCartSnapshot } from "@/lib/medusa-order";
 import { sendOrderConfirmationEmail } from "@/lib/order-email";
 import {
   claimPayment,
   lookupCartForRazorpayOrder,
+  markPaymentProcessed,
   releasePayment,
 } from "@/lib/razorpay-store";
 
 // Signature verification needs node:crypto and the unbuffered request body.
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+// Must stay below the payment claim's lifetime (PROCESSING_TTL_SECONDS in lib/payment-claim.ts).
+export const maxDuration = 60;
 
 /* ── Razorpay event shapes ────────────────────────────────── */
 
@@ -141,9 +144,16 @@ export async function POST(request: NextRequest) {
 
   // Razorpay sends both payment.captured and order.paid for a single payment,
   // and redelivers on any non-2xx. Only one of those may complete the cart.
+  // The claim is temporary while this delivery works and permanent only once the
+  // order is confirmed, so a delivery that dies part-way never swallows a payment.
   const claim = await claimPayment(payment.id);
   if (claim === "already_processed") {
     return Response.json({ received: true, acted: false, deduped: true });
+  }
+  if (claim === "in_progress") {
+    // Another delivery (payment.captured and order.paid arrive together) is on it.
+    // Not 2xx, so Razorpay comes back later and finds it done.
+    return Response.json({ error: "Already being processed." }, { status: 409 });
   }
 
   /* ── Resolve the Medusa cart ────────────────────────────── */
@@ -189,10 +199,10 @@ export async function POST(request: NextRequest) {
   }
 
   if (snapshot.completedAt) {
-    // The client path already got there. This is the normal outcome for a
-    // healthy checkout, and it is also our idempotency backstop when Redis
-    // is not configured.
-    return Response.json({ received: true, acted: false, alreadyCompleted: true });
+    // The client path (or Medusa's own webhook) already completed it. Still make
+    // sure the Razorpay ids and the confirmation email are done: verify may have
+    // stopped right after completing. Both steps are safe to repeat.
+    return finalizeOrder(cartId, payment, eventName, "already_completed");
   }
 
   // Only enforced on the untrusted resolution path: without it, a spoofed
@@ -229,12 +239,57 @@ export async function POST(request: NextRequest) {
   }
 
   console.info(
-    `[razorpay/webhook] Recovered order via ${eventName}, ` +
-    `medusa_order: ${orderId}, payment: ${payment.id}, cart resolved via ${cartSource}.`
+    `[razorpay/webhook] Completed via ${eventName}, medusa_order: ${orderId}, ` +
+    `payment: ${payment.id}, cart resolved via ${cartSource}.`
   );
+  return finalizeOrder(cartId, payment, eventName, "completed");
+}
 
-  await persistRazorpayPaymentId(orderId, payment.order_id ?? "", payment.id);
-  await sendOrderConfirmationEmail(orderId);
+/**
+ * After the cart is an order: record the Razorpay ids on it and send the
+ * confirmation email, both once however often this runs. The payment claim
+ * becomes permanent only when the ids are recorded; if the backend cannot be
+ * reached, the claim is released and Razorpay is asked to come back.
+ */
+async function finalizeOrder(
+  cartId: string,
+  payment: RazorpayPaymentEntity,
+  eventName: string,
+  outcome: "completed" | "already_completed"
+): Promise<Response> {
+  if (!payment.order_id) {
+    await markPaymentProcessed(payment.id);
+    return Response.json({ received: true, acted: outcome === "completed" });
+  }
 
-  return Response.json({ received: true, acted: true, medusa_order_id: orderId });
+  const confirmed = await confirmRazorpayPayment(cartId, payment.order_id, payment.id);
+  if (!confirmed.ok) {
+    if (confirmed.retryable) {
+      await releasePayment(payment.id);
+      return Response.json({ error: "Order confirmation failed." }, { status: 500 });
+    }
+    console.error(
+      "[EYRA Security] MANUAL RECONCILIATION REQUIRED, the Razorpay ids could not be recorded on the order. " +
+      `payment: ${payment.id}, cart: ${cartId}, reason: ${confirmed.message}.`
+    );
+    await markPaymentProcessed(payment.id);
+    return Response.json({ received: true, acted: false, reason: "confirmation_rejected" });
+  }
+
+  const email = await sendOrderConfirmationEmail(confirmed.orderId);
+  if (email === "failed") {
+    // Not retried through Razorpay: a webhook that keeps failing gets switched
+    // off, which would put every later payment at risk. The email gate stops a
+    // later verify call or redelivery from sending a second copy.
+    console.error(`[razorpay/webhook] confirmation email NOT sent for order ${confirmed.orderId} (${eventName}).`);
+  }
+
+  await markPaymentProcessed(payment.id);
+  return Response.json({
+    received: true,
+    acted: outcome === "completed",
+    alreadyCompleted: outcome === "already_completed",
+    medusa_order_id: confirmed.orderId,
+    email,
+  });
 }

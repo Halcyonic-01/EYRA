@@ -17,6 +17,9 @@ const BASE_URL = (
   process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL ?? "http://localhost:9000"
 ).replace(/\/$/, "");
 
+// Fail instead of hanging when the backend (or its Redis) does not answer; callers retry.
+const MEDUSA_TIMEOUT_MS = 25000;
+
 const PUB_KEY = process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY ?? "";
 
 function storeHeaders(): Record<string, string> {
@@ -60,6 +63,7 @@ export interface CartSnapshot {
 export async function fetchCartSnapshot(cartId: string): Promise<CartSnapshot | null> {
   try {
     const res = await fetch(`${BASE_URL}/store/carts/${cartId}`, {
+      signal: AbortSignal.timeout(MEDUSA_TIMEOUT_MS),
       headers: storeHeaders(),
       cache: "no-store",
     });
@@ -123,6 +127,7 @@ export async function prepareCartForCheckout(
 
   try {
     const addressRes = await fetch(`${BASE_URL}/store/carts/${cartId}`, {
+      signal: AbortSignal.timeout(MEDUSA_TIMEOUT_MS),
       method: "POST",
       headers: storeHeaders(),
       body: JSON.stringify({
@@ -186,6 +191,7 @@ interface MedusaPaymentCollection {
 export async function createPaymentCollection(cartId: string): Promise<string | null> {
   try {
     const res = await fetch(`${BASE_URL}/store/payment-collections`, {
+      signal: AbortSignal.timeout(MEDUSA_TIMEOUT_MS),
       method: "POST",
       headers: storeHeaders(),
       body: JSON.stringify({ cart_id: cartId }),
@@ -213,6 +219,7 @@ export async function initPaymentSession(
     const res = await fetch(
       `${BASE_URL}/store/payment-collections/${collectionId}/payment-sessions`,
       {
+        signal: AbortSignal.timeout(MEDUSA_TIMEOUT_MS),
         method: "POST",
         headers: storeHeaders(),
         body: JSON.stringify({ provider_id: providerId }),
@@ -229,6 +236,67 @@ export async function initPaymentSession(
   } catch (err) {
     console.error("[medusa-order] payment session error for collection", collectionId, ":", err);
     return null;
+  }
+}
+
+/* ── Razorpay payment with a price snapshot ───────────────── */
+
+export type RazorpayCheckoutResult =
+  | {
+      ok: true;
+      razorpayOrderId: string;
+      collectionId: string;
+      sessionId: string;
+      /** What Razorpay will charge, in rupees, as the backend worked it out. */
+      amount: number;
+    }
+  | { ok: false; status: number; message: string };
+
+/**
+ * Open the Razorpay payment for a cart. The backend reprices the cart to
+ * today's prices, opens the payment and records what it costs, so a sale that
+ * ends while the customer pays cannot fail their order. Nothing here is taken
+ * from the browser.
+ */
+export async function startRazorpayCheckout(cartId: string): Promise<RazorpayCheckoutResult> {
+  try {
+    const res = await fetch(
+      `${BASE_URL}/store/carts/${encodeURIComponent(cartId)}/razorpay-session`,
+      { method: "POST", headers: storeHeaders(), body: "{}", cache: "no-store", signal: AbortSignal.timeout(MEDUSA_TIMEOUT_MS) }
+    );
+    const body = (await res.json().catch(() => ({}))) as {
+      razorpay_order_id?: unknown;
+      payment_collection_id?: unknown;
+      payment_session_id?: unknown;
+      amount?: unknown;
+      message?: unknown;
+    };
+    if (!res.ok) {
+      console.error(`[medusa-order] razorpay session ${res.status}, cart ${cartId}: ${String(body.message ?? "")}`);
+      return {
+        ok: false,
+        status: res.status,
+        message: typeof body.message === "string" ? body.message : "Payment could not be started.",
+      };
+    }
+    if (
+      typeof body.razorpay_order_id !== "string" ||
+      typeof body.payment_collection_id !== "string" ||
+      typeof body.payment_session_id !== "string" ||
+      typeof body.amount !== "number"
+    ) {
+      return { ok: false, status: 502, message: "Payment could not be started." };
+    }
+    return {
+      ok: true,
+      razorpayOrderId: body.razorpay_order_id,
+      collectionId: body.payment_collection_id,
+      sessionId: body.payment_session_id,
+      amount: body.amount,
+    };
+  } catch (err) {
+    console.error("[medusa-order] razorpay session error for cart", cartId, ":", err);
+    return { ok: false, status: 0, message: "Payment could not be started." };
   }
 }
 
@@ -271,6 +339,7 @@ export async function completeCart(cartId: string): Promise<CompleteCartOutcome>
 
   try {
     const res = await fetch(`${BASE_URL}/store/carts/${cartId}/complete`, {
+      signal: AbortSignal.timeout(MEDUSA_TIMEOUT_MS),
       method: "POST",
       headers: storeHeaders(),
       cache: "no-store",
@@ -280,7 +349,11 @@ export async function completeCart(cartId: string): Promise<CompleteCartOutcome>
       console.error(
         `[medusa-order] complete ${res.status} ${res.statusText}, cart ${cartId}`
       );
-      return { orderId: null, retryable: res.status >= 500 || res.status === 429 };
+      // 409: another request (verify or a webhook) is completing this cart right now.
+      return {
+        orderId: null,
+        retryable: res.status >= 500 || res.status === 429 || res.status === 409,
+      };
     }
 
     const data = (await res.json()) as MedusaCompleteResponse;
@@ -304,41 +377,49 @@ export async function completeCart(cartId: string): Promise<CompleteCartOutcome>
 /* ── Payment reconciliation metadata ─────────────────────────
  *
  * Without this, there is no durable link between a Medusa order and the
- * Razorpay payment that paid for it, the only record is a Redis
- * idempotency key that expires after 30 days. Persisting it onto the
- * order itself is what makes reconciling against Razorpay's own records
- * possible at all, at any point in the future.
+ * Razorpay payment that paid for it. The backend records the ids on the order
+ * after checking them (the Razorpay order is this cart's, and Razorpay lists
+ * the payment as paid), merges them into the order's metadata so nothing else
+ * is lost, and accepts the same ids any number of times. It works on a cart
+ * that was already completed, so verify and the webhook can both call it.
  */
 
 const ADMIN_KEY = process.env.MEDUSA_ADMIN_API_KEY ?? "";
 
-export async function persistRazorpayPaymentId(
-  orderId: string,
+export type RazorpayConfirmation =
+  | { ok: true; orderId: string }
+  | { ok: false; retryable: boolean; status: number; message: string };
+
+export async function confirmRazorpayPayment(
+  cartId: string,
   razorpayOrderId: string,
   razorpayPaymentId: string
-): Promise<void> {
-  if (!ADMIN_KEY) return;
+): Promise<RazorpayConfirmation> {
+  if (!ADMIN_KEY) {
+    return { ok: false, retryable: false, status: 0, message: "MEDUSA_ADMIN_API_KEY is not set" };
+  }
   try {
-    await fetch(`${BASE_URL}/admin/orders/${orderId}`, {
+    const res = await fetch(`${BASE_URL}/admin/razorpay-confirmations`, {
+      signal: AbortSignal.timeout(MEDUSA_TIMEOUT_MS),
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Basic ${ADMIN_KEY}`,
-      },
+      headers: { "Content-Type": "application/json", Authorization: `Basic ${ADMIN_KEY}` },
       body: JSON.stringify({
-        metadata: {
-          razorpay_order_id: razorpayOrderId,
-          razorpay_payment_id: razorpayPaymentId,
-        },
+        cart_id: cartId,
+        razorpay_order_id: razorpayOrderId,
+        razorpay_payment_id: razorpayPaymentId,
       }),
       cache: "no-store",
     });
+    const body = (await res.json().catch(() => ({}))) as { order_id?: unknown; message?: unknown };
+    if (res.ok && typeof body.order_id === "string") {
+      return { ok: true, orderId: body.order_id };
+    }
+    const message = typeof body.message === "string" ? body.message : `HTTP ${res.status}`;
+    console.error(`[medusa-order] Razorpay confirmation ${res.status} for cart ${cartId}: ${message}`);
+    // 404: no order yet; 5xx: backend or Razorpay down. Both can succeed later.
+    return { ok: false, retryable: res.status >= 500 || res.status === 404 || res.status === 429, status: res.status, message };
   } catch (err) {
-    console.error(
-      "[medusa-order] failed to persist Razorpay payment id for order",
-      orderId,
-      ":",
-      err
-    );
+    console.error("[medusa-order] Razorpay confirmation error for cart", cartId, ":", err);
+    return { ok: false, retryable: true, status: 0, message: "network error" };
   }
 }
