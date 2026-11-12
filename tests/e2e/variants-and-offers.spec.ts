@@ -38,8 +38,8 @@ const money = (n: number) => `₹${n.toLocaleString("en-IN")}`;
 async function addVariant(page: Page, path: string, choice?: string) {
   await page.goto(path);
   if (choice) await page.getByRole("radio", { name: new RegExp(choice, "i") }).click();
-  await page.getByRole("button", { name: /^Add to cart$/ }).click();
-  await expect(page.getByRole("button", { name: "Added to cart" })).toBeVisible();
+  await page.getByRole("button", { name: /^Add to cart$/ }).first().click();
+  await expect(page.getByRole("button", { name: "Added to cart" }).first()).toBeVisible();
   // Let the cart sync finish before moving on.
   await page.waitForTimeout(1200);
 }
@@ -63,13 +63,34 @@ test.describe("anklets: single and pair", () => {
 
     const lines = page.locator("main").getByText("Luna Anklet");
     await expect(lines).toHaveCount(2);
-    await expect(page.getByText("Pair", { exact: true })).toBeVisible();
+    await expect(page.getByText("Pair (2 anklets)", { exact: true })).toBeVisible();
     await expect(page.getByText(money(2000)).first()).toBeVisible();
     await expect(page.getByText(money(3800)).first()).toBeVisible();
 
     // 2,000 + 3,800, never two singles.
     await expect(page.getByText(`Subtotal (2 items)`)).toBeVisible();
     await expect(page.locator("main").getByText(money(5800)).first()).toBeVisible();
+  });
+
+  test("quantity counts pairs: each pair is two singles less Rs 200, and a single never gets it", async ({ page }) => {
+    await page.goto("/products/luna-anklet");
+    const more = page.getByRole("button", { name: "Increase quantity" });
+    await more.click();
+    await more.click();
+    await expect(page.getByText(money(6000)).first()).toBeVisible(); // 3 singles, no discount
+
+    await page.getByRole("radio", { name: /Pair/ }).click();
+    await expect(page.getByText(money(11400)).first()).toBeVisible(); // 3 pairs
+    await expect(page.getByText("3 pairs · 6 anklets · You save ₹600")).toBeVisible();
+    await page.getByRole("button", { name: "Decrease quantity" }).click();
+    await expect(page.getByText(money(7600)).first()).toBeVisible(); // 2 pairs
+
+    await page.getByRole("button", { name: /^Add to cart$/ }).first().click();
+    await expect(page.getByRole("button", { name: "Added to cart" }).first()).toBeVisible();
+    await page.waitForTimeout(1200);
+    await page.goto("/cart");
+    await expect(page.getByText("Pair (2 anklets)", { exact: true })).toBeVisible();
+    await expect(page.locator("main").getByText(money(7600)).first()).toBeVisible();
   });
 
   test("the quantity of one variant does not touch the other", async ({ page }) => {
@@ -91,8 +112,8 @@ test.describe("pendant: with or without a silver chain", () => {
     await expect(chain).toContainText(money(2800));
 
     await chain.click();
-    await page.getByRole("button", { name: /^Add to cart$/ }).click();
-    await expect(page.getByRole("button", { name: "Added to cart" })).toBeVisible();
+    await page.getByRole("button", { name: /^Add to cart$/ }).first().click();
+    await expect(page.getByRole("button", { name: "Added to cart" }).first()).toBeVisible();
     await page.waitForTimeout(1200);
 
     await page.goto("/cart");

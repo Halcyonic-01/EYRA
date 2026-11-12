@@ -11,7 +11,9 @@ storefront does and the Vercel settings.
 - **Product page**: every Medusa option other than ring size (anklet Single or
   Pair, pendant with or without a chain) is shown as a choice with its own price.
   The page opens on the cheapest option. `lib/variant-selection.ts` only matches a
-  variant; it never works out a price.
+  variant; it never works out a price. For an anklet the quantity counts the
+  chosen option (2 Pairs are 4 anklets) and the price shown is for the whole
+  quantity, with the pair saving.
 - **Cart**: one line per variant, so a single and a pair of the same anklet are
   two lines at their own prices. After every change the cart reads its totals from
   the backend (`GET /store/carts/:id/summary`, read only) and shows what it
