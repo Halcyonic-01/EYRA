@@ -1,6 +1,5 @@
 import { HeroSection } from "@/components/home/HeroSection";
 import { StatsBar } from "@/components/home/StatsBar";
-import { AboutSection } from "@/components/home/AboutSection";
 import { TrendingCarousel } from "@/components/home/TrendingCarousel";
 import { CollectionsGrid } from "@/components/home/CollectionsGrid";
 import { GenderSplit } from "@/components/home/GenderSplit";
@@ -13,7 +12,6 @@ export default function Home() {
     <>
       <HeroSection />
       <StatsBar />
-      <AboutSection />
       <CollectionsGrid />
       <TrendingCarousel />
       <GenderSplit />

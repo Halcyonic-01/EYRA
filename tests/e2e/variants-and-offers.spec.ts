@@ -140,7 +140,7 @@ test.describe("complimentary tote bag", () => {
   test("at exactly 1,499 it does not qualify and says how much more to add", async ({ page }) => {
     await page.goto("/products");
     await page.getByRole("button", { name: "Type" }).click();
-    await page.getByRole("menu").getByText("Chains", { exact: true }).click();
+    await page.getByRole("menu").getByText("Pendants", { exact: true }).click();
     // Rope Twist Chain is 1,499: exactly the threshold, so it does not qualify.
     const card = page.locator("article", { hasText: "Rope Twist Chain" });
     await card.getByRole("button", { name: "Add to cart" }).click();

@@ -25,16 +25,11 @@ export function CollectionsGrid() {
           </p>
         </FadeIn>
 
-        {/* Subtitle + View all */}
-        <FadeIn delay={80} className="mb-14 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
-          <p className="font-sans font-light text-[0.88rem] leading-relaxed text-carbon max-w-lg">
-            At Eyra, every piece is thoughtfully crafted using 925 sterling silver to deliver
-            elegance, comfort, and durability in perfect balance. Our collections are designed
-            for both men and women who appreciate minimal luxury and timeless style.
-          </p>
+        {/* View all */}
+        <FadeIn delay={80} className="mb-14 flex">
           <Link
             href="/collections"
-            className="flex-shrink-0 text-[0.78rem] font-sans font-light tracking-[0.14em] uppercase text-carbon border-b border-carbon pb-px hover:text-jet hover:border-jet transition-colors duration-300 self-start sm:self-auto"
+            className="text-[0.78rem] font-sans font-light tracking-[0.14em] uppercase text-carbon border-b border-carbon pb-px hover:text-jet hover:border-jet transition-colors duration-300"
           >
             View all
           </Link>

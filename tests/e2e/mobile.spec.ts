@@ -11,7 +11,9 @@ test.use({ viewport: { width: 375, height: 812 } });
 test.describe("mobile viewport", () => {
   test("no page has horizontal overflow", async ({ page }) => {
     for (const path of ["/", "/products", "/products/celestial-band-ring", "/cart", "/wishlist", "/sign-up", "/sign-in"]) {
-      await page.goto(path, { waitUntil: "networkidle" });
+      // Not "networkidle": Clerk's sign-in and sign-up pages keep one request open, so the network never goes idle.
+      await page.goto(path, { waitUntil: "load" });
+      await page.waitForTimeout(500);
       const { innerWidth, scrollWidth } = await page.evaluate(() => ({
         innerWidth: window.innerWidth,
         scrollWidth: document.documentElement.scrollWidth,
@@ -27,7 +29,7 @@ test.describe("mobile viewport", () => {
     // screen, silently cutting off the quantity controls at the edge.
     await page.goto("/products");
     await page.getByRole("button", { name: "Type" }).click();
-    await page.getByRole("menu").getByText("Chains", { exact: true }).click();
+    await page.getByRole("menu").getByText("Pendants", { exact: true }).click();
     await page.locator("article").first().getByRole("button", { name: "Add to cart" }).click();
     await page.waitForTimeout(300);
 
@@ -92,7 +94,7 @@ test.describe("mobile viewport", () => {
     await page.goto("/products");
     await page.getByRole("button", { name: "Type" }).click();
     await page.getByRole("menu").getByText("Rings", { exact: true }).click();
-    await page.getByRole("menu").getByText("Chains", { exact: true }).click();
+    await page.getByRole("menu").getByText("Pendants", { exact: true }).click();
     await page.keyboard.press("Escape");
     await page.getByRole("button", { name: "Price" }).click();
     await page.getByRole("menu").getByText("Under", { exact: false }).click();
