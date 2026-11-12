@@ -47,8 +47,9 @@ async function addVariant(page: Page, path: string, choice?: string) {
 test.describe("anklets: single and pair", () => {
   test("each option shows its own price and adds that variant", async ({ page }) => {
     await page.goto("/products/luna-anklet");
-    await expect(page.getByRole("radio", { name: /Single/ })).toContainText(money(2000));
-    await expect(page.getByRole("radio", { name: /Pair/ })).toContainText(money(3800));
+    // The buttons carry only the name; the price is shown above them.
+    await expect(page.getByRole("radio", { name: /Single/ })).not.toContainText("₹");
+    await expect(page.getByRole("radio", { name: /Pair/ })).not.toContainText("₹");
 
     await page.getByRole("radio", { name: /Pair/ }).click();
     await expect(page.getByText(money(3800)).first()).toBeVisible();

@@ -1,5 +1,6 @@
 "use client";
 
+import { percentOff as discountPercent } from "@/lib/discount";
 import { useEffect, useMemo, useState, useRef } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -258,6 +259,7 @@ export function ProductDetailClient({
   const singleUnit = variants.find((v) => v.options[PACK] === SINGLE)?.price ?? null;
   const shownPrice = ankletPacks ? unitPrice * sellQuantity : unitPrice;
   const shownOriginal = ankletPacks ? unitOriginal * sellQuantity : unitOriginal;
+  const percentOff = discountPercent(shownPrice, shownOriginal);
   const pairSavingTotal = isPairPack && singleUnit !== null ? Math.max(0, singleUnit * 2 - unitPrice) * sellQuantity : 0;
   const inCart = isInCart(cartItems, variantId) ||
     (variants.length === 0 &&
@@ -478,6 +480,11 @@ export function ProductDetailClient({
                   <span className="font-sans font-normal text-[18px] leading-[28px] text-[#A3A3A3] line-through">
                     ₹{shownOriginal.toLocaleString("en-IN")}
                   </span>
+                  {percentOff > 0 && (
+                    <span className="self-center rounded-md bg-[#E3F6E8] px-2 py-0.5 font-sans text-[13px] font-medium leading-[20px] text-[#1E7A3C]">
+                      {percentOff}% off
+                    </span>
+                  )}
                 </div>
                 {ankletPacks && (isPairPack || sellQuantity > 1) && (
                   <p className="font-sans font-medium text-[14px] leading-[21px] text-black">
@@ -505,6 +512,8 @@ export function ProductDetailClient({
                 const single = options.find((o) => o.value === SINGLE && o.inStock);
                 const pairSaving = (price: number, value: string) =>
                   value === PAIR && single ? single.price * 2 - price : 0;
+                // Single/Pair buttons carry only the name; the price and saving show above.
+                const namesOnly = choice.title === PACK;
                 return (
                   <div key={choice.title} className="flex flex-col gap-3">
                     <span className="font-sans font-medium text-[14px] leading-[21px] text-black">
@@ -512,7 +521,7 @@ export function ProductDetailClient({
                       {selection[choice.title] ? `: ${selection[choice.title]}` : ""}
                     </span>
                     <div
-                      className={options.length === 2 ? "grid grid-cols-2 gap-2 sm:max-w-[360px]" : "flex flex-wrap gap-2"}
+                      className={options.length === 2 ? "grid grid-cols-2 gap-3" : "flex flex-wrap gap-2"}
                       role="radiogroup"
                       aria-label={choice.title}
                     >
@@ -527,17 +536,25 @@ export function ProductDetailClient({
                             aria-checked={active}
                             disabled={!option.inStock}
                             onClick={() => setSelection((prev) => ({ ...prev, [choice.title]: option.value }))}
-                            className={`flex flex-col items-start gap-0.5 rounded-xl border px-4 py-2.5 text-left font-sans transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-40 ${
+                            className={`flex flex-col items-center justify-center gap-px rounded-lg border px-3 py-1.5 text-center font-sans transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-40 ${
                               active
-                                ? "border-black bg-black text-white"
+                                ? "border-black bg-[#EDEDED] text-black shadow-[inset_0_0_0_1px_#000]"
                                 : "border-[#CFCFCF] bg-white text-[#626262] hover:border-black hover:text-black"
                             }`}
                           >
-                            <span className="text-[14px] font-medium">{option.value}</span>
-                            <span className={`text-[13px] ${active ? "text-[#E5E5E5]" : "text-[#909090]"}`}>
-                              {option.inStock ? `₹${option.price.toLocaleString("en-IN")}` : "Sold out"}
-                              {saving > 0 && ` · Save ₹${saving.toLocaleString("en-IN")}`}
+                            <span className={`font-semibold tracking-[0.02em] ${namesOnly ? "text-[14px] leading-[24px]" : "text-[13px] leading-[18px]"}`}>
+                              {option.value}
                             </span>
+                            {(!namesOnly || !option.inStock) && (
+                            <span
+                              className={`whitespace-nowrap text-[12px] font-normal leading-[16px] tabular-nums tracking-[0.01em] ${
+                                active ? "text-[#3D3D3D]" : "text-[#7A7A7A]"
+                              }`}
+                            >
+                              {option.inStock ? `₹${option.price.toLocaleString("en-IN")}` : "Sold out"}
+                              {!namesOnly && saving > 0 && ` · Save ₹${saving.toLocaleString("en-IN")}`}
+                            </span>
+                            )}
                           </button>
                         );
                       })}
