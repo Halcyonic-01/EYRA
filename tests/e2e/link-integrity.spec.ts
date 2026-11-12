@@ -28,12 +28,18 @@ const ENTRY_POINTS = [
   "/best-sellers",
 ];
 
+// The crawls load every entry page one after another, and a dev server takes a few
+// seconds for each, so they get longer than the default minute. They only need the
+// status and the links in the HTML, not images and scripts, so they do not wait for "load".
+const CRAWL_TIMEOUT = 300_000;
+
 /** Routes that intentionally redirect guests to sign-in. */
 const AUTH_GATED = ["/checkout", "/orders", "/account"];
 
 test("no page in the site renders the 404 boundary", async ({ page }) => {
+  test.setTimeout(CRAWL_TIMEOUT);
   for (const path of ENTRY_POINTS) {
-    const response = await page.goto(path);
+    const response = await page.goto(path, { waitUntil: "domcontentloaded" });
     expect(response?.status(), `${path} returned ${response?.status()}`).toBeLessThan(400);
 
     // The branded 404 renders this copy; a real page must not.
@@ -45,11 +51,12 @@ test("no page in the site renders the 404 boundary", async ({ page }) => {
 });
 
 test("every internal link found on entry pages resolves", async ({ page }) => {
+  test.setTimeout(CRAWL_TIMEOUT);
   const seen = new Set<string>();
   const broken: string[] = [];
 
   for (const path of ENTRY_POINTS) {
-    await page.goto(path);
+    await page.goto(path, { waitUntil: "domcontentloaded" });
 
     const hrefs = await page.locator("a[href^='/']").evaluateAll((anchors) =>
       anchors.map((a) => a.getAttribute("href") ?? "")

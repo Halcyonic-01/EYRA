@@ -16,7 +16,7 @@ test.describe("guest cart", () => {
     // button reads "Select size" and links to the PDP instead of adding
     // directly. Filter to a single-variant type to test the direct-add path.
     await page.getByRole("button", { name: "Type" }).click();
-    await page.getByRole("menu").getByText("Chains", { exact: true }).click();
+    await page.getByRole("menu").getByText("Pendants", { exact: true }).click();
 
     const firstCard = page.locator("article").first();
     const productName = await firstCard.getByRole("heading").innerText();
@@ -46,7 +46,7 @@ test.describe("guest cart", () => {
   test("cart persists across a page reload", async ({ page }) => {
     await page.goto("/products");
     await page.getByRole("button", { name: "Type" }).click();
-    await page.getByRole("menu").getByText("Chains", { exact: true }).click();
+    await page.getByRole("menu").getByText("Pendants", { exact: true }).click();
 
     const firstCard = page.locator("article").first();
     await firstCard.getByRole("button", { name: "Add to cart" }).click();
