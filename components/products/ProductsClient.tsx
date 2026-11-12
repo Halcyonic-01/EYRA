@@ -1,10 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useDeferredValue, useMemo, useState } from "react";
 import { Search, X } from "lucide-react";
 import { ProductCard } from "./ProductCard";
 import { Dropdown } from "@/components/ui/Dropdown";
 import type { Audience, Product } from "./types";
+import { buildSearchIndex, searchProducts } from "@/lib/search";
 
 type ProductType = "ring" | "pendant" | "bracelet" | "anklet";
 type SortOption = "trending" | "price-asc" | "price-desc" | "newest";
@@ -121,18 +122,18 @@ export function ProductsClient({
   const [sortBy, setSortBy] = useState<SortOption>("trending");
   const [query, setQuery] = useState(initialQuery);
 
+  // The index is built once per catalogue; typing only searches it. The deferred
+  // query keeps the box responsive while the grid catches up.
+  const index = useMemo(() => buildSearchIndex(products), [products]);
+  const deferredQuery = useDeferredValue(query);
+  const search = useMemo(
+    () => (deferredQuery.trim() ? searchProducts(index, deferredQuery) : null),
+    [index, deferredQuery]
+  );
+
   const filtered = useMemo(() => {
-    let result = [...products];
-    const q = query.trim();
-    if (q) {
-      // Match at word starts only (e.g. "ring" -> "Ring"/"Rings") rather than
-      // anywhere in the string, plain substring matching would also match
-      // inside unrelated words.
-      const pattern = new RegExp(`\\b${q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`, "i");
-      result = result.filter(
-        (p) => pattern.test(p.name) || pattern.test(p.description) || pattern.test(p.type)
-      );
-    }
+    // With a query, results come in order of relevance; without one, in catalogue order.
+    let result = search ? [...search.products] : [...products];
     if (selectedTypes.length > 0) {
       result = result.filter((p) => selectedTypes.includes(p.type));
     }
@@ -142,14 +143,24 @@ export function ProductsClient({
     result = result.filter((p) => priceInRange(p.price, priceRange));
     if (sortBy === "price-asc") result.sort((a, b) => a.price - b.price);
     if (sortBy === "price-desc") result.sort((a, b) => b.price - a.price);
-    // "Newest" was offered in the dropdown but had no branch here, so picking
-    // it just relabelled the control and left the order untouched. getProducts
-    // returns the catalogue in Medusa's creation order, so reversing it puts
-    // the most recently added stock first, which is exactly how /new-arrivals
-    // decides what counts as new.
-    if (sortBy === "newest") result.reverse();
+    // getProducts returns the catalogue in Medusa's creation order, so the
+    // newest stock is last; that is how /new-arrivals decides what is new.
+    if (sortBy === "newest") {
+      const position = new Map(products.map((p, i) => [p.id, i]));
+      result.sort((a, b) => (position.get(b.id) ?? 0) - (position.get(a.id) ?? 0));
+    }
     return result;
-  }, [products, query, selectedTypes, selectedAudiences, priceRange, sortBy]);
+  }, [products, search, selectedTypes, selectedAudiences, priceRange, sortBy]);
+
+  // Tells the shopper when the results are not a straight match for what they typed.
+  const searchNotice =
+    search && filtered.length > 0
+      ? search.mode === "corrected" && search.correctedQuery
+        ? `Showing results for “${search.correctedQuery}”`
+        : search.mode === "partial" || search.mode === "closest"
+          ? `No exact matches for “${deferredQuery.trim()}”. Showing the closest products.`
+          : null
+      : null;
 
   function toggleType(type: ProductType) {
     setSelectedTypes((prev) =>
@@ -220,6 +231,11 @@ export function ProductsClient({
         <h1 className="font-sans font-normal text-[28px] leading-[42px] text-black">
           All Products ({filtered.length} results)
         </h1>
+        {searchNotice && (
+          <p role="status" className="mt-1 font-sans font-normal text-[14px] text-[#626262]">
+            {searchNotice}
+          </p>
+        )}
       </div>
 
       {/* Filter bar */}

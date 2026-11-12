@@ -4,7 +4,7 @@ import { test, expect, type Page } from "@playwright/test";
 // promises that matter most. The cancel window is a setting, so the
 // cancellation text is only checked when the page shows it.
 
-const ORDERS_EMAIL = "query-orders@eyra.org.in";
+const ORDERS_EMAIL = "orders@eyra.org.in";
 const GRIEVANCE_EMAIL = "grievance@eyra.org.in";
 
 async function pageText(page: Page, path: string): Promise<string> {
