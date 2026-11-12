@@ -10,6 +10,7 @@
  */
 
 import type { Audience, Product, ProductChoice, ProductVariant } from "@/components/products/types";
+import { originalFor } from "@/lib/discount";
 import { canonicalProductType } from "@/lib/product-type";
 import { orderSizes } from "@/lib/variant-selection";
 import type { DetailProduct } from "@/lib/products";
@@ -201,7 +202,7 @@ function normalizeType(p: MedusaProduct): "ring" | "pendant" | "bracelet" | "ank
  * Extract the cheapest variant's calculated price pair and its Medusa variant ID.
  * Falls back to zeroes if no pricing context was provided (no region/currency param).
  */
-function extractPrice(variants: MedusaVariant[]): {
+function extractPrice(variants: MedusaVariant[], key: string): {
   price: number;
   originalPrice: number;
   cheapestVariantId: string | undefined;
@@ -223,7 +224,7 @@ function extractPrice(variants: MedusaVariant[]): {
   const originalPrice =
     originalRaw > cheapest.calculated_price.calculated_amount
       ? Math.round(originalRaw)
-      : Math.round(price * 1.6); // synthetic MRP if no compare-at price set
+      : originalFor(price, key); // no compare-at price set: this product's own 35-50% discount
 
   return { price, originalPrice, cheapestVariantId: cheapest.id };
 }
@@ -270,7 +271,7 @@ function audiencesOf(p: MedusaProduct): Audience[] {
  * product URLs are human-readable (/products/eyra-signature-silver-ring).
  */
 function toProduct(p: MedusaProduct): Product {
-  const { price, originalPrice, cheapestVariantId } = extractPrice(p.variants);
+  const { price, originalPrice, cheapestVariantId } = extractPrice(p.variants, p.handle);
   const inStock = p.variants.reduce((s, v) => s + variantStock(v), 0);
   const prices = new Set(
     p.variants
@@ -359,7 +360,7 @@ function toDetailProduct(p: MedusaProduct): DetailProduct {
       id: v.id,
       title: v.title,
       price: Math.round(amount),
-      originalPrice: original > amount ? Math.round(original) : Math.round(amount * 1.6),
+      originalPrice: original > amount ? Math.round(original) : originalFor(Math.round(amount), p.handle),
       inStock: variantStock(v),
       options,
     };

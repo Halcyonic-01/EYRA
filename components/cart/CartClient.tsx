@@ -1,5 +1,6 @@
 "use client";
 
+import { percentOff } from "@/lib/discount";
 import { useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
@@ -138,10 +139,7 @@ export function CartClient() {
           <div className="flex flex-col gap-4">
             {items.map((item) => {
               const key = lineKey(item);
-              const discountPct =
-                item.originalUnitPrice > item.unitPrice
-                  ? Math.round(((item.originalUnitPrice - item.unitPrice) / item.originalUnitPrice) * 100)
-                  : 0;
+              const discountPct = percentOff(item.unitPrice, item.originalUnitPrice);
 
               return (
                 // Below sm: the image+info+qty-stepper+remove row's

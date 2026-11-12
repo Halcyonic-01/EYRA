@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import type { ChosenSize, Product, ProductVariant } from "@/components/products/types";
+import { isOldFixedOriginal, originalFor } from "@/lib/discount";
 import type { CartSummary, CartTotals } from "@/lib/medusa-cart";
 
 export interface CartItem {
@@ -394,19 +395,22 @@ export const useCartStore = create<CartStore>()(
 }),
     {
       name: "eyra-cart-storage",
-      version: 2,
+      version: 3,
       storage: createJSONStorage(() => localStorage),
       // Carts saved before variant pricing have no unit price: use the product's.
+      // Carts saved before per-product discounts hold the old fixed original price: replace it.
       migrate: (persisted) => {
         const state = persisted as { items?: Partial<CartItem>[]; cartId?: string | null };
         return {
           cartId: state.cartId ?? null,
-          items: (state.items ?? []).map((item) => ({
-            ...item,
-            unitPrice: item.unitPrice ?? item.product?.price ?? 0,
-            originalUnitPrice: item.originalUnitPrice ?? item.product?.originalPrice ?? 0,
-            variantLabel: item.variantLabel ?? null,
-          })),
+          items: (state.items ?? []).map((item) => {
+            const unitPrice = item.unitPrice ?? item.product?.price ?? 0;
+            let originalUnitPrice = item.originalUnitPrice ?? item.product?.originalPrice ?? 0;
+            if (item.product && isOldFixedOriginal(unitPrice, originalUnitPrice)) {
+              originalUnitPrice = originalFor(unitPrice, item.product.id);
+            }
+            return { ...item, unitPrice, originalUnitPrice, variantLabel: item.variantLabel ?? null };
+          }),
         } as unknown as CartStore;
       },
       // Only persist the cart contents and backend cart ID.
