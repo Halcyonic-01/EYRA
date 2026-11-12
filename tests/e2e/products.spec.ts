@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 
 test("products page lists products", async ({ page }) => {
   await page.goto("/products");
@@ -76,4 +76,86 @@ test("type filter narrows results to the selected category", async ({ page }) =>
   for (const title of cardTitles) {
     expect(title.toLowerCase()).not.toContain("chain");
   }
+});
+
+test.describe("search icon in the header", () => {
+  async function searchFromHeader(page: Page, path: string, text: string) {
+    await page.goto(path);
+    await page.getByRole("button", { name: "Search products" }).click();
+    const box = page.getByRole("searchbox", { name: "Search the store" });
+    await expect(box).toBeFocused();
+    await box.fill(text);
+    await box.press("Enter");
+  }
+
+  for (const path of ["/", "/products", "/products/luna-anklet", "/cart"]) {
+    test(`on ${path} it opens a search bar that finds products`, async ({ page }) => {
+      await searchFromHeader(page, path, "anklet");
+      await expect(page).toHaveURL(/\/products\?q=anklet/);
+      await expect(page.locator("article").first()).toBeVisible();
+      await expect(page.getByRole("searchbox", { name: "Search the store" })).toHaveCount(0);
+    });
+  }
+
+  test("Escape and the close icon shut the search bar", async ({ page }) => {
+    await page.goto("/");
+    const toggle = page.getByRole("button", { name: "Search products" });
+    await toggle.click();
+    await expect(page.getByRole("searchbox", { name: "Search the store" })).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("searchbox", { name: "Search the store" })).toHaveCount(0);
+    await toggle.click();
+    await toggle.click();
+    await expect(page.getByRole("searchbox", { name: "Search the store" })).toHaveCount(0);
+  });
+
+  test("shows matching products while typing, before Enter is pressed", async ({ page }) => {
+    await page.goto("/");
+    await page.getByRole("button", { name: "Search products" }).click();
+    const box = page.getByRole("searchbox", { name: "Search the store" });
+    await box.pressSequentially("anklet");
+    const results = page.locator('header a[href^="/products/"]');
+    await expect(results.first()).toBeVisible();
+    await expect(results.first()).toContainText(/anklet/i);
+    await expect(page).toHaveURL(/\/$/);
+    // Picking a result opens that product and closes the bar.
+    await results.first().click();
+    await expect(page).toHaveURL(/\/products\/[^?]+$/);
+    await expect(page.getByRole("searchbox", { name: "Search the store" })).toHaveCount(0);
+  });
+
+  test("a misspelled word still shows the closest products, and the clear button empties the box", async ({ page }) => {
+    await page.goto("/");
+    await page.getByRole("button", { name: "Search products" }).click();
+    const box = page.getByRole("searchbox", { name: "Search the store" });
+    await box.pressSequentially("ankelt");
+    await expect(page.getByRole("link", { name: /anklet/i }).first()).toBeVisible();
+    await page.getByRole("button", { name: "Clear search" }).click();
+    await expect(box).toHaveValue("");
+    await expect(box).toBeFocused();
+    await expect(page.getByRole("button", { name: "Clear search" })).toHaveCount(0);
+  });
+
+  test("a search with no match says so", async ({ page }) => {
+    await page.goto("/");
+    await page.getByRole("button", { name: "Search products" }).click();
+    await page.getByRole("searchbox", { name: "Search the store" }).pressSequentially("zzzzqx");
+    await expect(page.getByText(/No exact match|No products found/)).toBeVisible();
+  });
+});
+
+test("the products page search box has one clear button, not two", async ({ page }) => {
+  await page.goto("/products");
+  const box = page.getByRole("searchbox", { name: "Search products" });
+  await box.fill("chain");
+  await expect(page.getByRole("button", { name: "Clear search" })).toHaveCount(1);
+  // The browser's own cross inside a search box is hidden by a style rule on the input.
+  const hidden = await page.evaluate(() =>
+    [...document.styleSheets].some((sheet) =>
+      [...sheet.cssRules].some((rule) => rule.cssText.includes("-webkit-search-cancel-button"))
+    )
+  );
+  expect(hidden).toBe(true);
+  await page.getByRole("button", { name: "Clear search" }).click();
+  await expect(box).toHaveValue("");
 });

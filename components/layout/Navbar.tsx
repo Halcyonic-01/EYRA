@@ -3,10 +3,11 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, ShoppingBag, User, Heart, LogOut, Search } from "lucide-react";
+import { Menu, ShoppingBag, User, Heart, LogOut, Search, X } from "lucide-react";
 import { DeliveryCheckWidget } from "@/components/home/DeliveryCheckWidget";
 import { useAuth } from "@clerk/nextjs";
 import { Logo } from "@/components/ui/Logo";
+import { HeaderSearch } from "@/components/layout/HeaderSearch";
 import { MobileNav } from "@/components/layout/MobileNav";
 import { AnnouncementBanner } from "@/components/layout/AnnouncementBanner";
 import { useSignOut } from "@/components/auth/useSignOut";
@@ -31,8 +32,11 @@ export function Navbar() {
   const closeMenu = useCallback(() => setMenuOpen(false), []);
   const pathname = usePathname();
   const isHome = pathname === "/";
-  // Home and products already show a search box, so the header icon is only for the other pages.
-  const hasSearchBox = pathname === "/" || pathname === "/products";
+  // The header search icon opens a search bar under the header, on every page.
+  // Open for one page only: tied to the path it was opened on, so a new page closes it.
+  const [searchPath, setSearchPath] = useState<string | null>(null);
+  const searchOpen = searchPath === pathname;
+  const setSearchOpen = (open: boolean) => setSearchPath(open ? pathname : null);
   const cartCount = useCartStore((s) => s.items.reduce((n, i) => n + i.quantity, 0));
   const wishlistCount = useWishlistStore((s) => s.items.length);
   // Clerk v7 dropped the <SignedIn>/<SignedOut> components, and its <Show> is a
@@ -45,6 +49,15 @@ export function Navbar() {
   const walletHint = wallet?.nextExpiry
     ? `${formatRupees(wallet.nextExpiry.amount)} expires on ${new Date(wallet.nextExpiry.expiresAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}`
     : "Your wallet credit";
+
+  useEffect(() => {
+    if (!searchOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setSearchPath(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [searchOpen]);
 
   useEffect(() => {
     if (!isHome) return;
@@ -122,18 +135,18 @@ export function Navbar() {
 
           {/* Action icons */}
           <div className="flex items-center gap-0.5">
-            {!hasSearchBox && (
-              <Link
-                href="/products"
-                aria-label="Search products"
-                className={[
-                  "p-2.5 transition-colors duration-200",
-                  darkTheme ? "text-pearl hover:text-white" : "text-[#333] hover:text-black",
-                ].join(" ")}
-              >
-                <Search size={17} strokeWidth={1.5} />
-              </Link>
-            )}
+            <button
+              type="button"
+              aria-label="Search products"
+              aria-expanded={searchOpen}
+              onClick={() => setSearchOpen(!searchOpen)}
+              className={[
+                "p-2.5 transition-colors duration-200",
+                darkTheme ? "text-pearl hover:text-white" : "text-[#333] hover:text-black",
+              ].join(" ")}
+            >
+              {searchOpen ? <X size={17} strokeWidth={1.5} /> : <Search size={17} strokeWidth={1.5} />}
+            </button>
             <DeliveryCheckWidget dark={darkTheme} />
             {/* Account: signed-in users go to their profile, guests to sign-in.
                 Desktop only. Below lg, account lives in the hamburger menu. */}
@@ -204,6 +217,7 @@ export function Navbar() {
           </div>
         </div>
 
+        {searchOpen && <HeaderSearch onClose={() => setSearchPath(null)} />}
       </header>
 
       {/* ── Mobile navigation drawer (below lg) ───────── */}
