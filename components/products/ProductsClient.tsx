@@ -211,7 +211,7 @@ export function ProductsClient({
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search rings, chains, anklets…"
           aria-label="Search products"
-          className="flex-1 bg-transparent font-sans font-light text-[15px] text-black placeholder:text-[#909090] focus:outline-none border-b border-[#CFCFCF] focus:border-black pb-1.5 transition-colors duration-200"
+          className="flex-1 bg-transparent font-sans font-light text-[15px] text-black placeholder:text-[#909090] focus:outline-none [&::-webkit-search-cancel-button]:hidden border-b border-[#CFCFCF] focus:border-black pb-1.5 transition-colors duration-200"
         />
         {query && (
           <button
