@@ -15,6 +15,7 @@ import { useWalletBalance } from "@/components/wallet/useWalletBalance";
 import { WalletChip } from "@/components/wallet/WalletChip";
 import { formatRupees } from "@/lib/money";
 import { useCartStore } from "@/store/useStore";
+import { drawerAllowedOn, useCartDrawer } from "@/store/useCartDrawer";
 import { useWishlistStore } from "@/store/useStore";
 
 const NAV_ITEMS = [
@@ -37,6 +38,7 @@ export function Navbar() {
   const [searchPath, setSearchPath] = useState<string | null>(null);
   const searchOpen = searchPath === pathname;
   const setSearchOpen = (open: boolean) => setSearchPath(open ? pathname : null);
+  const openBag = useCartDrawer((s) => s.open);
   const cartCount = useCartStore((s) => s.items.reduce((n, i) => n + i.quantity, 0));
   const wishlistCount = useWishlistStore((s) => s.items.length);
   // Clerk v7 dropped the <SignedIn>/<SignedOut> components, and its <Show> is a
@@ -198,6 +200,12 @@ export function Navbar() {
             <Link
               href="/cart"
               aria-label="Cart"
+              onClick={(e) => {
+                // The bag opens over the page; a new-tab click, or the bag and checkout pages, still go to /cart.
+                if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0 || !drawerAllowedOn(pathname)) return;
+                e.preventDefault();
+                openBag(pathname);
+              }}
               className={[
                 "relative p-2.5 transition-colors duration-200",
                 darkTheme ? "text-pearl hover:text-white" : "text-[#333] hover:text-black",

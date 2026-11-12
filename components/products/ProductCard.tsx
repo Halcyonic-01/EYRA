@@ -3,7 +3,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRef, useState, type MouseEvent, type TouchEvent } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useCartDrawer } from "@/store/useCartDrawer";
 import type { Product } from "./types";
 import { useCartStore, useWishlistStore } from "@/store/useStore";
 import { productOfferFor, rupees } from "@/config/offers";
@@ -13,6 +14,8 @@ const SWIPE_MIN_PX = 40;
 
 export function ProductCard({ product }: { product: Product }) {
   const router = useRouter();
+  const pathname = usePathname();
+  const openBag = useCartDrawer((s) => s.open);
   const [imageIndex, setImageIndex] = useState(0);
   const touchStart = useRef<{ x: number; y: number } | null>(null);
   // Set when a swipe just happened, so the link under the finger doesn't navigate.
@@ -208,6 +211,7 @@ export function ProductCard({ product }: { product: Product }) {
               return;
             }
             if (!inCart) addToCart(product, null, product.variantId);
+            openBag(pathname);
           }}
           className={`w-full max-w-[200px] flex items-center justify-center px-5 py-1.5 font-sans font-medium text-[11px] leading-[16px] whitespace-nowrap rounded-full transition-colors duration-200 ${inCart
               ? "bg-black text-white"

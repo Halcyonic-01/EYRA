@@ -3,7 +3,8 @@
 import { percentOff as discountPercent } from "@/lib/discount";
 import { useEffect, useMemo, useState, useRef } from "react";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useCartDrawer } from "@/store/useCartDrawer";
 import type { DetailProduct } from "@/lib/products";
 import { useCartStore, useWishlistStore } from "@/store/useStore";
 import { SIZE_CHART } from "@/lib/sizing";
@@ -183,6 +184,8 @@ export function ProductDetailClient({
   policy: ProductPolicy;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
+  const openBag = useCartDrawer((s) => s.open);
   const [activeImage, setActiveImage] = useState(0);
   // A size as written in Medusa ("7", "7.5", "S"). A product with only one size has it picked already.
   const [pickedSize, setSelectedSize] = useState<string | null>(() =>
@@ -674,10 +677,12 @@ export function ProductDetailClient({
                 </button>
                 <button
                   onClick={() => {
-                    if (inCart) return;
-                    const chosen = resolveVariantId();
-                    if (chosen === null) return; // no size picked yet
-                    addToCart(product, hasSizes ? selectedSize : null, chosen, sellQuantity);
+                    if (!inCart) {
+                      const chosen = resolveVariantId();
+                      if (chosen === null) return; // no size picked yet
+                      addToCart(product, hasSizes ? selectedSize : null, chosen, sellQuantity);
+                    }
+                    openBag(pathname);
                   }}
                   className={`flex-1 flex items-center justify-center px-6 sm:px-8 py-4 font-sans font-medium text-[15px] tracking-wide leading-[20px] whitespace-nowrap rounded-full border transition-colors duration-200 ${
                     inCart
