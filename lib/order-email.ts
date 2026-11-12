@@ -73,7 +73,7 @@ async function fetchOrderForEmail(orderId: string): Promise<OrderForEmail | null
     ].join(",");
     const res = await fetch(
       `${BASE_URL}/admin/orders/${orderId}?fields=${fields}`,
-      { headers: adminHeaders(), cache: "no-store" }
+      { headers: adminHeaders(), cache: "no-store", signal: AbortSignal.timeout(15000) }
     );
     if (!res.ok) {
       console.error(`[order-email] order fetch ${res.status}, ${orderId}`);
@@ -87,17 +87,32 @@ async function fetchOrderForEmail(orderId: string): Promise<OrderForEmail | null
   }
 }
 
-async function markConfirmationEmailSent(orderId: string): Promise<void> {
+type EmailGate = "claimed" | "already_sent" | "busy" | "unavailable";
+
+/**
+ * The backend's once-only gate for the confirmation email: one atomic claim,
+ * then "sent" or "release". Verify and the webhook can both reach here for the
+ * same order, at the same moment; only one claim wins.
+ */
+async function emailGate(orderId: string, action: "claim" | "sent" | "release"): Promise<EmailGate> {
   try {
-    await fetch(`${BASE_URL}/admin/orders/${orderId}`, {
+    const res = await fetch(`${BASE_URL}/admin/orders/${orderId}/confirmation-email`, {
       method: "POST",
       headers: adminHeaders(),
-      body: JSON.stringify({ metadata: { confirmation_email_sent: true } }),
+      body: JSON.stringify({ action }),
+      cache: "no-store",
+      signal: AbortSignal.timeout(15000),
     });
+    if (!res.ok) {
+      console.error(`[order-email] email ${action} ${res.status} for ${orderId}`);
+      return "unavailable";
+    }
+    const body = (await res.json()) as { claimed?: boolean; already_sent?: boolean };
+    if (body.claimed) return "claimed";
+    return body.already_sent ? "already_sent" : "busy";
   } catch (err) {
-    // Non-fatal: worst case is a duplicate email if this order is somehow
-    // completed again, which the caller-side idempotency mostly prevents.
-    console.error("[order-email] failed to mark sent for", orderId, ":", err);
+    console.error(`[order-email] email ${action} failed for ${orderId}:`, err);
+    return "unavailable";
   }
 }
 
@@ -226,12 +241,27 @@ function renderOrderEmail(order: OrderForEmail): string {
   `;
 }
 
-export async function sendOrderConfirmationEmail(orderId: string): Promise<void> {
-  if (!ADMIN_KEY) return;
+/**
+ * - sent / already_sent: nothing more to do
+ * - busy: another request holds the claim and is sending it now
+ * - failed: could not send (or reach the backend); safe to try again later
+ * - skipped: email is not configured, or the order has no email address
+ */
+export type ConfirmationEmailResult = "sent" | "already_sent" | "busy" | "failed" | "skipped";
+
+export async function sendOrderConfirmationEmail(orderId: string): Promise<ConfirmationEmailResult> {
+  if (!ADMIN_KEY) return "skipped";
+  // Nothing would be sent, so do not take (and then hand back) the claim.
+  if (!process.env.RESEND_API_KEY || process.env.EMAIL_MODE?.trim().toLowerCase() === "off") return "skipped";
 
   const order = await fetchOrderForEmail(orderId);
-  if (!order || !order.email) return;
-  if (order.metadata?.confirmation_email_sent) return;
+  if (!order) return "failed";
+  if (!order.email) return "skipped";
+  if (order.metadata?.confirmation_email_sent) return "already_sent";
+
+  const gate = await emailGate(orderId, "claim");
+  if (gate === "already_sent" || gate === "busy") return gate;
+  if (gate === "unavailable") return "failed";
 
   const sent = await sendEmail({
     to: order.email,
@@ -240,5 +270,12 @@ export async function sendOrderConfirmationEmail(orderId: string): Promise<void>
     from: process.env.ORDER_EMAIL_FROM ?? "EYRA Orders <orders@eyra.org.in>",
   });
 
-  if (sent) await markConfirmationEmailSent(orderId);
+  // A crash between sending and this mark lets the claim expire and the email
+  // go again on a later retry: at least once, never silently dropped.
+  if (sent) {
+    await emailGate(orderId, "sent");
+    return "sent";
+  }
+  await emailGate(orderId, "release");
+  return "failed";
 }

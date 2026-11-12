@@ -2,9 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { rememberCartForRazorpayOrder } from "@/lib/razorpay-store";
 import {
   prepareCartForCheckout,
-  createPaymentCollection,
-  initPaymentSession,
   fetchCartSnapshot,
+  startRazorpayCheckout,
   type CheckoutShippingAddress,
 } from "@/lib/medusa-order";
 import { syncWalletForCheckout } from "@/lib/medusa-wallet";
@@ -63,41 +62,36 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Step 2, create (or reuse) the payment collection for this cart
-    const collectionId = await createPaymentCollection(cartId);
-
-    if (!collectionId) {
+    // Step 2, open the Razorpay payment. The backend reprices the cart to
+    // today's prices and records what this payment is for, so the customer
+    // keeps that price even if a sale ends while they pay. The amount and the
+    // Razorpay order both come from the backend, never from the browser.
+    const started = await startRazorpayCheckout(cartId);
+    if (!started.ok) {
+      // A 4xx is the backend saying no (prices changed, already paid); say why.
+      const refused = started.status >= 400 && started.status < 500;
       return NextResponse.json(
-        { razorpayOrderId: null, error: "payment_collection_failed" },
+        {
+          razorpayOrderId: null,
+          error: refused ? "checkout_refused" : "payment_session_failed",
+          message: refused ? started.message : undefined,
+        },
         { status: 200 }
       );
     }
-
-    // Step 3, initialize a Razorpay payment session on the collection
-    const collection = await initPaymentSession(collectionId, "pp_razorpay_razorpay");
-    const session = collection?.payment_sessions?.find(
-      (s) => s.provider_id === "pp_razorpay_razorpay"
-    );
-
-    // The Razorpay order_id lives at session.data.razorpayOrder.id (confirmed
-    // against the plugin's actual response shape, not session.data.id).
-    const razorpayOrder = session?.data?.razorpayOrder as { id?: unknown } | undefined;
-    const razorpayOrderId =
-      typeof razorpayOrder?.id === "string" ? razorpayOrder.id : null;
+    const razorpayOrderId = started.razorpayOrderId;
 
     // Bind the Razorpay order to this cart while both IDs are server-derived.
     // /api/razorpay/webhook relies on this to recover an order when the
     // customer's browser never makes it back to /api/razorpay/verify.
-    if (razorpayOrderId) {
-      await rememberCartForRazorpayOrder(razorpayOrderId, cartId);
-    }
+    await rememberCartForRazorpayOrder(razorpayOrderId, cartId);
 
     return NextResponse.json({
       razorpayOrderId,
-      collectionId,
-      sessionId: session?.id ?? null,
+      collectionId: started.collectionId,
+      sessionId: started.sessionId,
       // What Razorpay will actually charge, after any wallet credit.
-      amount: collection?.amount ?? snapshot?.total ?? null,
+      amount: started.amount,
     });
   } catch (err) {
     console.error("[razorpay/create-order]", err);
