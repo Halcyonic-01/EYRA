@@ -1,5 +1,6 @@
 "use client";
 
+import { Stars } from "@/components/reviews/Stars";
 import { percentOff as discountPercent } from "@/lib/discount";
 import { useEffect, useMemo, useState, useRef } from "react";
 import Image from "next/image";
@@ -20,17 +21,6 @@ const SINGLE = "Single";
 const PAIR = "Pair";
 
 /* ── Inline SVG icons ────────────────────────────── */
-
-function StarIcon({ filled }: { filled: boolean }) {
-  return (
-    <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
-      <path
-        d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
-        fill={filled ? "#F2C822" : "#E5E5E5"}
-      />
-    </svg>
-  );
-}
 
 function ShareIcon() {
   return (
@@ -178,9 +168,12 @@ export interface ProductPolicy {
 export function ProductDetailClient({
   product,
   policy,
+  reviewSummary = null,
 }: {
   product: DetailProduct;
   policy: ProductPolicy;
+  /** From approved customer reviews only. */
+  reviewSummary?: { average: number; count: number } | null;
 }) {
   const router = useRouter();
   const [activeImage, setActiveImage] = useState(0);
@@ -457,19 +450,17 @@ export function ProductDetailClient({
                   </p>
                 )}
 
-                {/* Star rating: only once there are reviews to show */}
-                {product.reviewCount > 0 && (
-                  <div className="flex items-center gap-[2px] mt-1">
+                {/* Star rating: only from approved customer reviews, and only once there are some */}
+                {reviewSummary && reviewSummary.count > 0 && (
+                  <a href="#reviews" className="flex items-center gap-[2px] mt-1 w-fit group">
                     <span className="font-sans font-normal text-[16px] text-black mr-1">
-                      {product.rating}/5
+                      {reviewSummary.average.toFixed(1)}/5
                     </span>
-                    {Array.from({ length: 5 }, (_, i) => (
-                      <StarIcon key={i} filled={i < Math.round(product.rating)} />
-                    ))}
-                    <span className="ml-2 font-sans font-normal text-[13px] text-[#909090]">
-                      ({product.reviewCount} reviews)
+                    <Stars value={reviewSummary.average} size={16} />
+                    <span className="ml-2 font-sans font-normal text-[13px] text-[#909090] group-hover:text-black group-hover:underline underline-offset-2">
+                      ({reviewSummary.count} {reviewSummary.count === 1 ? "review" : "reviews"})
                     </span>
-                  </div>
+                  </a>
                 )}
 
                 {/* Price row: current price bold, MRP muted beside it */}

@@ -14,12 +14,15 @@ import {
   renderOrderShipped,
   renderPromotion,
   renderRefundProcessed,
+  renderReviewReminder,
+  renderReviewRequest,
   renderWelcomeOffer,
   type OrderDeliveredEmail,
   type OrderShippedEmail,
   type PromotionEmail,
   type RefundProcessedEmail,
   type Rendered,
+  type ReviewRequestEmail,
   type WelcomeOfferEmail,
 } from "@/lib/customer-email-templates";
 import { unsubscribeUrl } from "@/lib/unsubscribe-token";
@@ -43,6 +46,10 @@ function transactional(to: Common, rendered: Rendered): Promise<boolean> {
 export const sendOrderShippedEmail = (p: Common & OrderShippedEmail) => transactional(p, renderOrderShipped(p));
 
 export const sendOrderDeliveredEmail = (p: Common & OrderDeliveredEmail) => transactional(p, renderOrderDelivered(p));
+
+export const sendReviewRequestEmail = (p: Common & ReviewRequestEmail) => transactional(p, renderReviewRequest(p));
+
+export const sendReviewReminderEmail = (p: Common & ReviewRequestEmail) => transactional(p, renderReviewReminder(p));
 
 export const sendRefundProcessedEmail = (p: Common & RefundProcessedEmail) => transactional(p, renderRefundProcessed(p));
 

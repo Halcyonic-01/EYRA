@@ -7,6 +7,8 @@ import { CtaBanner } from "@/components/home/CtaBanner";
 import { NewsletterBanner } from "@/components/home/NewsletterBanner";
 import { getProducts, getProductByHandle, getSimilarProducts } from "@/lib/medusa";
 import { storeConfig } from "@/config/storeConfig";
+import { ProductReviews } from "@/components/reviews/ProductReviews";
+import { getProductReviews } from "@/lib/reviews";
 
 // The root layout reads request headers, so this page is always rendered on
 // demand. Say so explicitly: prerendering it on Vercel fails with
@@ -38,21 +40,38 @@ export default async function ProductDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [product, similar] = await Promise.all([
+  const [product, similar, reviews] = await Promise.all([
     getProductByHandle(id),
     getSimilarProducts(id, 8),
+    getProductReviews(id),
   ]);
   if (!product) notFound();
+  // Ratings come only from approved customer reviews; with none, no rating is shown or claimed.
+  const ratingSchema =
+    reviews && reviews.summary.count > 0
+      ? {
+          "@context": "https://schema.org",
+          "@type": "Product",
+          name: product.name,
+          aggregateRating: { "@type": "AggregateRating", ratingValue: reviews.summary.average, reviewCount: reviews.summary.count, bestRating: 5, worstRating: 1 },
+        }
+      : null;
 
   return (
     <>
+      {ratingSchema && (
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(ratingSchema).replace(/</g, "\\u003c") }} />
+      )}
       <ProductDetailClient
         product={product}
+        reviewSummary={reviews ? { average: reviews.summary.average, count: reviews.summary.count } : null}
         policy={{
           returnDays: storeConfig.policy.returnDays,
           exchangeDays: storeConfig.policy.exchangeDays,
         }}
       />
+
+      <ProductReviews handle={id} initial={reviews} />
 
       {/* ── Similar products ─────────────────────── */}
       <section className="bg-white py-16">

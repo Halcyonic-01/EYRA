@@ -181,3 +181,97 @@ export function renderPromotion(params: PromotionEmail): Rendered {
     ),
   };
 }
+
+/* ── Review requests ──────────────────────────────────────── */
+
+export interface ReviewEmailProduct {
+  title: string;
+  variant?: string | null;
+  thumbnail?: string | null;
+}
+
+export interface ReviewRequestEmail {
+  firstName?: string | null;
+  orderNumber: number;
+  /** The customer's own review link, made by the backend. */
+  reviewUrl: string;
+  products: ReviewEmailProduct[];
+}
+
+/** The review page link with a star rating already chosen, so one tap starts the review. */
+export const ratedLink = (reviewUrl: string, stars: number): string => {
+  const url = new URL(reviewUrl);
+  url.searchParams.set("r", String(stars));
+  return url.toString();
+};
+
+const productList = (products: ReviewEmailProduct[]): string => {
+  const rows = products
+    .slice(0, 4)
+    .map((product) => {
+      // Only images on a secure address are shown; email clients block the rest anyway.
+      const image =
+        product.thumbnail && product.thumbnail.startsWith("https://")
+          ? `<img src="${escapeHtml(product.thumbnail)}" width="56" height="56" alt="" style="display:block;border-radius:8px;object-fit:cover;background:${COLOR.ivory};">`
+          : "";
+      return `
+            <tr>
+              <td width="64" style="padding:8px 0;vertical-align:middle;">${image}</td>
+              <td style="padding:8px 0;vertical-align:middle;font-family:${FONT};font-size:14px;color:${COLOR.jet};">
+                ${escapeHtml(product.title)}${product.variant ? `<div style="font-size:12px;color:${COLOR.stone};">${escapeHtml(product.variant)}</div>` : ""}
+              </td>
+            </tr>`;
+    })
+    .join("");
+  return details(rows);
+};
+
+const starRow = (reviewUrl: string): string => {
+  const stars = [1, 2, 3, 4, 5]
+    .map(
+      (n) =>
+        `<a href="${escapeHtml(ratedLink(reviewUrl, n))}" aria-label="${n} star${n > 1 ? "s" : ""}" style="font-size:32px;line-height:32px;color:${COLOR.jet};text-decoration:none;padding:0 4px;">&#9734;</a>`
+    )
+    .join("");
+  return `
+      <tr>
+        <td style="padding:24px 40px 0 40px;text-align:center;">
+          <div style="font-family:${FONT};font-size:13px;color:${COLOR.ash};margin-bottom:8px;">Tap a star to start</div>
+          ${stars}
+        </td>
+      </tr>`;
+};
+
+export function renderReviewRequest(params: ReviewRequestEmail): Rendered {
+  const first = params.products[0]?.title ?? "your order";
+  return {
+    subject: `How are you finding your ${first}?`,
+    html: shell(
+      heading(
+        "How are you finding it?",
+        `${hello(params.firstName)}<br>Your EYRA order #${params.orderNumber} has arrived. We would love to hear what you think, good or bad. It takes a minute, and you can add photos.`
+      ) +
+        productList(params.products) +
+        starRow(params.reviewUrl) +
+        cta(escapeHtml(params.reviewUrl), "Write a review") +
+        note("Your review is checked before it is published and shows with a Verified purchase badge. This link is just for you and works once.")
+    ),
+  };
+}
+
+export function renderReviewReminder(params: ReviewRequestEmail): Rendered {
+  const first = params.products[0]?.title ?? "your order";
+  return {
+    subject: `A minute to review your ${first}?`,
+    html: shell(
+      heading(
+        "Still time to share your thoughts",
+        `${hello(params.firstName)}<br>A few days ago your EYRA order #${params.orderNumber} arrived. If you have a moment, tell other shoppers how it is wearing.`
+      ) +
+        productList(params.products) +
+        starRow(params.reviewUrl) +
+        cta(escapeHtml(params.reviewUrl), "Write a review") +
+        note("This is the only reminder we will send about this order.")
+    ),
+  };
+}

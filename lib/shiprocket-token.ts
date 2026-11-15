@@ -6,11 +6,15 @@
  */
 import "server-only";
 
+import { loginAllowed, loginFailureHint } from "@/lib/shiprocket-backoff";
+
 const SHIPROCKET_BASE = "https://apiv2.shiprocket.in/v1/external";
 /** Renew well inside the ten days, in case the clocks differ. */
 const LIFETIME_MS = 8 * 24 * 60 * 60 * 1000;
 
 let cached: { token: string; expiresAt: number } | null = null;
+/** When the last sign-in was refused or failed; see lib/shiprocket-backoff.ts. */
+let failedAt: number | null = null;
 
 export function hasShiprocketLogin(): boolean {
   return Boolean(process.env.SHIPROCKET_EMAIL && process.env.SHIPROCKET_PASSWORD);
@@ -26,13 +30,16 @@ async function login(): Promise<string | null> {
       signal: AbortSignal.timeout(15000),
     });
     if (!res.ok) {
-      console.error("[shiprocket-token] login answered", res.status);
+      failedAt = Date.now();
+      // A warning, not an error: a refused sign-in is a settings problem, and the static token is still tried.
+      console.warn(`[shiprocket-token] login answered ${res.status}. ${loginFailureHint(res.status)}`);
       return null;
     }
     const body = (await res.json()) as { token?: string };
     return typeof body.token === "string" && body.token ? body.token : null;
   } catch (err) {
-    console.error("[shiprocket-token] login failed:", err);
+    failedAt = Date.now();
+    console.warn("[shiprocket-token] login failed:", err instanceof Error ? err.message : err, "Falling back to SHIPROCKET_API_TOKEN, and not asking again for 5 minutes.");
     return null;
   }
 }
@@ -41,10 +48,13 @@ async function login(): Promise<string | null> {
 export async function getShiprocketToken(forceRefresh = false): Promise<string | null> {
   if (hasShiprocketLogin()) {
     if (!forceRefresh && cached && cached.expiresAt > Date.now()) return cached.token;
-    const token = await login();
-    if (token) {
-      cached = { token, expiresAt: Date.now() + LIFETIME_MS };
-      return token;
+    if (loginAllowed(failedAt, Date.now())) {
+      const token = await login();
+      if (token) {
+        failedAt = null;
+        cached = { token, expiresAt: Date.now() + LIFETIME_MS };
+        return token;
+      }
     }
   }
   return process.env.SHIPROCKET_API_TOKEN || null;

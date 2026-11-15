@@ -9,7 +9,12 @@
  * published API and have not been run against the live services.
  */
 
-export type WhatsappTemplate = "store_credit_issued" | "exchange_payment_link" | "replacement_dispatched";
+export type WhatsappTemplate =
+  | "store_credit_issued"
+  | "exchange_payment_link"
+  | "replacement_dispatched"
+  | "review_request"
+  | "review_reminder";
 
 export interface WhatsappMessage {
   template: WhatsappTemplate;
@@ -26,18 +31,24 @@ export const TEMPLATE_PARAMS: Record<WhatsappTemplate, readonly string[]> = {
   store_credit_issued: ["name", "amount", "valid_until", "credit_note", "order"],
   exchange_payment_link: ["name", "amount", "link", "order"],
   replacement_dispatched: ["name", "order", "title"],
+  review_request: ["name", "product", "link"],
+  review_reminder: ["name", "product", "link"],
 };
 
 const DEFAULT_TEMPLATE_NAMES: Record<WhatsappTemplate, string> = {
   store_credit_issued: "eyra_store_credit_issued",
   exchange_payment_link: "eyra_exchange_payment_link",
   replacement_dispatched: "eyra_replacement_dispatched",
+  review_request: "eyra_review_request",
+  review_reminder: "eyra_review_reminder",
 };
 
 const ENV_TEMPLATE_NAMES: Record<WhatsappTemplate, string> = {
   store_credit_issued: "WHATSAPP_TEMPLATE_STORE_CREDIT",
   exchange_payment_link: "WHATSAPP_TEMPLATE_EXCHANGE_LINK",
   replacement_dispatched: "WHATSAPP_TEMPLATE_REPLACEMENT",
+  review_request: "WHATSAPP_TEMPLATE_REVIEW_REQUEST",
+  review_reminder: "WHATSAPP_TEMPLATE_REVIEW_REMINDER",
 };
 
 export function templateName(template: WhatsappTemplate, env: Env): string {
@@ -56,10 +67,14 @@ export function templateValues(message: WhatsappMessage): string[] {
 
 export type Provider = "wati" | "aisensy";
 
+/**
+ * The provider named by WHATSAPP_PROVIDER. With none named, AiSensy is used
+ * when its key is set (the default for new setups); WATI only when chosen.
+ */
 export function providerFrom(env: Env): Provider | null {
   const chosen = env.WHATSAPP_PROVIDER?.trim().toLowerCase();
-  if (chosen === "wati" && env.WATI_API_URL && env.WATI_ACCESS_TOKEN) return "wati";
-  if (chosen === "aisensy" && env.AISENSY_API_KEY) return "aisensy";
+  if (chosen === "wati") return env.WATI_API_URL && env.WATI_ACCESS_TOKEN ? "wati" : null;
+  if (chosen === "aisensy" || !chosen) return env.AISENSY_API_KEY?.trim() ? "aisensy" : null;
   return null;
 }
 

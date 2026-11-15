@@ -7,8 +7,11 @@ import {
   sendOrderShippedEmail,
   sendPromotionEmail,
   sendRefundProcessedEmail,
+  sendReviewReminderEmail,
+  sendReviewRequestEmail,
   sendWelcomeOfferEmail,
 } from "@/lib/customer-email";
+import { reviewLinkAllowed } from "@/lib/review-links";
 import { sendOrderCancelledEmail, sendRequestRejectedEmail, sendWalletCreditEmail } from "@/lib/wallet-email";
 
 function safeEqual(a: string, b: string): boolean {
@@ -54,6 +57,9 @@ interface NotifyBody {
   message?: string;
   cta_label?: string;
   cta_url?: string;
+  // review_request, review_reminder
+  review_url?: string;
+  products?: { title?: unknown; variant?: unknown; thumbnail?: unknown }[];
   /** Set by the backend on updates that must go out once; passed on to Resend. */
   idempotency_key?: string;
 }
@@ -162,6 +168,30 @@ export async function POST(req: NextRequest) {
       body.type === "order_shipped"
         ? await sendOrderShippedEmail({ ...common, awb: body.awb ?? null, courier: body.courier ?? null })
         : await sendOrderDeliveredEmail(common);
+    return Response.json({ sent });
+  }
+
+  if (body.type === "review_request" || body.type === "review_reminder") {
+    if (typeof body.order_number !== "number" || typeof body.review_url !== "string" || !reviewLinkAllowed(body.review_url)) {
+      return Response.json({ error: "order_number and a review_url on this site are required." }, { status: 400 });
+    }
+    const products = (Array.isArray(body.products) ? body.products : [])
+      .filter((p) => p && typeof p.title === "string")
+      .slice(0, 6)
+      .map((p) => ({
+        title: String(p.title).slice(0, 120),
+        variant: typeof p.variant === "string" ? p.variant.slice(0, 80) : null,
+        thumbnail: typeof p.thumbnail === "string" ? p.thumbnail : null,
+      }));
+    const params = {
+      email: body.email,
+      firstName: body.first_name,
+      orderNumber: body.order_number,
+      reviewUrl: body.review_url,
+      products,
+      idempotencyKey: body.idempotency_key,
+    };
+    const sent = body.type === "review_request" ? await sendReviewRequestEmail(params) : await sendReviewReminderEmail(params);
     return Response.json({ sent });
   }
 

@@ -56,6 +56,12 @@ const nextConfig: NextConfig = {
     // added through MEDUSA_IMAGE_HOSTS, not by allowing every bucket on S3.
     remotePatterns: imageRemotePatterns(process.env),
 
+    // Next refuses to fetch from a private address such as localhost, so locally
+    // uploaded images (Medusa's /static on :9000) would not load in development.
+    // Only development gets this; production images come from S3 behind
+    // media.eyra.org.in, and remotePatterns above still limits what can be fetched.
+    dangerouslyAllowLocalIP: process.env.NODE_ENV !== "production",
+
     // Cache each optimized image for 24 hours on Vercel's CDN edge.
     // The default is 60 s; a higher value dramatically reduces the number of
     // re-optimization calls counted against Vercel's image transformation quota.
