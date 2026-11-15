@@ -1,7 +1,6 @@
 "use client";
 
 import { percentOff } from "@/lib/discount";
-import { useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { lineKey, useCartStore, useWishlistStore } from "@/store/useStore";
@@ -9,6 +8,7 @@ import { COD_CHARGE, rupees } from "@/config/offers";
 import { ToteLine, ToteOffer } from "@/components/offers/ToteOffer";
 import { ProductOffers } from "@/components/offers/ProductOffers";
 import { PromoCodeBox } from "@/components/cart/PromoCodeBox";
+import { useCartTotals } from "@/lib/cart-totals";
 
 function TrashIcon() {
   return (
@@ -63,36 +63,9 @@ export function CartClient() {
     removeFromCart(lineKey(item));
   }
 
-  // Units, not cart lines. The checkout sidebar counts the same way, so a cart
-  // holding one product at quantity 3 no longer says "1 item" here and
-  // "3 items" on the very next screen.
-  const totalQty = items.reduce((n, i) => n + i.quantity, 0);
-
-  // Server-authoritative totals, fall back to a client-side subtotal estimate
-  // only when the Medusa cart hasn't synced yet (no variantIds or pending sync).
-  const totals = useMemo(() => {
-    if (serverTotals) {
-      return {
-        subtotal: serverTotals.subtotal,
-        discount: serverTotals.discountTotal,
-        delivery: serverTotals.shippingTotal,
-        tax: serverTotals.taxTotal,
-        // What a prepaid order costs: the items less any discount. Cash on
-        // Delivery adds its own charge at checkout, so it is not in this number.
-        total: serverTotals.subtotal - serverTotals.discountTotal,
-        isEstimate: false,
-      };
-    }
-    const clientSubtotal = items.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0);
-    return {
-      subtotal: clientSubtotal,
-      discount: 0,
-      delivery: 0,
-      tax: 0,
-      total: clientSubtotal,
-      isEstimate: true,
-    };
-  }, [serverTotals, items]);
+  // Units, not cart lines, so this agrees with checkout. Totals are shared with the slide-out bag.
+  const totals = useCartTotals();
+  const totalQty = totals.quantity;
 
   if (items.length === 0) {
     return (

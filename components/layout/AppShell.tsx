@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { useCartStore, useWishlistStore } from "@/store/useStore";
+import { CartDrawer } from "@/components/cart/CartDrawer";
 
 /**
  * Navbar and CartSyncBanner are themselves "use client" components, so
@@ -66,6 +67,7 @@ export function AppShell({
       </main>
       {footer}
       {cartSyncBanner}
+      <CartDrawer />
     </>
   );
 }

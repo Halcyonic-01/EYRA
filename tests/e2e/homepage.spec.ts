@@ -16,8 +16,12 @@ test("homepage loads with nav and branding", async ({ page }) => {
 test("nav links to cart, wishlist, and products work", async ({ page }) => {
   await page.goto("/");
 
-  await page.getByRole("link", { name: "Cart" }).click();
-  await expect(page).toHaveURL(/\/cart$/);
+  // The bag icon opens the slide-out bag over the page; the link itself still points at /cart.
+  const cart = page.getByRole("link", { name: "Cart" });
+  await expect(cart).toHaveAttribute("href", "/cart");
+  await cart.click();
+  await expect(page.getByRole("dialog", { name: "Your bag" })).toBeVisible();
+  await expect(page).toHaveURL(/\/$/);
 
   await page.goto("/");
   await page.getByRole("link", { name: "Wishlist" }).click();
