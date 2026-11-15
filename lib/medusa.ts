@@ -9,6 +9,7 @@
  * static mock data in lib/products.ts so the UI remains fully functional.
  */
 
+import { rankSimilar } from "@/lib/similar-products";
 import type { Audience, Product, ProductChoice, ProductVariant } from "@/components/products/types";
 import { originalFor } from "@/lib/discount";
 import { canonicalProductType } from "@/lib/product-type";
@@ -495,8 +496,9 @@ export async function getProductByHandle(handle: string): Promise<DetailProduct 
 }
 
 /**
- * Return up to `limit` products that are similar to the given one.
- * Same product type is shown first; other types fill the remainder.
+ * Return up to `limit` products that are similar to the given one: the same
+ * type and gender first, then other designs, never leading with the other
+ * gender's pieces. See `rankSimilar`.
  */
 export async function getSimilarProducts(
   handle: string,
@@ -509,11 +511,7 @@ export async function getSimilarProducts(
 
   if (!current) return all.slice(0, limit);
 
-  const others = all.filter((p) => p.id !== handle);
-  const sameType = others.filter((p) => p.type === current.type);
-  const rest = others.filter((p) => p.type !== current.type);
-
-  return [...sameType, ...rest].slice(0, limit);
+  return rankSimilar(current, all, limit);
 }
 
 /* ── Exchange options ─────────────────────────────────────── */
