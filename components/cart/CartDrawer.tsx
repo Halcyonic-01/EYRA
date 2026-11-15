@@ -65,12 +65,12 @@ export function CartDrawer() {
         aria-modal="true"
         aria-label="Your bag"
         tabIndex={-1}
-        className="absolute inset-x-0 bottom-0 top-12 flex flex-col rounded-t-3xl bg-white shadow-[0_-20px_60px_rgba(0,0,0,0.2)] outline-none animate-[drawer-up_260ms_cubic-bezier(.2,.8,.2,1)] sm:inset-y-0 sm:left-auto sm:right-0 sm:top-0 sm:w-[440px] sm:rounded-none sm:shadow-[-20px_0_60px_rgba(0,0,0,0.18)] sm:animate-[drawer-in_260ms_cubic-bezier(.2,.8,.2,1)]"
+        className="absolute inset-x-0 bottom-0 top-12 flex flex-col rounded-t-3xl bg-white shadow-[0_-20px_60px_rgba(0,0,0,0.2)] outline-none animate-[drawer-up_260ms_cubic-bezier(.2,.8,.2,1)] sm:inset-y-0 sm:left-auto sm:right-0 sm:top-0 sm:w-[500px] sm:max-w-full lg:w-[600px] sm:rounded-none sm:shadow-[-20px_0_60px_rgba(0,0,0,0.18)] sm:animate-[drawer-in_260ms_cubic-bezier(.2,.8,.2,1)]"
       >
         <div className="mx-auto mt-2.5 h-[5px] w-11 rounded-full bg-[#D6D6D6] sm:hidden" aria-hidden="true" />
 
         {/* Header */}
-        <div className="flex items-center justify-between px-5 pb-3 pt-3 sm:px-7 sm:pt-6">
+        <div className="flex items-center justify-between px-5 pb-3 pt-3 sm:px-7 sm:pt-6 lg:px-10 lg:pt-8">
           <h2 className="font-display text-[28px] font-medium leading-none text-black">
             Your bag
             <span className="ml-2 font-sans text-[13px] font-normal text-[#909090]">
@@ -93,7 +93,7 @@ export function CartDrawer() {
           <>
             <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
               <ToteProgress subtotal={totals.subtotal} inCart={toteInCart} />
-              <ul className="px-5 sm:px-7">
+              <ul className="px-5 sm:px-7 lg:px-10">
                 {items.map((item) => (
                   <DrawerLine key={lineKey(item)} item={item} />
                 ))}
@@ -102,7 +102,7 @@ export function CartDrawer() {
             </div>
 
             {/* Footer: always in view */}
-            <div className="border-t border-[#E4E4E4] bg-white px-5 pb-6 pt-4 sm:px-7">
+            <div className="border-t border-[#E4E4E4] bg-white px-5 pb-6 pt-4 sm:px-7 lg:px-10 lg:pb-8 lg:pt-5">
               {code && totals.discount > 0 && (
                 <div className="mb-3 flex items-center justify-between rounded-xl bg-[#EDF6EF] px-3 py-2.5 font-sans text-[13px] text-black">
                   <span className="flex items-center gap-2">
@@ -182,7 +182,7 @@ function ToteProgress({ subtotal, inCart }: { subtotal: number; inCart: boolean 
   const qualifies = qualifiesForTote(subtotal);
   const progress = qualifies ? 1 : Math.min(1, subtotal / (TOTE_MIN_SUBTOTAL + 1));
   return (
-    <div className="mx-5 mb-1 rounded-xl bg-[#F9F9F9] px-4 py-3.5 sm:mx-7" role="status">
+    <div className="mx-5 mb-1 rounded-xl bg-[#F9F9F9] px-4 py-3.5 sm:mx-7 lg:mx-10 lg:px-5 lg:py-4" role="status">
       <div className="flex items-center justify-between gap-3 font-sans text-[12.5px] text-black">
         <span className="flex items-center gap-2">
           <Gift size={14} strokeWidth={1.75} aria-hidden="true" />
@@ -215,12 +215,12 @@ function DrawerLine({ item }: { item: CartItem }) {
   const image = item.product.images[0];
 
   return (
-    <li className="grid grid-cols-[76px_1fr_auto] gap-4 border-b border-[#E4E4E4] py-4 sm:grid-cols-[84px_1fr_auto]">
+    <li className="grid grid-cols-[76px_1fr_auto] gap-4 border-b border-[#E4E4E4] py-4 sm:grid-cols-[84px_1fr_auto] lg:grid-cols-[104px_1fr_auto] lg:gap-5 lg:py-5">
       <Link
         href={`/products/${item.product.id}`}
         aria-hidden="true"
         tabIndex={-1}
-        className="relative h-[88px] w-[76px] overflow-hidden rounded-[10px] bg-[#F9F9F9] sm:h-24 sm:w-[84px]"
+        className="relative h-[88px] w-[76px] overflow-hidden rounded-[10px] bg-[#F9F9F9] sm:h-24 sm:w-[84px] lg:h-[116px] lg:w-[104px]"
       >
         {image && <Image src={image} alt="" fill sizes="84px" className="object-contain p-1.5 mix-blend-multiply" />}
       </Link>
@@ -293,7 +293,7 @@ function Suggestions({ inBag }: { inBag: string[] }) {
   if (products.length === 0) return null;
 
   return (
-    <section className="px-5 pb-5 pt-5 sm:px-7" aria-label="Pairs well with">
+    <section className="px-5 pb-5 pt-5 sm:px-7 lg:px-10 lg:pb-7 lg:pt-6" aria-label="Pairs well with">
       <h3 className="mb-3 font-sans text-[11px] font-medium uppercase tracking-[0.22em] text-[#909090]">Pairs well with</h3>
       <ul className="grid grid-cols-1 gap-2.5 min-[380px]:grid-cols-2">
         {products.map((product) => {
