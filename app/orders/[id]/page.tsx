@@ -7,7 +7,7 @@ import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { storeConfig } from "@/config/storeConfig";
-import { listReturnRequests } from "@/lib/medusa-returns";
+import { listReturnRequests, syncExchangePayment } from "@/lib/medusa-returns";
 import { eligibility, reasonLabel, STATUS_LABELS, type ReturnRequestStatus } from "@/lib/return-requests";
 import { getShiprocketToken } from "@/lib/shiprocket-token";
 import CancelOrderPanel from "@/components/orders/CancelOrderPanel";
@@ -300,10 +300,16 @@ function TrackingTimeline({
 
 export default async function OrderDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { id } = await params;
+  // Razorpay brings the customer back here after paying an exchange's difference.
+  const query = await searchParams;
+  const returnedFor = typeof query.exchange === "string" ? query.exchange : null;
+  const razorpayStatus = typeof query.razorpay_payment_link_status === "string" ? query.razorpay_payment_link_status : null;
 
   const user = await getCurrentUser();
   if (!user) redirect("/sign-in");
@@ -322,7 +328,14 @@ export default async function OrderDetailPage({
   const courierName = order.metadata?.courier_name;
   const activities = awbCode ? await fetchTracking(awbCode) : [];
 
-  const requests = (await listReturnRequests(medusaCustomerId, order.id)) ?? [];
+  let requests = (await listReturnRequests(medusaCustomerId, order.id)) ?? [];
+  // An exchange waiting for its payment is checked with Razorpay now, so a payment
+  // made a moment ago shows at once instead of waiting for the webhook.
+  const waitingForPayment = requests.filter((request) => request.status === "pending_fee");
+  if (waitingForPayment.length > 0) {
+    const checked = await Promise.all(waitingForPayment.map((request) => syncExchangePayment(request.id)));
+    if (checked.some(Boolean)) requests = (await listReturnRequests(medusaCustomerId, order.id)) ?? requests;
+  }
   const creditNotes = (await listCreditNotes(order.id)) ?? [];
   // Once a parcel has been delivered, or is coming back to us, it can no longer be cancelled:
   // the return and exchange terms below take over.
@@ -484,7 +497,12 @@ export default async function OrderDetailPage({
                           Exchange for: {request.exchange.replacementTitle}
                         </p>
                       )}
-                      {request.status === "pending_fee" && request.exchange?.feeLinkUrl && (
+                      {request.status === "pending_fee" && returnedFor === request.id && razorpayStatus === "paid" ? (
+                        <p className="mt-2 font-sans text-[12px] text-[#626262]" data-testid="payment-confirming">
+                          Thank you, we have your payment. We are confirming it with the bank, and will book the courier as soon as it is
+                          confirmed. This usually takes a minute: refresh this page to see it.
+                        </p>
+                      ) : request.status === "pending_fee" && request.exchange?.feeLinkUrl && (
                         <a
                           href={request.exchange.feeLinkUrl}
                           target="_blank"
@@ -493,6 +511,26 @@ export default async function OrderDetailPage({
                         >
                           Pay {formatRupees(request.exchange.amountDue ?? 0)} to confirm your exchange
                         </a>
+                      )}
+                      {/* A paid difference is always acknowledged, whatever happens next (the pickup may still be with our team). */}
+                      {request.exchange?.feePaid && !request.exchange.feeRefunded && request.status !== "approved" && (
+                        request.status === "rejected" ? (
+                          // Declined after paying: the refund is on its way (the backend retries until Razorpay takes it).
+                          <p className="mt-1 font-sans text-[12px] text-[#626262]" data-testid="payment-refunding">
+                            The {formatRupees(request.exchange.amountDue ?? 0)} you paid for this exchange is being refunded to your
+                            original payment method.
+                          </p>
+                        ) : (
+                          <p className="mt-1 font-sans text-[12px] text-[#2F7A06]" data-testid="payment-received">
+                            Payment of {formatRupees(request.exchange.amountDue ?? 0)} received. Thank you.
+                          </p>
+                        )
+                      )}
+                      {request.exchange?.feeRefunded && (
+                        <p className="mt-1 font-sans text-[12px] text-[#2F7A06]" data-testid="payment-refunded">
+                          The {formatRupees(request.exchange.amountDue ?? 0)} you paid for this exchange has been refunded to your original
+                          payment method. It can take 5 to 7 working days to show.
+                        </p>
                       )}
                       {request.status === "reverse_pickup_scheduled" && (
                         <p className="mt-1 font-sans text-[12px] text-[#626262]">
