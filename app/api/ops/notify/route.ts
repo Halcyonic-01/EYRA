@@ -467,6 +467,17 @@ export async function POST(req: NextRequest) {
     return Response.json({ received: true, sent: delivery.sent });
   }
 
+  if (body.type === "exchange_refund_failed") {
+    await alert(`An exchange's price difference could not be refunded: order ${orderId}`, [
+      `Medusa order: ${orderId}`,
+      requestLine,
+      `Amount: ₹${Number(body.amount) || 0}`,
+      errorLine,
+      "The exchange was declined (or its payment came in after it closed), so the customer's payment for the difference should go back. Razorpay did not take the refund. The backend tries again every 15 minutes, and a refund is never sent twice. If this keeps coming, refund it from the Razorpay dashboard.",
+    ].filter((line): line is string => Boolean(line)));
+    return Response.json({ received: true, sent: delivery.sent });
+  }
+
   if (body.type === "replacement_stock_not_reserved") {
     await alert(`A replacement order has no stock reserved: ${orderId}`, [
       `Replacement order: ${orderId}`,
