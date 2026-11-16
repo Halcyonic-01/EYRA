@@ -440,15 +440,15 @@ export function ProductDetailClient({
             </div>
 
             {/* Right: Sticky product info */}
-            <div className="w-full lg:flex-1 lg:sticky lg:self-start flex flex-col gap-6" style={{ top: "calc(var(--header-offset) + 2rem)" }}>
+            <div className="w-full lg:flex-1 lg:sticky lg:self-start flex flex-col gap-5 sm:gap-6" style={{ top: "calc(var(--header-offset) + 2rem)" }}>
 
               {/* Identity: name, subtitle, rating, price */}
-              <div className="flex flex-col gap-[7px]">
-                <h1 className="font-sans font-medium text-[20px] leading-[30px] text-black">
+              <div className="flex flex-col gap-1.5">
+                <h1 className="font-sans font-medium text-[18px] sm:text-[20px] leading-[26px] sm:leading-[30px] text-black">
                   {product.name}
                 </h1>
                 {product.description && (
-                  <p className="font-sans font-normal text-sm text-gray-600 leading-relaxed">
+                  <p className="font-sans font-normal text-[13px] sm:text-sm text-gray-600 leading-[20px] sm:leading-relaxed">
                     {product.description}
                   </p>
                 )}
@@ -467,15 +467,15 @@ export function ProductDetailClient({
                 )}
 
                 {/* Price row: current price bold, MRP muted beside it */}
-                <div className="flex items-baseline flex-wrap gap-3 mt-2">
-                  <span className="font-sans font-medium text-[24px] leading-[36px] text-black">
+                <div className="flex items-baseline flex-wrap gap-x-2.5 sm:gap-x-3 gap-y-1 mt-1.5">
+                  <span className="font-sans font-medium text-[22px] sm:text-[24px] leading-[30px] sm:leading-[36px] text-black">
                     ₹{shownPrice.toLocaleString("en-IN")}
                   </span>
-                  <span className="font-sans font-normal text-[18px] leading-[28px] text-[#A3A3A3] line-through">
+                  <span className="font-sans font-normal text-[15px] sm:text-[18px] leading-[22px] sm:leading-[28px] text-[#A3A3A3] line-through">
                     ₹{shownOriginal.toLocaleString("en-IN")}
                   </span>
                   {percentOff > 0 && (
-                    <span className="self-center rounded-md bg-[#E3F6E8] px-2 py-0.5 font-sans text-[13px] font-medium leading-[20px] text-[#1E7A3C]">
+                    <span className="self-center rounded-md bg-[#E3F6E8] px-2 py-0.5 font-sans text-[12px] sm:text-[13px] font-medium leading-[18px] sm:leading-[20px] text-[#1E7A3C]">
                       {percentOff}% off
                     </span>
                   )}
@@ -488,7 +488,7 @@ export function ProductDetailClient({
                     {pairSavingTotal > 0 && ` · You save ₹${pairSavingTotal.toLocaleString("en-IN")}`}
                   </p>
                 )}
-                <p className="font-sans font-normal text-[15px] leading-[22px] text-[#BABABA]">
+                <p className="font-sans font-normal text-[12px] sm:text-[13px] leading-[18px] sm:leading-[20px] text-[#9A9A9A]">
                   Inclusive of all taxes
                 </p>
               </div>
@@ -509,8 +509,8 @@ export function ProductDetailClient({
                 // Single/Pair buttons carry only the name; the price and saving show above.
                 const namesOnly = choice.title === PACK;
                 return (
-                  <div key={choice.title} className="flex flex-col gap-3">
-                    <span className="font-sans font-medium text-[14px] leading-[21px] text-black">
+                  <div key={choice.title} className="flex flex-col gap-2.5">
+                    <span className="font-sans font-medium text-[13px] sm:text-[14px] leading-[20px] sm:leading-[21px] text-black">
                       {choice.title}
                       {selection[choice.title] ? `: ${selection[choice.title]}` : ""}
                     </span>
@@ -559,15 +559,15 @@ export function ProductDetailClient({
 
               {/* Size picker: rings, and any other product with a Size option */}
               {hasSizes && (
-                <div className="flex flex-col gap-3">
+                <div className="flex flex-col gap-2.5">
                   <div className="flex items-center justify-between">
-                    <span className="font-sans font-medium text-[14px] leading-[21px] text-black">
+                    <span className="font-sans font-medium text-[13px] sm:text-[14px] leading-[20px] sm:leading-[21px] text-black">
                       {sizeLabel}{selectedSize ? `: ${selectedSize}` : ""}
                     </span>
                     {product.type === "ring" && (
                       <button
                         onClick={() => setSizeChartOpen(true)}
-                        className="font-sans font-light text-[13px] text-[#626262] underline underline-offset-2 hover:text-black transition-colors duration-200"
+                        className="font-sans font-light text-[12px] sm:text-[13px] text-[#626262] underline underline-offset-2 hover:text-black transition-colors duration-200"
                       >
                         Size chart guide
                       </button>
@@ -589,7 +589,7 @@ export function ProductDetailClient({
                             setSelectedSize(active ? null : size);
                             setSizeRequiredError(false);
                           }}
-                          className={`min-w-[44px] h-11 px-3 rounded-full border font-sans text-[14px] tabular-nums transition-colors duration-150 disabled:cursor-not-allowed disabled:border-[#E6E6E6] disabled:bg-[#F7F7F7] disabled:text-[#B5B5B5] disabled:line-through ${
+                          className={`min-w-[40px] h-10 sm:min-w-[44px] sm:h-11 px-3 rounded-full border font-sans text-[13px] sm:text-[14px] tabular-nums transition-colors duration-150 disabled:cursor-not-allowed disabled:border-[#E6E6E6] disabled:bg-[#F7F7F7] disabled:text-[#B5B5B5] disabled:line-through ${
                             active
                               ? "border-black bg-black text-white"
                               : sizeRequiredError
@@ -614,19 +614,19 @@ export function ProductDetailClient({
               )}
 
               {/* Quantity stepper */}
-              <div className="flex flex-col gap-3">
-                <span className="font-sans font-medium text-[14px] leading-[21px] text-black">Quantity</span>
+              <div className="flex flex-col gap-2.5">
+                <span className="font-sans font-medium text-[13px] sm:text-[14px] leading-[20px] sm:leading-[21px] text-black">Quantity</span>
                 <div className="flex items-center self-start rounded-full border border-[#D4D4D4] bg-white overflow-hidden">
                   <button
                     type="button"
                     aria-label="Decrease quantity"
                     onClick={() => setQuantity(Math.max(1, sellQuantity - 1))}
                     disabled={sellQuantity <= 1}
-                    className="w-11 h-11 flex items-center justify-center text-black hover:bg-[#F7F7F7] disabled:opacity-30 disabled:hover:bg-white transition-colors duration-150"
+                    className="w-10 h-10 sm:w-11 sm:h-11 flex items-center justify-center text-black hover:bg-[#F7F7F7] disabled:opacity-30 disabled:hover:bg-white transition-colors duration-150"
                   >
                     <MinusIcon />
                   </button>
-                  <span className="min-w-[44px] text-center font-sans font-medium text-[15px] tabular-nums text-black" aria-live="polite">
+                  <span className="min-w-[40px] sm:min-w-[44px] text-center font-sans font-medium text-[14px] sm:text-[15px] tabular-nums text-black" aria-live="polite">
                     {sellQuantity}
                   </span>
                   <button
@@ -634,7 +634,7 @@ export function ProductDetailClient({
                     aria-label="Increase quantity"
                     onClick={() => setQuantity(maxQuantity === null ? sellQuantity + 1 : Math.min(sellQuantity + 1, maxQuantity))}
                     disabled={atMaxQuantity}
-                    className="w-11 h-11 flex items-center justify-center text-black hover:bg-[#F7F7F7] disabled:opacity-30 disabled:hover:bg-white transition-colors duration-150"
+                    className="w-10 h-10 sm:w-11 sm:h-11 flex items-center justify-center text-black hover:bg-[#F7F7F7] disabled:opacity-30 disabled:hover:bg-white transition-colors duration-150"
                   >
                     <PlusIcon />
                   </button>
@@ -661,7 +661,7 @@ export function ProductDetailClient({
                     }
                     router.push("/checkout");
                   }}
-                  className="flex-1 flex items-center justify-center px-6 sm:px-8 py-4 bg-black text-white font-sans font-medium text-[15px] tracking-wide leading-[20px] whitespace-nowrap rounded-full hover:bg-[#1a1a1a] transition-colors duration-200"
+                  className="flex-1 min-w-0 flex items-center justify-center px-5 sm:px-8 py-3 sm:py-3.5 bg-black text-white border border-black font-sans font-medium text-[14px] sm:text-[15px] tracking-wide leading-[20px] whitespace-nowrap rounded-full hover:bg-[#1a1a1a] transition-colors duration-200"
                   style={{ boxShadow: "inset 0px 6px 10px rgba(211,211,211,0.3)" }}
                 >
                   Buy now
@@ -675,7 +675,7 @@ export function ProductDetailClient({
                     }
                     openBag(pathname);
                   }}
-                  className={`flex-1 flex items-center justify-center px-6 sm:px-8 py-4 font-sans font-medium text-[15px] tracking-wide leading-[20px] whitespace-nowrap rounded-full border transition-colors duration-200 ${
+                  className={`flex-1 min-w-0 flex items-center justify-center px-5 sm:px-8 py-3 sm:py-3.5 font-sans font-medium text-[14px] sm:text-[15px] tracking-wide leading-[20px] whitespace-nowrap rounded-full border transition-colors duration-200 ${
                     inCart
                       ? "bg-black text-white border-black"
                       : "bg-white text-black border-[#DBDBDB] hover:border-black"
