@@ -46,7 +46,7 @@ export function Navbar() {
   // Gate on isLoaded so the auth controls do not flip after hydration.
   const { isLoaded, isSignedIn } = useAuth();
   const signOut = useSignOut();
-  // Spendable wallet credit, shown next to the account icon when there is any.
+  // Spendable wallet credit, shown first in the header icons when there is any.
   const wallet = useWalletBalance(Boolean(isLoaded && isSignedIn));
   const walletHint = wallet?.nextExpiry
     ? `${formatRupees(wallet.nextExpiry.amount)} expires on ${new Date(wallet.nextExpiry.expiresAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}`
@@ -137,6 +137,10 @@ export function Navbar() {
 
           {/* Action icons */}
           <div className="flex items-center gap-0.5">
+            {/* Wallet credit leads the icons, ahead of search, when there is any. */}
+            {wallet && wallet.balance > 0 && (
+              <WalletChip balance={wallet.balance} hint={walletHint} dark={darkTheme} />
+            )}
             <button
               type="button"
               aria-label="Search products"
@@ -152,9 +156,6 @@ export function Navbar() {
             <DeliveryCheckWidget dark={darkTheme} />
             {/* Account: signed-in users go to their profile, guests to sign-in.
                 Desktop only. Below lg, account lives in the hamburger menu. */}
-            {wallet && wallet.balance > 0 && (
-              <WalletChip balance={wallet.balance} hint={walletHint} dark={darkTheme} />
-            )}
             <Link
               href={isSignedIn ? "/account" : "/sign-in"}
               aria-label={isSignedIn ? "Your account" : "Sign in"}
