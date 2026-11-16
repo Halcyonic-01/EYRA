@@ -87,10 +87,10 @@ export function CartClient() {
   }
 
   return (
-    <div className="max-w-screen-xl mx-auto px-6 lg:px-10 py-10 pb-20">
-      <div className="flex flex-col lg:flex-row gap-8 items-start">
-        {/* Left: Cart items */}
-        <div className="flex-1 min-w-0">
+    <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-10 py-6 sm:py-10 pb-12 sm:pb-20">
+      <div className="flex flex-col lg:flex-row gap-6 sm:gap-8 items-start">
+        {/* Left: Cart items. w-full below lg: with items-start the column would otherwise size to its content, and a long product name pushes it past the screen edge. */}
+        <div className="w-full lg:w-auto flex-1 min-w-0">
           {/* There used to be a "Select all" control and a checkbox per item
               here. Nothing read that selection: the totals below, and the
               Medusa cart that checkout actually charges, were always the full
@@ -100,16 +100,16 @@ export function CartClient() {
               still being billed for. A control that cannot change what you pay
               is worse than no control, so it is gone; per-item removal is what
               the trash button already does. */}
-          <div className="flex items-center justify-between mb-5">
-            <h1 className="font-sans font-medium text-[18px] leading-[27px] text-black">
+          <div className="flex items-center justify-between mb-3 sm:mb-5">
+            <h1 className="font-sans font-medium text-[16px] sm:text-[18px] leading-6 sm:leading-[27px] text-black">
               Shopping cart
             </h1>
-            <span className="font-sans font-normal text-[14px] text-[#626262]">
+            <span className="font-sans font-normal text-[12px] sm:text-[14px] text-[#626262]">
               {totalQty} {totalQty === 1 ? "item" : "items"}
             </span>
           </div>
 
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-3 sm:gap-4">
             {items.map((item) => {
               const key = lineKey(item);
               const discountPct = percentOff(item.unitPrice, item.originalUnitPrice);
@@ -120,46 +120,46 @@ export function CartClient() {
                 // beside a readable info column at a 375px viewport, so the
                 // qty-stepper/remove group drops to its own row underneath
                 // instead of squeezing beside the product info.
-                <div key={key} className="flex flex-col sm:flex-row gap-3 sm:gap-4 p-4 bg-white border border-[#E1E1E1] rounded-2xl">
-                  <div className="flex gap-4 flex-1 min-w-0">
+                <div key={key} className="flex flex-col sm:flex-row gap-2 sm:gap-4 p-3 sm:p-4 bg-white border border-[#E1E1E1] rounded-xl sm:rounded-2xl">
+                  <div className="flex gap-3 sm:gap-4 flex-1 min-w-0">
                     {/* Product image */}
                     <div
-                      className="relative w-[79px] h-[79px] flex-shrink-0 rounded-2xl overflow-hidden bg-white"
+                      className="relative w-[64px] h-[64px] sm:w-[79px] sm:h-[79px] flex-shrink-0 rounded-xl sm:rounded-2xl overflow-hidden bg-white"
                       style={{ border: "1px solid #E1E1E1", boxShadow: "0px 2px 8px rgba(0,0,0,0.06)" }}
                     >
                       <Image
                         src={item.product.images[0]}
                         alt={item.product.name}
                         fill
-                        className="object-contain p-2"
-                        sizes="79px"
+                        className="object-contain p-1.5 sm:p-2"
+                        sizes="(min-width: 640px) 79px, 64px"
                       />
                     </div>
 
                     {/* Info */}
-                    <div className="flex-1 min-w-0 flex flex-col gap-1">
-                      <p className="font-sans font-normal text-[18px] leading-[27px] text-black truncate">
+                    <div className="flex-1 min-w-0 flex flex-col gap-0.5 sm:gap-1">
+                      <p className="font-sans font-normal text-[15px] sm:text-[18px] leading-[22px] sm:leading-[27px] text-black truncate">
                         {item.product.name}
                       </p>
                       {item.size && (
-                        <p className="font-sans font-normal text-[13px] text-[#909090]">Size: {item.size}</p>
+                        <p className="font-sans font-normal text-[12px] sm:text-[13px] text-[#909090]">Size: {item.size}</p>
                       )}
                       {item.variantLabel && (
-                        <p className="font-sans font-normal text-[13px] text-[#909090]">{item.variantLabel}</p>
+                        <p className="font-sans font-normal text-[12px] sm:text-[13px] text-[#909090]">{item.variantLabel}</p>
                       )}
 
                       {/* Price row */}
-                      <div className="flex items-center gap-2 flex-wrap mt-0.5">
-                        <span className="font-sans font-semibold text-[18px] leading-[27px] text-black">
+                      <div className="flex items-center gap-x-2 gap-y-0 flex-wrap mt-0.5">
+                        <span className="font-sans font-semibold text-[15px] sm:text-[18px] leading-[22px] sm:leading-[27px] text-black">
                           ₹{item.unitPrice.toLocaleString("en-IN")}
                         </span>
                         {discountPct > 0 && (
-                          <span className="font-sans font-normal text-[15px] text-[#AAAAAA] line-through">
+                          <span className="font-sans font-normal text-[13px] sm:text-[15px] text-[#AAAAAA] line-through">
                             ₹{item.originalUnitPrice.toLocaleString("en-IN")}
                           </span>
                         )}
                         {discountPct > 0 && (
-                          <span className="font-sans font-normal text-[13px] text-black">
+                          <span className="font-sans font-normal text-[11px] sm:text-[13px] text-black">
                             {discountPct}% OFF
                           </span>
                         )}
@@ -172,11 +172,11 @@ export function CartClient() {
                       justify-between); order-last on mobile just moves remove
                       to the trailing end of the row instead, a more familiar
                       placement for a destructive action than leading it. */}
-                  <div className="flex flex-row sm:flex-col items-center sm:items-end justify-end sm:justify-between gap-3 sm:gap-2 flex-shrink-0">
+                  <div className="flex flex-row sm:flex-col items-center sm:items-end justify-end sm:justify-between gap-2.5 sm:gap-2 flex-shrink-0">
                     <button
                       aria-label="Remove item"
                       onClick={() => removeFromCart(key)}
-                      className="order-last sm:order-none w-8 h-8 flex items-center justify-center rounded-full hover:bg-[#FFF0F0] transition-colors duration-200"
+                      className="order-last sm:order-none w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center rounded-full hover:bg-[#FFF0F0] transition-colors duration-200"
                     >
                       <TrashIcon />
                     </button>
@@ -186,17 +186,17 @@ export function CartClient() {
                       <button
                         aria-label="Decrease quantity"
                         onClick={() => updateQuantity(key, item.quantity - 1)}
-                        className="w-[26px] h-[26px] flex items-center justify-center text-black hover:bg-[#F7F7F7] transition-colors duration-150"
+                        className="w-6 h-6 sm:w-[26px] sm:h-[26px] flex items-center justify-center text-black hover:bg-[#F7F7F7] transition-colors duration-150"
                       >
                         <MinusIcon />
                       </button>
-                      <span className="w-8 text-center font-sans font-medium text-[18px] leading-none text-black select-none">
+                      <span className="w-7 sm:w-8 text-center font-sans font-medium text-[15px] sm:text-[18px] leading-none text-black select-none">
                         {item.quantity}
                       </span>
                       <button
                         aria-label="Increase quantity"
                         onClick={() => updateQuantity(key, item.quantity + 1)}
-                        className="w-[26px] h-[26px] flex items-center justify-center text-black hover:bg-[#F7F7F7] transition-colors duration-150"
+                        className="w-6 h-6 sm:w-[26px] sm:h-[26px] flex items-center justify-center text-black hover:bg-[#F7F7F7] transition-colors duration-150"
                       >
                         <PlusIcon />
                       </button>
@@ -204,7 +204,7 @@ export function CartClient() {
 
                     <button
                       onClick={() => moveToWishlist(item)}
-                      className="order-first sm:order-none flex items-center gap-1.5 font-sans font-normal text-[13px] text-[#626262] hover:text-black transition-colors duration-200"
+                      className="order-first sm:order-none flex items-center gap-1.5 font-sans font-normal text-[12px] sm:text-[13px] text-[#626262] hover:text-black transition-colors duration-200"
                     >
                       <span className="text-[#D81B60]"><HeartIcon /></span>
                       Move to wishlist
@@ -216,19 +216,19 @@ export function CartClient() {
 
           </div>
 
-          {serverTotals?.tote.inCart && <ToteLine className="mt-4 rounded-xl bg-[#F7F7F7] px-4 py-3" />}
+          {serverTotals?.tote.inCart && <ToteLine className="mt-3 sm:mt-4 rounded-xl bg-[#F7F7F7] px-3 sm:px-4 py-2.5 sm:py-3" />}
           {!totals.isEstimate && (
-            <ToteOffer itemsSubtotal={totals.subtotal} inCart={Boolean(serverTotals?.tote.inCart)} className="mt-4" />
+            <ToteOffer itemsSubtotal={totals.subtotal} inCart={Boolean(serverTotals?.tote.inCart)} className="mt-3 sm:mt-4" />
           )}
         </div>
 
         {/* Right: Order Summary */}
         <div
-          className="w-full lg:w-[380px] flex-shrink-0 rounded-2xl p-6 flex flex-col gap-4 lg:sticky lg:self-start"
+          className="w-full lg:w-[380px] flex-shrink-0 rounded-xl sm:rounded-2xl p-4 sm:p-6 flex flex-col gap-3 sm:gap-4 lg:sticky lg:self-start"
           style={{ background: "#F7F7F7", top: "calc(var(--header-offset) + 2rem)" }}
         >
           <div className="flex items-center justify-between">
-            <h2 className="font-sans font-medium text-[18px] leading-[27px] text-black">
+            <h2 className="font-sans font-medium text-[16px] sm:text-[18px] leading-6 sm:leading-[27px] text-black">
               Order Summary
             </h2>
             {syncStatus === "syncing" && (
@@ -236,7 +236,7 @@ export function CartClient() {
             )}
           </div>
 
-          <div className="flex flex-col gap-3 text-[14px] font-sans font-normal">
+          <div className="flex flex-col gap-2 sm:gap-3 text-[13px] sm:text-[14px] font-sans font-normal">
             <div className="flex items-center justify-between">
               <span className="text-[#626262]">
                 Subtotal ({totalQty} {totalQty === 1 ? "item" : "items"})
@@ -285,10 +285,10 @@ export function CartClient() {
           <div className="w-full h-px bg-[#DFDFDF]" />
 
           <div className="flex items-center justify-between">
-            <span className="font-sans font-semibold text-[16px] text-black">
+            <span className="font-sans font-semibold text-[14px] sm:text-[16px] text-black">
               {totals.isEstimate ? "Estimated Total" : "TOTAL"}
             </span>
-            <span className="font-sans font-semibold text-[18px] text-black">
+            <span className="font-sans font-semibold text-[16px] sm:text-[18px] text-black">
               ₹{totals.total.toLocaleString("en-IN")}
             </span>
           </div>
@@ -298,7 +298,7 @@ export function CartClient() {
 
           <Link
             href="/checkout"
-            className={`w-full flex items-center justify-center py-[14px] bg-black text-white font-sans font-medium text-[18px] rounded-full hover:bg-[#1a1a1a] transition-colors duration-200 ${
+            className={`w-full flex items-center justify-center py-3 sm:py-[14px] bg-black text-white font-sans font-medium text-[16px] sm:text-[18px] rounded-full hover:bg-[#1a1a1a] transition-colors duration-200 ${
               items.length === 0 ? "pointer-events-none opacity-40" : ""
             }`}
             style={{ boxShadow: "inset 0px 6px 10px rgba(211,211,211,0.3)" }}
