@@ -713,12 +713,15 @@ export function ProductDetailClient({
                       setPincode(e.target.value.replace(/\D/g, "").slice(0, 6));
                       pincodeCheck.reset();
                     }}
-                    className="flex-1 px-[18px] py-[12px] font-sans font-normal text-[16px] text-black placeholder:text-[#909090] bg-transparent outline-none"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") pincodeCheck.check(pincode);
+                    }}
+                    className="min-w-0 flex-1 px-4 sm:px-[18px] py-[12px] font-sans font-normal text-[16px] text-black placeholder:text-[#909090] bg-transparent outline-none"
                   />
                   <button
                     onClick={() => pincodeCheck.check(pincode)}
                     disabled={pincodeCheck.status === "loading"}
-                    className="px-6 py-[12px] bg-black text-white font-sans font-normal text-[16px] rounded-[100px] hover:bg-[#1a1a1a] disabled:opacity-60 transition-colors duration-200 mr-px"
+                    className="shrink-0 whitespace-nowrap px-5 sm:px-6 py-[12px] bg-black text-white font-sans font-normal text-[16px] rounded-[100px] hover:bg-[#1a1a1a] disabled:opacity-60 transition-colors duration-200 mr-px"
                     style={{ boxShadow: "inset 0px 6px 10px rgba(211,211,211,0.3)" }}
                   >
                     {pincodeCheck.status === "loading" ? "Checking…" : "Check"}
@@ -739,9 +742,13 @@ export function ProductDetailClient({
               </div>
 
               {/* Offers that this piece qualifies for, below delivery */}
+                  {/* min-w-0 lets the input shrink: a text input has a minimum width of its own, which on a narrow phone, or one with a larger font setting, pushed the Check button out of the box where it was clipped. */}
               <ProductOffers subtotal={shownPrice} context="product" />
 
               {/* Quality badges: bottom of the product details, below delivery */}
+                    autoComplete="postal-code"
+                    maxLength={6}
+                    aria-label="Delivery pincode"
               <div className="flex flex-col gap-4 pt-6 border-t border-[#E1E1E1]">
                 {QUALITY_BADGES.map((badge) => (
                   <div key={badge.title} className="flex items-start gap-3">
@@ -751,6 +758,7 @@ export function ProductDetailClient({
                       <p className="font-sans font-normal text-xs text-gray-500 leading-relaxed">{badge.description}</p>
                     </div>
                   </div>
+                    type="button"
                 ))}
               </div>
             </div>
