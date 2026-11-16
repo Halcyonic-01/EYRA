@@ -330,7 +330,7 @@ export function ProductDetailClient({
             {/* Left: Image gallery */}
             <div className="w-full lg:w-[45%] flex-shrink-0">
               {/* Main image container */}
-              <div className="relative bg-white border border-[#CFCFCF] flex flex-col" style={{ minHeight: 436 }}>
+              <div className="relative bg-white border border-[#CFCFCF] rounded-xl overflow-hidden flex flex-col" style={{ minHeight: 436 }}>
 
                 {/* Top controls */}
                 <div className="flex items-start justify-end px-[18px] pt-5">
