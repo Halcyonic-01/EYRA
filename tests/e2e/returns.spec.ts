@@ -120,6 +120,10 @@ test.describe("returns routes", () => {
     expect((await request.get("/api/returns")).status()).toBe(401);
     expect((await request.post("/api/returns", { data: { orderId: "order_x", type: "return", reason: "SIZE_ISSUE", items: [] } })).status()).toBe(401);
     expect((await request.get("/api/returns/replacements")).status()).toBe(401);
+    // Nor ask what an exchange would cost.
+    expect(
+      (await request.post("/api/returns/quote", { data: { orderId: "order_x", itemId: "ordli_x", replacementVariantId: "variant_x" } })).status()
+    ).toBe(401);
   });
 
   test("booking a pickup and sending WhatsApp are for the backend only", async ({ request }) => {
@@ -132,7 +136,7 @@ test.describe("returns routes", () => {
   });
 
   test("the team alerts for returns are for the backend only", async ({ request }) => {
-    for (const type of ["rto_received", "return_parcel_arrived", "reverse_pickup_problem", "credit_note_failed", "return_not_finished"]) {
+    for (const type of ["rto_received", "return_parcel_arrived", "reverse_pickup_problem", "credit_note_failed", "return_not_finished", "exchange_payment_short", "exchange_refund_failed"]) {
       const res = await request.post("/api/ops/notify", { data: { type, order_id: "order_x" } });
       expect([401, 503]).toContain(res.status());
     }

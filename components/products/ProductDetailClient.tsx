@@ -192,6 +192,26 @@ export function ProductDetailClient({
   const [quantity, setQuantity] = useState(1);
   const pincodeCheck = usePincodeServiceability();
   const touchStartX = useRef<number>(0);
+  // The sticky buy bar shows while the inline buttons are out of view, and gives way to the footer.
+  const ctaRef = useRef<HTMLDivElement>(null);
+  const sizeRef = useRef<HTMLDivElement>(null);
+  const [ctaInView, setCtaInView] = useState(true);
+  const [footerInView, setFooterInView] = useState(false);
+  const showStickyBar = !ctaInView && !footerInView;
+
+  useEffect(() => {
+    const cta = ctaRef.current;
+    if (!cta || typeof IntersectionObserver === "undefined") return;
+    const ctaObserver = new IntersectionObserver(([entry]) => setCtaInView(entry.isIntersecting));
+    ctaObserver.observe(cta);
+    const footer = document.querySelector("footer");
+    const footerObserver = new IntersectionObserver(([entry]) => setFooterInView(entry.isIntersecting));
+    if (footer) footerObserver.observe(footer);
+    return () => {
+      ctaObserver.disconnect();
+      footerObserver.disconnect();
+    };
+  }, []);
 
   // While the full-screen view is open: lock page scroll, and let the keyboard
   // close it or move between images.
@@ -271,9 +291,55 @@ export function ProductDetailClient({
   function resolveVariantId(): string | undefined | null {
     if (hasSizes && !selectedSize) {
       setSizeRequiredError(true);
+      // From the sticky bar the size picker is usually off screen: take them to it.
+      if (showStickyBar) sizeRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
       return null;
     }
     return variantId;
+  }
+
+  function buyNow() {
+    const chosen = resolveVariantId();
+    if (chosen === null) return; // no size picked yet
+    if (!inCart) {
+      addToCart(product, hasSizes ? selectedSize : null, chosen, sellQuantity);
+    }
+    router.push("/checkout");
+  }
+
+  function addAndOpenBag() {
+    if (!inCart) {
+      const chosen = resolveVariantId();
+      if (chosen === null) return; // no size picked yet
+      addToCart(product, hasSizes ? selectedSize : null, chosen, sellQuantity);
+    }
+    openBag(pathname);
+  }
+
+  /** Buy now and Add to cart, used by the page and by the sticky bar. */
+  function ctaButtons(padding: string) {
+    return (
+      <>
+        <button
+          onClick={buyNow}
+          className={`flex-1 min-w-0 flex items-center justify-center px-5 sm:px-8 ${padding} bg-black text-white border border-black font-sans font-medium text-[14px] sm:text-[15px] tracking-wide leading-[20px] whitespace-nowrap rounded-full hover:bg-[#1a1a1a] transition-colors duration-200`}
+          style={{ boxShadow: "inset 0px 6px 10px rgba(211,211,211,0.3)" }}
+        >
+          Buy now
+        </button>
+        <button
+          onClick={addAndOpenBag}
+          className={`flex-1 min-w-0 flex items-center justify-center px-5 sm:px-8 ${padding} font-sans font-medium text-[14px] sm:text-[15px] tracking-wide leading-[20px] whitespace-nowrap rounded-full border transition-colors duration-200 ${
+            inCart
+              ? "bg-black text-white border-black"
+              : "bg-white text-black border-[#DBDBDB] hover:border-black"
+          }`}
+          style={{ boxShadow: "inset 0px 6px 10px rgba(211,211,211,0.3)" }}
+        >
+          {inCart ? "Added to cart" : "Add to cart"}
+        </button>
+      </>
+    );
   }
 
   /**
@@ -566,7 +632,7 @@ export function ProductDetailClient({
 
               {/* Size picker: rings, and any other product with a Size option */}
               {hasSizes && (
-                <div className="flex flex-col gap-2.5">
+                <div ref={sizeRef} className="flex flex-col gap-2.5 scroll-mt-40">
                   <div className="flex items-center justify-between">
                     <span className="font-sans font-medium text-[13px] sm:text-[14px] leading-[20px] sm:leading-[21px] text-black">
                       {sizeLabel}{selectedSize ? `: ${selectedSize}` : ""}
@@ -657,40 +723,9 @@ export function ProductDetailClient({
                 )}
               </div>
 
-              {/* CTA buttons */}
-              <div className="flex gap-3">
-                <button
-                  onClick={() => {
-                    const chosen = resolveVariantId();
-                    if (chosen === null) return; // no size picked yet
-                    if (!inCart) {
-                      addToCart(product, hasSizes ? selectedSize : null, chosen, sellQuantity);
-                    }
-                    router.push("/checkout");
-                  }}
-                  className="flex-1 min-w-0 flex items-center justify-center px-5 sm:px-8 py-3 sm:py-3.5 bg-black text-white border border-black font-sans font-medium text-[14px] sm:text-[15px] tracking-wide leading-[20px] whitespace-nowrap rounded-full hover:bg-[#1a1a1a] transition-colors duration-200"
-                  style={{ boxShadow: "inset 0px 6px 10px rgba(211,211,211,0.3)" }}
-                >
-                  Buy now
-                </button>
-                <button
-                  onClick={() => {
-                    if (!inCart) {
-                      const chosen = resolveVariantId();
-                      if (chosen === null) return; // no size picked yet
-                      addToCart(product, hasSizes ? selectedSize : null, chosen, sellQuantity);
-                    }
-                    openBag(pathname);
-                  }}
-                  className={`flex-1 min-w-0 flex items-center justify-center px-5 sm:px-8 py-3 sm:py-3.5 font-sans font-medium text-[14px] sm:text-[15px] tracking-wide leading-[20px] whitespace-nowrap rounded-full border transition-colors duration-200 ${
-                    inCart
-                      ? "bg-black text-white border-black"
-                      : "bg-white text-black border-[#DBDBDB] hover:border-black"
-                  }`}
-                  style={{ boxShadow: "inset 0px 6px 10px rgba(211,211,211,0.3)" }}
-                >
-                  {inCart ? "Added to cart" : "Add to cart"}
-                </button>
+              {/* CTA buttons. The sticky bar below repeats them while these are off screen. */}
+              <div ref={ctaRef} className="flex gap-3">
+                {ctaButtons("py-3 sm:py-3.5")}
               </div>
 
               <PolicyBadge />
@@ -711,21 +746,29 @@ export function ProductDetailClient({
                   Estimated Delivery Time
                 </p>
                 <div className="flex items-center border border-[#E1E1E1] rounded-[333px] overflow-hidden bg-white">
+                  {/* min-w-0 lets the input shrink: a text input has a minimum width of its own, which on a narrow phone, or one with a larger font setting, pushed the Check button out of the box where it was clipped. */}
                   <input
                     type="text"
                     inputMode="numeric"
+                    autoComplete="postal-code"
+                    maxLength={6}
+                    aria-label="Delivery pincode"
                     placeholder="Enter Pincode"
                     value={pincode}
                     onChange={(e) => {
                       setPincode(e.target.value.replace(/\D/g, "").slice(0, 6));
                       pincodeCheck.reset();
                     }}
-                    className="flex-1 px-[18px] py-[12px] font-sans font-normal text-[16px] text-black placeholder:text-[#909090] bg-transparent outline-none"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") pincodeCheck.check(pincode);
+                    }}
+                    className="min-w-0 flex-1 px-4 sm:px-[18px] py-[12px] font-sans font-normal text-[16px] text-black placeholder:text-[#909090] bg-transparent outline-none"
                   />
                   <button
+                    type="button"
                     onClick={() => pincodeCheck.check(pincode)}
                     disabled={pincodeCheck.status === "loading"}
-                    className="px-6 py-[12px] bg-black text-white font-sans font-normal text-[16px] rounded-[100px] hover:bg-[#1a1a1a] disabled:opacity-60 transition-colors duration-200 mr-px"
+                    className="shrink-0 whitespace-nowrap px-5 sm:px-6 py-[12px] bg-black text-white font-sans font-normal text-[16px] rounded-[100px] hover:bg-[#1a1a1a] disabled:opacity-60 transition-colors duration-200 mr-px"
                     style={{ boxShadow: "inset 0px 6px 10px rgba(211,211,211,0.3)" }}
                   >
                     {pincodeCheck.status === "loading" ? "Checking…" : "Check"}
@@ -764,6 +807,24 @@ export function ProductDetailClient({
           </div>
         </div>
       </section>
+
+      {/* ── Sticky buy bar: stays at the bottom while the inline buttons are off screen ── */}
+      {showStickyBar && (
+        <div
+          role="region"
+          aria-label="Quick purchase"
+          className="fixed inset-x-0 bottom-0 z-40 border-t border-[#E1E1E1] bg-white shadow-[0_-6px_20px_rgba(0,0,0,0.06)]"
+          style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+        >
+          <div className="mx-auto flex max-w-screen-xl items-center gap-4 px-4 py-3 sm:px-6 lg:px-10">
+            <div className="hidden min-w-0 flex-1 sm:block">
+              <p className="truncate font-sans text-[15px] font-medium leading-[22px] text-black">{product.name}</p>
+              <p className="font-sans text-[14px] leading-[20px] text-[#626262]">₹{shownPrice.toLocaleString("en-IN")}</p>
+            </div>
+            <div className="flex w-full gap-3 sm:w-[420px] sm:flex-none">{ctaButtons("py-3")}</div>
+          </div>
+        </div>
+      )}
 
       {/* ── Size chart modal ──────────────────────── */}
       {sizeChartOpen && (

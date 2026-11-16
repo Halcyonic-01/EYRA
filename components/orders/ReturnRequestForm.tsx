@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { EXCHANGE_WINDOW_DAYS, RETURN_WINDOW_DAYS, REVERSE_LOGISTICS_FEE } from "@/config/policy-constants";
@@ -32,6 +31,14 @@ interface ExchangeOption {
   price: number;
 }
 
+/** The backend's figures for an exchange, before it is confirmed. */
+interface Quote {
+  paidValue: number;
+  replacementPrice: number | null;
+  amountDue: number;
+  credit: number;
+}
+
 interface CreatedRequest {
   type: ReturnRequestType;
   status: string;
@@ -46,7 +53,6 @@ const inputClass =
 
 
 export default function ReturnRequestForm({ orderId, orderNumber, items, canReturn, canExchange, walletCreditMonths }: Props) {
-  const router = useRouter();
   const [type, setType] = useState<ReturnRequestType>(canReturn ? "return" : "exchange");
   const [quantities, setQuantities] = useState<Record<string, number>>({});
   const [exchangeItem, setExchangeItem] = useState<string>("");
@@ -57,6 +63,7 @@ export default function ReturnRequestForm({ orderId, orderNumber, items, canRetu
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [created, setCreated] = useState<CreatedRequest | null>(null);
+  const [quote, setQuote] = useState<{ key: string; quote: Quote | null; error: string | null } | null>(null);
 
   // The sizes and designs on offer are only needed for an exchange.
   useEffect(() => {
@@ -74,6 +81,35 @@ export default function ReturnRequestForm({ orderId, orderNumber, items, canRetu
       cancelled = true;
     };
   }, [type, options]);
+
+  // What the exchange costs, from the backend: the same figure the payment link will ask for.
+  const quoteKey = type === "exchange" && exchangeItem && replacement ? `${exchangeItem}:${replacement}` : "";
+  useEffect(() => {
+    if (!quoteKey) return;
+    let cancelled = false;
+    const [itemId, replacementVariantId] = quoteKey.split(":");
+    fetch("/api/returns/quote", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ orderId, itemId, replacementVariantId }),
+    })
+      .then(async (res) => {
+        const data = (await res.json().catch(() => ({}))) as { quote?: Quote; message?: string };
+        if (cancelled) return;
+        setQuote(
+          res.ok && data.quote
+            ? { key: quoteKey, quote: data.quote, error: null }
+            : { key: quoteKey, quote: null, error: data.message ?? "We could not work out the price just now." }
+        );
+      })
+      .catch(() => {
+        if (!cancelled) setQuote({ key: quoteKey, quote: null, error: "We could not work out the price just now." });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [quoteKey, orderId]);
+  const currentQuote = quote && quote.key === quoteKey ? quote : null;
 
   const isExchange = type === "exchange";
   const chosen = isExchange
@@ -108,8 +144,9 @@ export default function ReturnRequestForm({ orderId, orderNumber, items, canRetu
       });
       if (res.ok) {
         const data = (await res.json()) as { request: CreatedRequest };
+        // No router.refresh() here: the page would re-render without this form once its last
+        // item is requested, and take this confirmation (and its payment button) with it.
         setCreated(data.request);
-        router.refresh();
         return;
       }
       const data = (await res.json().catch(() => ({}))) as { message?: string; error?: string };
@@ -135,7 +172,7 @@ export default function ReturnRequestForm({ orderId, orderNumber, items, canRetu
           <>
             <p className="mt-2 font-sans text-[14px] text-[#626262]">
               Your replacement costs {due ? formatRupees(due) : "more"} more than the item you are returning. To confirm your exchange, pay that difference using the secure payment link. As soon as it
-              is paid, we book the courier to collect your item. We have also sent the link to you by email, SMS and WhatsApp.
+              is paid, we book the courier to collect your item. We also send you the link, and you can always find it on your order page until it is paid.
             </p>
             <a
               href={link}
@@ -295,6 +332,30 @@ export default function ReturnRequestForm({ orderId, orderNumber, items, canRetu
           </select>
           {options !== null && options.length === 0 && (
             <p className="font-sans text-[12px] text-[#B42318]">Nothing is available to exchange for right now. Please try again later.</p>
+          )}
+          {quoteKey && (
+            <div className="rounded-xl bg-[#F7F7F7] px-4 py-3 font-sans text-[13px] text-[#3A3A3A]" data-testid="exchange-quote" aria-live="polite">
+              {!currentQuote ? (
+                "Working out the price…"
+              ) : currentQuote.error || !currentQuote.quote ? (
+                <span className="text-[#B42318]">{currentQuote.error}</span>
+              ) : currentQuote.quote.amountDue > 0 ? (
+                <>
+                  You paid {formatRupees(currentQuote.quote.paidValue)} for this item and the new one is{" "}
+                  {formatRupees(currentQuote.quote.replacementPrice ?? 0)}, so you pay{" "}
+                  <strong className="font-medium text-black">{formatRupees(currentQuote.quote.amountDue)} more</strong>. We send you a secure
+                  payment link for it, and book the pickup as soon as it is paid.
+                </>
+              ) : currentQuote.quote.credit > 0 ? (
+                <>
+                  Nothing to pay. The new piece costs less, so{" "}
+                  <strong className="font-medium text-black">{formatRupees(currentQuote.quote.credit)}</strong> is added to your wallet as store
+                  credit once your item reaches us.
+                </>
+              ) : (
+                <>Nothing to pay: the new piece costs the same as what you paid. We book the pickup straight away.</>
+              )}
+            </div>
           )}
         </div>
       )}
