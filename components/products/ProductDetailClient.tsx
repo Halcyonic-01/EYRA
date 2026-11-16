@@ -398,44 +398,51 @@ export function ProductDetailClient({
                   />
                 </div>
 
-                {/* Navigation row */}
-                <div className="flex items-center justify-between px-4 py-5 mt-2">
+                {/* Navigation row: arrows from sm up (phones swipe), pagination dots between them. The fixed
+                    min height keeps the image area the same size with or without the arrows. */}
+                <div className="flex min-h-[42px] box-content items-center justify-center sm:justify-between px-4 py-5 mt-2">
                   <button
                     aria-label="Previous image"
                     onClick={() => setActiveImage((i) => Math.max(0, i - 1))}
                     disabled={activeImage === 0}
-                    className="w-[42px] h-[42px] rounded-full bg-white flex items-center justify-center text-black hover:shadow-md disabled:opacity-30 transition-all duration-200"
+                    className="hidden sm:flex w-[42px] h-[42px] rounded-full bg-white items-center justify-center text-black hover:shadow-md disabled:opacity-30 transition-all duration-200"
                   >
                     <ChevronLeftIcon />
                   </button>
-                  <span className="font-sans font-normal text-[16px] leading-[24px] text-[#9F9F9F]">
-                    {activeImage + 1}/{product.images.length}
-                  </span>
+                  {product.images.length > 1 ? (
+                    <div className="flex items-center justify-center" role="group" aria-label="Product images">
+                      {product.images.map((_, i) => {
+                        const active = i === activeImage;
+                        return (
+                          <button
+                            key={i}
+                            type="button"
+                            aria-label={`View image ${i + 1} of ${product.images.length}`}
+                            aria-current={active ? "true" : undefined}
+                            onClick={() => setActiveImage(i)}
+                            className="flex h-5 w-5 items-center justify-center"
+                          >
+                            <span
+                              className={`block rounded-full transition-all duration-200 ${
+                                active ? "h-2.5 w-2.5 bg-black" : "h-1.5 w-1.5 bg-[#CFCFCF]"
+                              }`}
+                            />
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <span aria-hidden="true" />
+                  )}
                   <button
                     aria-label="Next image"
                     onClick={() => setActiveImage((i) => Math.min(product.images.length - 1, i + 1))}
                     disabled={activeImage === product.images.length - 1}
-                    className="w-[42px] h-[42px] rounded-full bg-white flex items-center justify-center text-black hover:shadow-md disabled:opacity-30 transition-all duration-200"
+                    className="hidden sm:flex w-[42px] h-[42px] rounded-full bg-white items-center justify-center text-black hover:shadow-md disabled:opacity-30 transition-all duration-200"
                   >
                     <ChevronRightIcon />
                   </button>
                 </div>
-              </div>
-
-              {/* Thumbnail strip */}
-              <div className="flex gap-2 mt-3 overflow-x-auto pb-1">
-                {product.images.map((img, i) => (
-                  <button
-                    key={i}
-                    aria-label={`View image ${i + 1}`}
-                    onClick={() => setActiveImage(i)}
-                    className={`relative w-16 h-16 flex-shrink-0 border-2 bg-white transition-colors duration-200 ${
-                      i === activeImage ? "border-black" : "border-[#CFCFCF] hover:border-[#909090]"
-                    }`}
-                  >
-                    <Image src={img} alt="" fill className="object-contain p-1" sizes="64px" />
-                  </button>
-                ))}
               </div>
             </div>
 
