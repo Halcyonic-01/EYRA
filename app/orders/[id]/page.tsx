@@ -418,6 +418,22 @@ export default async function OrderDetailPage({
             />
           )}
 
+          {/* Reviews: once the parcel has reached the customer */}
+          {courierStatus === "DELIVERED" && !isCancelled && (
+            <div className="rounded-2xl border border-[#E1E1E1] px-5 py-4 flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="font-sans font-medium text-[14px] text-black">How are you finding it?</p>
+                <p className="font-sans text-[13px] text-[#909090]">Rate your pieces, add photos, or change a review you left.</p>
+              </div>
+              <Link
+                href={`/orders/${order.id}/review`}
+                className="rounded-full bg-black px-5 py-2.5 font-sans text-[13px] font-medium text-white hover:bg-[#1a1a1a] transition-colors duration-200"
+              >
+                Rate &amp; review
+              </Link>
+            </div>
+          )}
+
           {/* Returns and exchanges */}
           {(requests.length > 0 || canRequest) && (
             <div className="rounded-2xl border border-[#E1E1E1] overflow-hidden">

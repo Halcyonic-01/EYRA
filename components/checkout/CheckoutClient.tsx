@@ -249,8 +249,11 @@ function OrderSidebar({ items, totals }: { items: CartItem[]; totals: DisplayTot
 
 /* ── Step 1: Shipping ─────────────────────────────────────── */
 function ShippingStep({
-  form, errors, touched, pincodeStatus, serviceability, onChange, onBlur, onNext,
+  form, errors, touched, pincodeStatus, serviceability, onChange, onBlur, onNext, whatsappOptIn, onWhatsappOptIn,
 }: {
+  /** Whether the customer agreed to WhatsApp messages about this order. Off unless they tick it. */
+  whatsappOptIn: boolean;
+  onWhatsappOptIn: (value: boolean) => void;
   form: ShippingForm;
   errors: ShippingErrors;
   touched: TouchedFields;
@@ -403,6 +406,19 @@ function ShippingStep({
             />
           </div>
           <FieldError msg={touched.phone ? errors.phone : undefined} />
+          <label className="mt-3 flex items-start gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              name="whatsappOptIn"
+              checked={whatsappOptIn}
+              onChange={(e) => onWhatsappOptIn(e.target.checked)}
+              className="mt-0.5 h-[18px] w-[18px] flex-shrink-0 accent-black"
+            />
+            <span className="font-sans text-[13px] leading-[19px] text-[#5D5D5D]">
+              Send me order updates and a review request on WhatsApp at this number.{" "}
+              <span className="text-[#909090]">Optional. Without it we use email only; reply STOP to stop at any time.</span>
+            </span>
+          </label>
         </div>
 
         <button
@@ -826,6 +842,7 @@ export function CheckoutClient() {
     city: "", state: "", pincode: "", phone: "",
   });
   const [touched, setTouched] = useState<TouchedFields>({});
+  const [whatsappOptIn, setWhatsappOptIn] = useState(false);
   const [pincodeStatus, setPincodeStatus] = useState<PincodeStatus>("idle");
 
   /* Serviceability */
@@ -995,6 +1012,7 @@ export function CheckoutClient() {
       state: form.state,
       pincode: form.pincode,
       phone: form.phone,
+      whatsappOptIn,
     };
 
     let confirmedOrderId: string | null = null;
@@ -1063,6 +1081,7 @@ export function CheckoutClient() {
         state: form.state,
         pincode: form.pincode,
         phone: form.phone,
+        whatsappOptIn,
       };
 
       // Turn the cart into a real Medusa order before anything else, a COD
@@ -1131,6 +1150,7 @@ export function CheckoutClient() {
       state: form.state,
       pincode: form.pincode,
       phone: form.phone,
+      whatsappOptIn,
     };
 
     // Obtain a server-generated Razorpay order_id from Medusa.
@@ -1321,6 +1341,8 @@ export function CheckoutClient() {
                 onChange={handleChange}
                 onBlur={handleBlur}
                 onNext={handleShippingNext}
+                whatsappOptIn={whatsappOptIn}
+                onWhatsappOptIn={setWhatsappOptIn}
               />
             )}
             {step === 2 && (

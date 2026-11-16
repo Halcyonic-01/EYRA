@@ -10,6 +10,8 @@
  */
 import "server-only";
 
+import { setWhatsappConsent } from "@/lib/reviews";
+
 import { setCartPaymentMode } from "@/lib/medusa-commerce";
 import type { PaymentMode } from "@/lib/medusa-cart";
 
@@ -99,6 +101,8 @@ export interface CheckoutShippingAddress {
   state: string;
   pincode: string;
   phone: string;
+  /** The checkout's WhatsApp checkbox: true only when the customer ticked it. */
+  whatsappOptIn?: boolean;
 }
 
 export function splitName(fullName: string): { first_name: string; last_name: string } {
@@ -154,6 +158,12 @@ export async function prepareCartForCheckout(
   } catch (err) {
     console.error("[medusa-order] cart address update error for", cartId, ":", err);
     return false;
+  }
+
+  // Consent is recorded on the cart (and so the order). Not saving it is not fatal:
+  // the customer then simply gets email only, which is the safe default.
+  if (!(await setWhatsappConsent(cartId, address.whatsappOptIn === true))) {
+    console.error(`[medusa-order] could not record the WhatsApp choice on cart ${cartId}`);
   }
 
   const priced = await setCartPaymentMode(cartId, mode);

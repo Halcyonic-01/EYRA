@@ -38,8 +38,9 @@ export const PRODUCTS: DetailProduct[] = [
     type: "ring",
     specs: RING_SPECS,
     sizes: RING_SIZES,
-    rating: 4.4,
-    reviewCount: 128,
+    // No made-up ratings: these are filled only from approved customer reviews.
+    rating: 0,
+    reviewCount: 0,
   },
   {
     id: "2",
@@ -52,8 +53,9 @@ export const PRODUCTS: DetailProduct[] = [
     type: "ring",
     specs: RING_SPECS,
     sizes: RING_SIZES,
-    rating: 4.2,
-    reviewCount: 84,
+    // No made-up ratings: these are filled only from approved customer reviews.
+    rating: 0,
+    reviewCount: 0,
   },
   {
     id: "3",
@@ -66,8 +68,9 @@ export const PRODUCTS: DetailProduct[] = [
     type: "pendant",
     specs: CHAIN_SPECS,
     sizes: [],
-    rating: 4.6,
-    reviewCount: 210,
+    // No made-up ratings: these are filled only from approved customer reviews.
+    rating: 0,
+    reviewCount: 0,
   },
   {
     id: "6",
@@ -80,8 +83,9 @@ export const PRODUCTS: DetailProduct[] = [
     type: "ring",
     specs: RING_SPECS,
     sizes: RING_SIZES,
-    rating: 4.7,
-    reviewCount: 62,
+    // No made-up ratings: these are filled only from approved customer reviews.
+    rating: 0,
+    reviewCount: 0,
   },
   {
     id: "7",
@@ -94,8 +98,9 @@ export const PRODUCTS: DetailProduct[] = [
     type: "pendant",
     specs: CHAIN_SPECS,
     sizes: [],
-    rating: 4.1,
-    reviewCount: 145,
+    // No made-up ratings: these are filled only from approved customer reviews.
+    rating: 0,
+    reviewCount: 0,
   },
   {
     id: "8",
@@ -108,8 +113,9 @@ export const PRODUCTS: DetailProduct[] = [
     type: "pendant",
     specs: CHAIN_SPECS,
     sizes: [],
-    rating: 4.4,
-    reviewCount: 88,
+    // No made-up ratings: these are filled only from approved customer reviews.
+    rating: 0,
+    reviewCount: 0,
   },
   {
     id: "9",
@@ -122,8 +128,9 @@ export const PRODUCTS: DetailProduct[] = [
     type: "ring",
     specs: RING_SPECS,
     sizes: RING_SIZES,
-    rating: 4.8,
-    reviewCount: 203,
+    // No made-up ratings: these are filled only from approved customer reviews.
+    rating: 0,
+    reviewCount: 0,
   },
   {
     id: "11",
@@ -136,8 +143,9 @@ export const PRODUCTS: DetailProduct[] = [
     type: "ring",
     specs: RING_SPECS,
     sizes: RING_SIZES,
-    rating: 4.5,
-    reviewCount: 111,
+    // No made-up ratings: these are filled only from approved customer reviews.
+    rating: 0,
+    reviewCount: 0,
   },
   {
     id: "12",
@@ -150,8 +158,9 @@ export const PRODUCTS: DetailProduct[] = [
     type: "pendant",
     specs: CHAIN_SPECS,
     sizes: [],
-    rating: 4.6,
-    reviewCount: 74,
+    // No made-up ratings: these are filled only from approved customer reviews.
+    rating: 0,
+    reviewCount: 0,
   },
 ];
 
