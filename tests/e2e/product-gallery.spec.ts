@@ -33,7 +33,8 @@ const PRODUCT = "/products/sovereign-signet-ring";
 const gallery = (page: Page) => page.getByRole("button", { name: "View image full screen" }).locator("xpath=..");
 const arrow = (page: Page, name: "Previous image" | "Next image") => gallery(page).getByRole("button", { name });
 const dots = (page: Page) => page.getByRole("group", { name: "Product images" }).getByRole("button");
-const mainImage = (page: Page) => page.getByRole("button", { name: "View image full screen" }).locator("img");
+// The gallery keeps every image mounted and shows one; the shown one is the one not aria-hidden.
+const mainImage = (page: Page) => page.getByRole("button", { name: "View image full screen" }).locator('img:not([aria-hidden="true"])');
 const activeSource = async (page: Page) => (await mainImage(page).getAttribute("src")) ?? "";
 
 /** A real touch swipe across the main image, as a finger would make it. */
@@ -75,8 +76,9 @@ test.describe("product image gallery", () => {
       })
     );
     expect(sizes.filter((d) => d.active)).toHaveLength(1);
-    expect(sizes[0]).toMatchObject({ active: true, w: 10, color: "rgb(0, 0, 0)" });
-    for (const other of sizes.slice(1)) expect(other.w).toBe(6);
+    // Smaller and subtler on phones: 8px active, 5px for the others.
+    expect(sizes[0]).toMatchObject({ active: true, w: 8, color: "rgb(0, 0, 0)" });
+    for (const other of sizes.slice(1)) expect(other.w).toBe(5);
 
     const group = (await page.getByRole("group", { name: "Product images" }).boundingBox())!;
     const image = (await page.getByRole("button", { name: "View image full screen" }).boundingBox())!;
@@ -121,15 +123,68 @@ test.describe("product image gallery", () => {
     await expect(dots(page).nth(2)).toHaveAttribute("aria-current", "true");
   });
 
-  test("the image area is the same size with or without the arrows, so the layout does not shift", async ({ page }) => {
+  test("on a phone the image card is square and the share and wishlist buttons sit inside its top corner", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 800 });
+    await page.goto(PRODUCT);
+    const card = (await gallery(page).boundingBox())!;
+    expect(Math.abs(card.width - card.height)).toBeLessThan(2);
+    const share = (await gallery(page).getByRole("button", { name: "Share" }).boundingBox())!;
+    expect(share.x + share.width).toBeLessThanOrEqual(card.x + card.width);
+    expect(share.y).toBeGreaterThanOrEqual(card.y);
+    // The dots sit inside the card, near its bottom, centred.
+    const group = (await page.getByRole("group", { name: "Product images" }).boundingBox())!;
+    expect(group.y + group.height).toBeLessThanOrEqual(card.y + card.height);
+    expect(Math.abs(group.x + group.width / 2 - (card.x + card.width / 2))).toBeLessThan(1);
+  });
+
+  test("from a tablet up the card keeps its taller shape", async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto(PRODUCT);
+    const card = (await gallery(page).boundingBox())!;
+    expect(card.height).toBeGreaterThanOrEqual(436);
+    expect(card.height).toBeGreaterThan(card.width * 0.8);
+  });
+
+  test("switching images is instant: the next image is already loaded before it is shown", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 800 });
     await page.goto(PRODUCT);
     const area = page.getByRole("button", { name: "View image full screen" });
-    const before = (await area.boundingBox())!;
-    // Put the arrows back, as they were: nothing moves.
-    await page.addStyleTag({ content: 'button[aria-label="Previous image"], button[aria-label="Next image"] { display: flex !important; }' });
-    const after = (await area.boundingBox())!;
-    expect(Math.round(after.height)).toBe(Math.round(before.height));
-    expect(Math.round(after.width)).toBe(Math.round(before.width));
+    // Every image sits in the gallery once; nothing is fetched again on a switch.
+    await expect(area.locator("img")).toHaveCount(4);
+    // The first image and its neighbour finish loading on their own.
+    await expect.poll(() => area.locator("img").nth(1).evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0)).toBe(true);
+    const requests: string[] = [];
+    page.on("request", (r) => { if (r.url().includes("/_next/image")) requests.push(r.url()); });
+    await dots(page).nth(1).click();
+    // Shown at once, already decoded, with no new download for it.
+    expect(await mainImage(page).evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0)).toBe(true);
+    await dots(page).nth(0).click();
+    expect(await mainImage(page).evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0)).toBe(true);
+    expect(requests).toHaveLength(0);
+  });
+
+  test("the full-screen view switches instantly too, and keeps its own place in sync with the page", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 800 });
+    await page.goto(PRODUCT);
+    await page.getByRole("button", { name: "View image full screen" }).click();
+    const view = page.getByRole("dialog", { name: /images$/ });
+    await expect(view).toBeVisible();
+    await expect(view.locator("img")).toHaveCount(4);
+    const shown = () => view.locator('img:not([aria-hidden="true"])');
+    // The open image and its neighbour load on their own.
+    await expect.poll(() => view.locator("img").nth(1).evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0)).toBe(true);
+    await page.keyboard.press("ArrowRight");
+    await expect(view.getByText("2/4")).toBeVisible();
+    expect(await shown().evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0)).toBe(true);
+    await expect(shown()).toHaveAttribute("alt", /view 2$/);
+    // Each step loads the next neighbour ahead of time.
+    await expect.poll(() => view.locator("img").nth(2).evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0)).toBe(true);
+    await page.keyboard.press("ArrowRight");
+    expect(await shown().evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0)).toBe(true);
+    await page.keyboard.press("Escape");
+    await expect(view).toBeHidden();
+    // The page gallery is on the same image.
+    await expect(dots(page).nth(2)).toHaveAttribute("aria-current", "true");
   });
 });
+

@@ -35,7 +35,9 @@ export function HeroSection() {
 
       {/* ── Hero image / video container ─────────────── */}
       <div className="max-w-screen-xl mx-auto px-6 lg:px-16 pb-0">
-        <div className="relative overflow-hidden rounded-2xl bg-pewter" style={{ height: "clamp(340px, 55vw, 700px)" }}>
+        {/* Phones: the box takes the image's own shape (2472x1366), so nothing is cropped and both
+            baked-in captions show in full. From sm up the height rule is the one it always had. */}
+        <div className="relative overflow-hidden rounded-2xl bg-pewter aspect-[2472/1366] sm:aspect-auto sm:h-[clamp(340px,55vw,700px)]">
           {/* Video element, swap src for a real .mp4 when available */}
           <video
             autoPlay

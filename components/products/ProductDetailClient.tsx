@@ -2,7 +2,7 @@
 
 import { Stars } from "@/components/reviews/Stars";
 import { percentOff as discountPercent } from "@/lib/discount";
-import { useEffect, useMemo, useState, useRef } from "react";
+import { memo, useEffect, useMemo, useState, useRef } from "react";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useCartDrawer } from "@/store/useCartDrawer";
@@ -20,6 +20,53 @@ import { ProductOffers } from "@/components/offers/ProductOffers";
 const PACK = "Pack";
 const SINGLE = "Single";
 const PAIR = "Pair";
+
+/**
+ * The gallery's images, layered in one spot with only the active one shown. Swapping
+ * the src of a single <Image> made every switch wait for a fresh download; here each
+ * image stays mounted once fetched, so switching is just a change of opacity. The
+ * first image is preloaded (page gallery only), the ones next to the active one load
+ * straight away, and the rest load lazily. Used by the page gallery and the full-screen view. Memoized, so a swipe re-renders only this, not its images.
+ */
+const GalleryImages = memo(function GalleryImages({
+  images,
+  active,
+  name,
+  fit = "object-contain px-6 pt-11 pb-5 sm:p-4",
+  sizes = "(max-width: 1024px) 90vw, 45vw",
+  preloadFirst = true,
+}: {
+  images: string[];
+  active: number;
+  name: string;
+  /** Classes for each image's fit and padding. */
+  fit?: string;
+  sizes?: string;
+  /** Preload the first image: the page gallery, which is above the fold. */
+  preloadFirst?: boolean;
+}) {
+  return (
+    <>
+      {images.map((src, i) => {
+        const shown = i === active;
+        const near = Math.abs(i - active) <= 1;
+        return (
+          <Image
+            key={src + i}
+            src={src}
+            alt={shown ? `${name}, view ${i + 1}` : ""}
+            aria-hidden={shown ? undefined : true}
+            fill
+            className={`${fit} transition-opacity duration-150 ${shown ? "opacity-100" : "opacity-0"}`}
+            preload={preloadFirst && i === 0}
+            loading={preloadFirst && i === 0 ? undefined : near ? "eager" : "lazy"}
+            sizes={sizes}
+          />
+        );
+      })}
+    </>
+  );
+});
 
 /* ── Inline SVG icons ────────────────────────────── */
 
@@ -389,17 +436,17 @@ export function ProductDetailClient({
   return (
     <>
       {/* ── Product detail section ─────────────────── */}
-      <section className="bg-[#F7F7F7] py-10 lg:py-14">
+      <section className="bg-[#F7F7F7] py-5 sm:py-10 lg:py-14">
         <div className="max-w-screen-xl mx-auto px-6 lg:px-10">
-          <div className="flex flex-col lg:flex-row gap-8 lg:gap-14 items-start">
+          <div className="flex flex-col lg:flex-row gap-5 sm:gap-8 lg:gap-14 items-start">
 
             {/* Left: Image gallery */}
             <div className="w-full lg:w-[45%] flex-shrink-0">
               {/* Main image container */}
-              <div className="relative bg-white border border-[#CFCFCF] rounded-xl overflow-hidden flex flex-col" style={{ minHeight: 436 }}>
+              <div className="relative bg-white border border-[#CFCFCF] rounded-xl overflow-hidden flex flex-col aspect-square sm:aspect-auto sm:min-h-[436px]">
 
                 {/* Top controls */}
-                <div className="flex items-start justify-end px-[18px] pt-5">
+                <div className="absolute right-2.5 top-2.5 z-10 flex items-start justify-end sm:static sm:px-[18px] sm:pt-5">
                   <div className="flex gap-1 items-start">
                     {shareNote && (
                       <span
@@ -412,7 +459,7 @@ export function ProductDetailClient({
                     <button
                       aria-label="Share"
                       onClick={handleShare}
-                      className="w-[42px] h-[42px] rounded-full bg-white border border-[#DDDDDD] flex items-center justify-center hover:border-black transition-colors duration-200"
+                      className="w-9 h-9 sm:w-[42px] sm:h-[42px] rounded-full bg-white border border-[#DDDDDD] flex items-center justify-center hover:border-black transition-colors duration-200"
                     >
                       <ShareIcon />
                     </button>
@@ -433,7 +480,7 @@ export function ProductDetailClient({
                           hasSizes ? selectedSize : null
                         );
                       }}
-                      className="w-[42px] h-[42px] rounded-full bg-white border border-[#DDDDDD] flex items-center justify-center hover:border-black transition-colors duration-200"
+                      className="w-9 h-9 sm:w-[42px] sm:h-[42px] rounded-full bg-white border border-[#DDDDDD] flex items-center justify-center hover:border-black transition-colors duration-200"
                     >
                       <HeartIcon filled={wishlist} />
                     </button>
@@ -445,8 +492,7 @@ export function ProductDetailClient({
                   role="button"
                   tabIndex={0}
                   aria-label="View image full screen"
-                  className="relative flex-1 mx-2.5 mt-4 mb-0 cursor-zoom-in select-none"
-                  style={{ minHeight: 280 }}
+                  className="relative flex-1 mx-2.5 mt-0 sm:mt-4 mb-0 min-h-0 sm:min-h-[280px] cursor-zoom-in select-none"
                   onClick={() => setLightboxOpen(true)}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" || e.key === " ") setLightboxOpen(true);
@@ -454,19 +500,12 @@ export function ProductDetailClient({
                   onTouchStart={handleTouchStart}
                   onTouchEnd={handleTouchEnd}
                 >
-                  <Image
-                    src={product.images[activeImage]}
-                    alt={`${product.name}, view ${activeImage + 1}`}
-                    fill
-                    className="object-contain p-4 transition-opacity duration-300"
-                    priority
-                    sizes="(max-width: 1024px) 90vw, 45vw"
-                  />
+                  <GalleryImages images={product.images} active={activeImage} name={product.name} />
                 </div>
 
                 {/* Navigation row: arrows from sm up (phones swipe), pagination dots between them. The fixed
                     min height keeps the image area the same size with or without the arrows. */}
-                <div className="flex min-h-[42px] box-content items-center justify-center sm:justify-between px-4 py-5 mt-2">
+                <div className="flex min-h-0 sm:min-h-[42px] box-content items-center justify-center sm:justify-between px-4 py-2 sm:py-5 mt-0 sm:mt-2">
                   <button
                     aria-label="Previous image"
                     onClick={() => setActiveImage((i) => Math.max(0, i - 1))}
@@ -490,7 +529,7 @@ export function ProductDetailClient({
                           >
                             <span
                               className={`block rounded-full transition-all duration-200 ${
-                                active ? "h-2.5 w-2.5 bg-black" : "h-1.5 w-1.5 bg-[#CFCFCF]"
+                                active ? "h-2 w-2 sm:h-2.5 sm:w-2.5 bg-black" : "h-[5px] w-[5px] sm:h-1.5 sm:w-1.5 bg-[#CFCFCF]"
                               }`}
                             />
                           </button>
@@ -517,7 +556,7 @@ export function ProductDetailClient({
 
               {/* Identity: name, subtitle, rating, price */}
               <div className="flex flex-col gap-1.5">
-                <h1 className="font-sans font-medium text-[18px] sm:text-[20px] leading-[26px] sm:leading-[30px] text-black">
+                <h1 className="font-sans font-medium text-[16px] sm:text-[20px] leading-[22px] sm:leading-[30px] text-black">
                   {product.name}
                 </h1>
                 {product.description && (
@@ -883,8 +922,8 @@ export function ProductDetailClient({
                           <span className="ml-2 text-[11px] text-[#9F7A00]">← selected</span>
                         )}
                       </td>
-                      <td className="border border-[#CFCFCF] p-3 text-[#626262]">{row.circumference}</td>
-                      <td className="border border-[#CFCFCF] p-3 text-[#626262]">{row.diameter}</td>
+                      <td className="border border-[#CFCFCF] p-3 text-[#626262]">{row.circumference.toFixed(1)}</td>
+                      <td className="border border-[#CFCFCF] p-3 text-[#626262]">{row.diameter.toFixed(1)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -927,13 +966,8 @@ export function ProductDetailClient({
           </div>
 
           <div className="relative flex-1 mx-4 mb-4">
-            <Image
-              src={product.images[activeImage]}
-              alt={`${product.name}, view ${activeImage + 1}`}
-              fill
-              className="object-contain"
-              sizes="100vw"
-            />
+            {/* Same layering as the page gallery, so swiping here is instant too. */}
+            <GalleryImages images={product.images} active={activeImage} name={product.name} fit="object-contain" sizes="100vw" preloadFirst={false} />
             {/* Arrows for desktop. On touch screens, swipe instead. */}
             <button
               aria-label="Previous image"

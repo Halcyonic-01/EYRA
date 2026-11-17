@@ -10,6 +10,7 @@
  */
 
 import { rankSimilar } from "@/lib/similar-products";
+import { limitRingSizes } from "@/lib/sizing";
 import type { Audience, Product, ProductChoice, ProductVariant } from "@/components/products/types";
 import { originalFor } from "@/lib/discount";
 import { canonicalProductType } from "@/lib/product-type";
@@ -317,7 +318,10 @@ function toDetailProduct(p: MedusaProduct): DetailProduct {
   const sizeOption = p.options.find((o) =>
     o.title.toLowerCase().includes("size")
   );
-  const sizes = sizeOption ? orderSizes(sizeOption.values.map((v) => v.value)) : [];
+  // Rings for women and for men are offered in a short list of sizes for now (lib/sizing.ts).
+  const sizes = sizeOption
+    ? limitRingSizes(orderSizes(sizeOption.values.map((v) => v.value)), base.type, base.audiences)
+    : [];
 
   // Quality badges come from Medusa product tags; fall back to sensible defaults
   const defaultSpecs: Record<"ring" | "pendant" | "bracelet" | "anklet", string[]> = {

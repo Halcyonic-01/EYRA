@@ -22,7 +22,7 @@ export interface DetailProduct extends Product {
   sizeOptionTitle?: string;
 }
 
-const RING_SIZES = ["6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20"];
+const RING_SIZES = ["6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24"];
 const RING_SPECS = ["925 Sterling", "Hallmarked", "BIS Certified", "Anti-tarnish"];
 const CHAIN_SPECS = ["925 Sterling", "Nickel Free", "Hallmarked", "Anti-tarnish"];
 
