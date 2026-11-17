@@ -96,7 +96,10 @@ export function ProductOffers({
           return (
             <li
               key={card.key}
-              className="flex items-start gap-3 rounded-2xl border border-cloud bg-white px-4 py-3"
+              // A soft green edge when this piece qualifies, the usual grey when it does not.
+              className={`flex items-start gap-3 rounded-2xl border bg-white px-4 py-3 ${
+                card.unlocked ? "border-[#A9D8B6]" : "border-cloud"
+              }`}
             >
               <Tag
                 aria-hidden="true"
