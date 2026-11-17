@@ -108,8 +108,13 @@ export default async function RootLayout({
         },
       }}
     >
+      {/* globals.css sets scroll-behavior: smooth. Since Next 16 that no longer pauses during a page
+          change, so the jump to the top became a slow glide that a late-loading image could cut short,
+          leaving the new page opened part-way down. This attribute restores the override: route changes
+          jump straight to the top, and in-page smooth scrolling is untouched. */}
       <html
         lang="en"
+        data-scroll-behavior="smooth"
         className={`${poppins.variable} ${cormorant.variable}`}
       >
         <body className="bg-ivory text-carbon font-sans min-h-screen flex flex-col antialiased">

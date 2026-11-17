@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { useCartStore, useWishlistStore } from "@/store/useStore";
 import { CartDrawer } from "@/components/cart/CartDrawer";
+import { ScrollToTop } from "@/components/layout/ScrollToTop";
 
 /**
  * Navbar and CartSyncBanner are themselves "use client" components, so
@@ -61,6 +62,7 @@ export function AppShell({
 
   return (
     <>
+      <ScrollToTop />
       {navbar}
       <main className="flex-1" style={{ paddingTop: "var(--header-offset)" }}>
         {children}
