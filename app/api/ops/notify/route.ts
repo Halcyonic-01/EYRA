@@ -148,6 +148,27 @@ export async function POST(req: NextRequest) {
     return Response.json({ received: true, sent: delivery.sent });
   }
 
+  // A Razorpay payment on a replaced checkout attempt; there may be no order for it.
+  if (body.type === "late_payment") {
+    const late = body as { outcome?: string; cart_id?: string; razorpay_order_id?: string; razorpay_payment_id?: string };
+    const refunded = late.outcome === "refunded";
+    await alert(
+      refunded
+        ? `Late payment refunded: ₹${Number(body.amount) || 0} (${late.razorpay_payment_id ?? "unknown payment"})`
+        : `Late payment needs a person: ₹${Number(body.amount) || 0} (${late.razorpay_payment_id ?? "unknown payment"})`,
+      [
+        `Cart: ${late.cart_id ?? "(unknown)"}`,
+        `Order: ${body.order_id ?? "(none)"}`,
+        `Razorpay order: ${late.razorpay_order_id ?? "(unknown)"}, payment: ${late.razorpay_payment_id ?? "(unknown)"}`,
+        body.detail ? `Detail: ${body.detail}` : null,
+        refunded
+          ? "The customer paid an older checkout attempt after starting a newer one, and that payment could not become their order (it was already placed another way, the cart changed, or an item ran out). It was refunded automatically. Nothing to do unless the customer asks."
+          : "The customer paid an older checkout attempt and it could not be refunded or placed automatically. Check the payment in the Razorpay dashboard and refund it or create the order by hand.",
+      ].filter((line): line is string => Boolean(line))
+    );
+    return Response.json({ received: true, sent: delivery.sent });
+  }
+
   const orderId = body.order_id;
   if (typeof orderId !== "string" || !orderId.startsWith("order_")) {
     return Response.json({ error: "order_id is required." }, { status: 400 });
