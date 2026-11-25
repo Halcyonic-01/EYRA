@@ -16,6 +16,9 @@ import { CHECKOUT_TERMS_TEXT } from "@/config/policy-copy";
 import { estimatedDeliveryDate, formatDeliveryDateShort } from "@/lib/delivery-date";
 import { formatRupees } from "@/lib/money";
 import { WalletPanel } from "@/components/checkout/WalletPanel";
+import { payuEnabled, type PayuCheckoutForm } from "@/lib/payu";
+import { submitHostedForm } from "@/lib/payu-redirect";
+import type { PaymentMode } from "@/lib/medusa-cart";
 
 const INDIAN_STATES = [
   "Andaman and Nicobar Islands","Andhra Pradesh","Arunachal Pradesh",
@@ -42,7 +45,14 @@ interface ShippingForm {
 
 type ShippingErrors = Partial<Record<keyof ShippingForm, string>>;
 type TouchedFields = Partial<Record<keyof ShippingForm, boolean>>;
-type PaymentMethod = "cod" | "prepaid";
+// "prepaid" is Razorpay; "payu" is PayU's hosted checkout, also prepaid.
+type PaymentMethod = "cod" | "prepaid" | "payu";
+const PAYU_ENABLED = payuEnabled();
+
+/** How a method is priced and checked for the pincode: both online gateways are prepaid. */
+function modeFor(method: PaymentMethod): PaymentMode {
+  return method === "cod" ? "cod" : "prepaid";
+}
 type CheckoutStep = 1 | 2 | 3;
 type PincodeStatus = "idle" | "loading" | "valid" | "invalid" | "unserviceable";
 
@@ -668,6 +678,31 @@ function PaymentStep({
             <span className="text-white font-bold text-[11px]">R</span>
           </div>
         </button>
+
+        {/* PayU, an alternative online gateway; the customer chooses it, it is never switched to for them */}
+        {PAYU_ENABLED && <button
+          onClick={() => onSelectMethod("payu")}
+          data-testid="payment-method-payu"
+          className={`flex items-start gap-4 p-5 rounded-2xl border-2 text-left transition-colors duration-150 w-full ${
+            paymentMethod === "payu" ? "border-black bg-[#FAFAFA]" : "border-[#E1E1E1] hover:border-[#AAAAAA]"
+          }`}
+        >
+          <div className={`mt-0.5 w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center ${paymentMethod === "payu" ? "border-black" : "border-[#CFCFCF]"}`}>
+            {paymentMethod === "payu" && <div className="w-2.5 h-2.5 rounded-full bg-black" />}
+          </div>
+          <div className="flex-1">
+            <p className="font-sans font-medium text-[16px] text-black">Prepaid via PayU</p>
+            <p className="font-sans font-normal text-[13px] text-[#626262] mt-1">
+              Pay on PayU&apos;s secure page with UPI, card, net banking, or wallet. You come back here once you&apos;ve paid.
+            </p>
+            <p className="font-sans font-medium text-[13px] mt-1.5" style={{ color: "#3D7A1A" }}>
+              Free shipping on prepaid orders.
+            </p>
+          </div>
+          <div className="flex-shrink-0 mt-0.5 flex items-center justify-center w-8 h-8 rounded-full bg-[#A6C307]">
+            <span className="text-white font-bold text-[11px]">P</span>
+          </div>
+        </button>}
       </div>}
 
       {/* Security badge, shown when prepaid selected */}
@@ -683,14 +718,38 @@ function PaymentStep({
         </div>
       )}
 
+      {!walletOnly && paymentMethod === "payu" && (
+        <div className="flex items-start gap-3 p-4 bg-[#F7FFF4] border border-[#C8EEB8] rounded-2xl" data-testid="payu-redirect-note">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" className="mt-0.5 flex-shrink-0" aria-hidden="true">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="#47B10A" strokeWidth="1.5" strokeLinejoin="round" />
+            <path d="M9 12l2 2 4-4" stroke="#47B10A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          <p className="font-sans font-normal text-[12px] text-[#3D7A1A] leading-[18px]">
+            You&apos;ll be taken to PayU&apos;s secure page to pay. Your order is placed only once PayU confirms the payment.
+          </p>
+        </div>
+      )}
+
       {/* No method selected error */}
       {!walletOnly && paymentMethod === null && (
         <p className="font-sans text-[13px] text-[#D93025]">Please select a payment method to continue.</p>
       )}
 
-      {/* Razorpay load error */}
+      {/* Payment error */}
       {razorpayError && (
-        <p className="font-sans text-[13px] text-[#D93025]">{razorpayError}</p>
+        <p className="font-sans text-[13px] text-[#D93025]" data-testid="payment-error">{razorpayError}</p>
+      )}
+
+      {/* Razorpay trouble: offer PayU, for the customer to choose */}
+      {PAYU_ENABLED && razorpayError && paymentMethod === "prepaid" && !loading && (
+        <button
+          type="button"
+          onClick={() => onSelectMethod("payu")}
+          className="self-start font-sans text-[13px] text-black underline underline-offset-2"
+          data-testid="payu-fallback"
+        >
+          Having trouble with Razorpay? Pay with PayU instead
+        </button>
       )}
 
       {/* Address summary chip */}
@@ -853,6 +912,19 @@ export function CheckoutClient() {
   const [payLoading, setPayLoading] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [razorpayError, setRazorpayError] = useState("");
+  // Set while the browser is being sent to PayU, so a second tap cannot open a second attempt.
+  const payuRedirecting = useRef(false);
+
+  // Back from PayU's page without paying: the browser may restore this page as it was, still "loading".
+  useEffect(() => {
+    function onPageShow(e: PageTransitionEvent) {
+      if (!e.persisted) return;
+      payuRedirecting.current = false;
+      setPayLoading(false);
+    }
+    window.addEventListener("pageshow", onPageShow);
+    return () => window.removeEventListener("pageshow", onPageShow);
+  }, []);
 
 
   /* Wallet credit. `walletBalance` is null until it has been read. */
@@ -899,8 +971,9 @@ export function CheckoutClient() {
   /* Choose how to pay. The delivery charge and total follow the choice. */
   async function handleSelectMethod(method: PaymentMethod) {
     setPaymentMethod(method);
+    setRazorpayError("");
     if (!cartId) return;
-    const result = await fetchCheckoutPricing(cartId, method, "keep");
+    const result = await fetchCheckoutPricing(cartId, modeFor(method), "keep");
     if (result.ok) setPricing(result.cart);
   }
 
@@ -910,7 +983,7 @@ export function CheckoutClient() {
     setWalletBusy(true);
     setWalletError("");
     try {
-      const result = await fetchCheckoutPricing(cartId, paymentMethod ?? "prepaid", on ? "on" : "off");
+      const result = await fetchCheckoutPricing(cartId, paymentMethod ? modeFor(paymentMethod) : "prepaid", on ? "on" : "off");
       if (!result.ok) {
         setWalletError(result.message);
         return;
@@ -958,7 +1031,7 @@ export function CheckoutClient() {
         setPincodeStatus(data.serviceable ? "valid" : "unserviceable");
         // Reset selected payment method if it's no longer available for this pincode.
         setPaymentMethod((prev) =>
-          prev && !data.availablePaymentMethods.includes(prev) ? null : prev
+          prev && !data.availablePaymentMethods.includes(modeFor(prev)) ? null : prev
         );
       })
       .catch((err: unknown) => {
@@ -1113,6 +1186,12 @@ export function CheckoutClient() {
       const params = new URLSearchParams({ orderId: confirmedOrderId, method: "cod" });
       if (useWallet) params.set("wallet", String(displayTotals.walletCredit));
       router.push(`/orders/success?${params.toString()}`);
+      return;
+    }
+
+    /* ── Prepaid via PayU (hosted checkout) ─────────────────────── */
+    if (paymentMethod === "payu") {
+      await handlePayuPayment(useWallet);
       return;
     }
 
@@ -1306,6 +1385,64 @@ export function CheckoutClient() {
 
     const rzp = new window.Razorpay(rzpOptions);
     rzp.open();
+  }
+
+  /*
+   * PayU: the server prepares the cart and the backend opens the attempt and
+   * signs the form; the browser only posts it to PayU. Nothing is decided here:
+   * the order is placed by the backend once PayU confirms, and the status page
+   * says what happened.
+   */
+  async function handlePayuPayment(useWallet: boolean) {
+    if (payuRedirecting.current) return;
+    if (!cartId) {
+      setRazorpayError("Your cart session has expired. Please refresh the page and try again.");
+      setPayLoading(false);
+      return;
+    }
+    payuRedirecting.current = true;
+
+    const fail = (message: string) => {
+      payuRedirecting.current = false;
+      setRazorpayError(message);
+      setPayLoading(false);
+    };
+
+    const shippingAddress = {
+      fullName: form.fullName,
+      addressLine1: form.addressLine1,
+      addressLine2: form.addressLine2,
+      city: form.city,
+      state: form.state,
+      pincode: form.pincode,
+      phone: form.phone,
+      whatsappOptIn,
+    };
+
+    let data: { form?: PayuCheckoutForm; error?: string; message?: string };
+    try {
+      const res = await fetch("/api/payu/create-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cartId, shippingAddress, useWallet }),
+      });
+      data = (await res.json().catch(() => ({}))) as typeof data;
+      if (res.status === 401) return fail(data.message || "Please sign in again to place your order.");
+      if (!res.ok) return fail("Could not start the PayU payment. Please try again or choose another payment method.");
+    } catch (err) {
+      console.error("[EYRA/payu] create-session request failed:", err);
+      return fail("Could not start the PayU payment. Please try again or choose another payment method.");
+    }
+
+    if (data.error === "checkout_refused") return fail(data.message || "Please review your cart and try again.");
+    if (data.error === "fully_covered_by_wallet") return fail("Your wallet credit now covers this order. Please place the order again.");
+    if (data.error === "wallet_unavailable") return fail(data.message || "Could not apply your wallet credit. Please try again.");
+    if (data.error || !data.form) {
+      return fail(data.message || "Could not start the PayU payment. Please try again or choose another payment method.");
+    }
+
+    // Leaves the page; the loading state stays on until the browser navigates.
+    submitHostedForm(data.form);
   }
 
   /* Empty cart guard */
