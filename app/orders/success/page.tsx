@@ -16,12 +16,15 @@ export default async function OrderSuccessPage({
     method?: string;
     wallet?: string;
     payment_id?: string;
+    provider?: string;
     awb?: string;
     courier?: string;
   }>;
 }) {
-  const { orderId, method, wallet, payment_id, awb, courier } = await searchParams;
+  const { orderId, method, wallet, payment_id, provider, awb, courier } = await searchParams;
   const isPrepaid = method === "prepaid";
+  // Display only: which gateway took the payment.
+  const gateway = provider === "payu" ? "PayU" : "Razorpay";
   const isWalletOnly = method === "wallet";
   // Wallet credit used, when any. Display only: the order itself is the record.
   const walletCredit = Number(wallet) > 0 ? Number(wallet) : 0;
@@ -91,7 +94,7 @@ export default async function OrderSuccessPage({
             {isWalletOnly
               ? "Paid with wallet credit"
               : isPrepaid
-              ? "Prepaid via Razorpay"
+              ? `Prepaid via ${gateway}`
               : "Cash on Delivery"}
           </span>
         </div>
