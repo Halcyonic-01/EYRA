@@ -1,10 +1,9 @@
-import fs from "node:fs";
-import path from "node:path";
 import { test, expect, devices, type Page } from "@playwright/test";
 
 import { submitHostedForm } from "../../lib/payu-redirect";
 import type { PayuCheckoutForm } from "../../lib/payu";
-import { FAKE_PAYU_PORT, signedResponse, startFakePayu } from "./helpers/fake-payu";
+import { signedResponse, startFakePayu } from "./helpers/fake-payu";
+import { cartCompleted, payuCart, rememberCart, storedCartId } from "./helpers/backend";
 
 /**
  * PayU hosted checkout, end to end, on a desktop and a phone: the backend opens
@@ -21,87 +20,6 @@ import { FAKE_PAYU_PORT, signedResponse, startFakePayu } from "./helpers/fake-pa
  * tests cannot pass without creating users in the shared Clerk instance, so the
  * carts are prepared through the backend exactly as /api/payu/create-session does.
  */
-
-function localEnv(name: string): string | undefined {
-  if (process.env[name]) return process.env[name];
-  try {
-    const file = fs.readFileSync(path.join(__dirname, "../../.env.local"), "utf8");
-    return file.match(new RegExp(`^${name}=(.*)$`, "m"))?.[1]?.trim();
-  } catch {
-    return undefined;
-  }
-}
-
-const BACKEND = (localEnv("NEXT_PUBLIC_MEDUSA_BACKEND_URL") ?? "http://localhost:9000").replace(/\/$/, "");
-const PUB_KEY = localEnv("NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY") ?? "";
-
-async function store<T>(route: string, body?: unknown): Promise<{ status: number; data: T }> {
-  const res = await fetch(`${BACKEND}${route}`, {
-    method: body === undefined ? "GET" : "POST",
-    headers: { "Content-Type": "application/json", "x-publishable-api-key": PUB_KEY },
-    body: body === undefined ? undefined : JSON.stringify(body),
-  });
-  return { status: res.status, data: (await res.json().catch(() => ({}))) as T };
-}
-
-type Variant = { id: string; inventory_quantity?: number | null; manage_inventory?: boolean };
-type Product = { handle: string; variants?: Variant[] };
-
-/** A prepaid cart with one item, an email and an address, as /api/payu/create-session leaves it, and its PayU form. */
-async function payuCart(): Promise<{ cartId: string; form: PayuCheckoutForm } | { skip: string }> {
-  let regions;
-  try {
-    regions = await store<{ regions: { id: string; currency_code: string }[] }>("/store/regions");
-  } catch {
-    return { skip: `backend not reachable at ${BACKEND}` };
-  }
-  const region = regions.data.regions?.find((r) => r.currency_code === "inr");
-  if (!region) return { skip: "no INR region" };
-
-  const products = await store<{ products: Product[] }>(
-    `/store/products?region_id=${region.id}&limit=50&fields=handle,*variants,+variants.inventory_quantity`
-  );
-  const variant = products.data.products
-    ?.filter((p) => p.handle !== "eyra-complimentary-tote")
-    .flatMap((p) => p.variants ?? [])
-    .find((v) => v.manage_inventory === false || (v.inventory_quantity ?? 0) > 2);
-  if (!variant) return { skip: "no product in stock" };
-
-  const cart = await store<{ cart: { id: string } }>("/store/carts", { region_id: region.id });
-  const cartId = cart.data.cart.id;
-  await store(`/store/carts/${cartId}/line-items`, { variant_id: variant.id, quantity: 1 });
-  await store(`/store/carts/${cartId}`, {
-    email: "payu-e2e@example.com",
-    shipping_address: {
-      first_name: "Asha", last_name: "Test", phone: "9999999999", address_1: "1 Test Street",
-      city: "Bengaluru", province: "Karnataka", postal_code: "560001", country_code: "in",
-    },
-  });
-  const mode = await store(`/store/carts/${cartId}/payment-mode`, { mode: "prepaid" });
-  if (mode.status !== 200) return { skip: `payment mode refused (${mode.status})` };
-
-  const session = await store<{ form?: PayuCheckoutForm; message?: string }>(`/store/carts/${cartId}/payu-session`, {});
-  if (session.status !== 200 || !session.data.form) return { skip: `PayU not set up on the backend: ${session.data.message ?? session.status}` };
-  if (!session.data.form.action.startsWith(`http://127.0.0.1:${FAKE_PAYU_PORT}/`)) {
-    return { skip: "backend PAYU_CHECKOUT_URL does not point at the fake" };
-  }
-  return { cartId, form: session.data.form };
-}
-
-async function cartCompleted(cartId: string): Promise<boolean> {
-  const res = await store<{ cart?: { completed_at?: string | null } }>(`/store/carts/${cartId}?fields=id,completed_at`);
-  return !!res.data.cart?.completed_at;
-}
-
-/** Put the cart in this browser's saved cart, the way adding to bag would. */
-async function rememberCart(page: Page, cartId: string) {
-  await page.evaluate((id) => {
-    localStorage.setItem("eyra-cart-storage", JSON.stringify({ state: { items: [], cartId: id }, version: 3 }));
-  }, cartId);
-}
-
-const storedCartId = (page: Page) =>
-  page.evaluate(() => JSON.parse(localStorage.getItem("eyra-cart-storage") ?? "{}")?.state?.cartId ?? null);
 
 // One worker, in order: the fake PayU listens on a fixed port.
 test.describe.configure({ mode: "default" });
@@ -170,7 +88,8 @@ for (const vp of VIEWPORTS) {
       await tap(page, "payu-failure");
       await expect(page.getByTestId("payu-status-failed")).toBeVisible();
       await expect(page.getByTestId("payu-status-message")).toContainText("no money was taken");
-      await expect(page.getByTestId("payu-try-again")).toHaveAttribute("href", "/checkout");
+      await expect(page.getByTestId("payu-try-again")).toHaveAttribute("href", "/checkout?method=payu");
+      await expect(page.getByTestId("payu-switch-razorpay")).toHaveAttribute("href", "/checkout?method=prepaid");
       expect(await cartCompleted(cartId)).toBe(false);
       expect(await storedCartId(page)).toBe(cartId);
     });
@@ -228,6 +147,91 @@ for (const vp of VIEWPORTS) {
     });
   });
 }
+
+/** What the customer sees on /payment-status for each state, on both screens. */
+for (const vp of VIEWPORTS) {
+  test.describe(`Payment status on ${vp.name}`, () => {
+    test.use(vp.use);
+
+    async function readyCart() {
+      const ready = await payuCart();
+      test.skip("skip" in ready, "skip" in ready ? ready.skip : "");
+      return ready as { cartId: string; form: PayuCheckoutForm };
+    }
+    /** The customer reached PayU's page (PayU now knows the transaction). */
+    async function reachPayu(form: PayuCheckoutForm) {
+      const res = await fetch(form.action, { method: "POST", body: new URLSearchParams(form.fields) });
+      expect(res.status).toBe(200);
+    }
+    async function openStatus(page: Page, cartId: string | null) {
+      await page.goto("/cart");
+      if (cartId) await rememberCart(page, cartId);
+      await page.goto("/payment-status");
+    }
+    /** Fits the screen: no sideways scrolling, and every button is big enough to tap. */
+    async function fitsScreen(page: Page) {
+      const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+      expect(overflow).toBeLessThanOrEqual(0);
+      const small = await page.locator('[data-testid="cart-payment-status"] a, [data-testid="cart-payment-status"] button').evaluateAll((els) =>
+        els.filter((el) => el.getBoundingClientRect().height < 44).map((el) => el.textContent)
+      );
+      expect(small).toEqual([]);
+    }
+
+    test("nothing paid: says so and offers checkout", async ({ page }) => {
+      const { cartId } = await readyCart();
+      await openStatus(page, cartId);
+      await expect(page.getByTestId("payment-status-clear")).toBeVisible();
+      await expect(page.getByRole("link", { name: "Go to checkout" })).toBeVisible();
+      await fitsScreen(page);
+    });
+
+    test("pending at PayU: asks not to pay again, offers no checkout, then shows it paid once PayU confirms", async ({ page, request }) => {
+      const { cartId, form } = await readyCart();
+      await reachPayu(form);
+      fake.settle(form.fields.txnid, "pending");
+      await openStatus(page, cartId);
+
+      await expect(page.getByTestId("payment-standing-pending")).toBeVisible();
+      await expect(page.getByTestId("payment-standing-message")).toContainText("Please don't pay again");
+      await expect(page.getByRole("link", { name: "Go to checkout" })).toHaveCount(0);
+      await fitsScreen(page);
+      const api = await (await request.post("/api/checkout/payment-status", { data: { cartId } })).json();
+      expect(api.payment).toMatchObject({ state: "pending", can_pay: false, allowed_providers: [] });
+
+      fake.settle(form.fields.txnid, "success");
+      await page.getByTestId("payment-standing-recheck").click();
+      await expect(page.getByTestId("payment-standing-paid")).toBeVisible();
+      await expect(page.getByTestId("payment-standing-message")).toContainText("Please don't pay again");
+    });
+
+    test("PayU unreachable: paying is paused rather than guessed", async ({ page }) => {
+      const { cartId, form } = await readyCart();
+      await reachPayu(form);
+      fake.settle(form.fields.txnid, "pending");
+      await fake.close();
+      try {
+        await openStatus(page, cartId);
+        await expect(page.getByTestId("payment-standing-unknown")).toBeVisible();
+        await expect(page.getByTestId("payment-standing-message")).toContainText("paying again is paused");
+        await fitsScreen(page);
+      } finally {
+        fake = await startFakePayu();
+      }
+    });
+
+    test("no cart in this browser: says where to look instead", async ({ page }) => {
+      await openStatus(page, null);
+      await expect(page.getByTestId("payment-status-no-cart")).toBeVisible();
+      await fitsScreen(page);
+    });
+  });
+}
+
+test("the payment status API takes only a cart id", async ({ request }) => {
+  expect((await request.post("/api/checkout/payment-status", { data: {} })).status()).toBe(400);
+  expect((await request.post("/api/checkout/payment-status", { data: { cartId: "../admin" } })).status()).toBe(400);
+});
 
 test("a guest cannot open a PayU payment", async ({ request }) => {
   const res = await request.post("/api/payu/create-session", { data: { cartId: "cart_x", shippingAddress: {} } });

@@ -10,6 +10,7 @@ import {
 import { syncWalletForCheckout } from "@/lib/medusa-wallet";
 import { sendOrderConfirmationEmail } from "@/lib/order-email";
 import { applyRateLimit } from "@/lib/rateLimit";
+import { onlinePaymentBlocker } from "@/lib/medusa-payment-standing";
 import { getCheckoutEmail, SIGN_IN_REQUIRED } from "@/lib/checkout-customer";
 
 /**
@@ -41,6 +42,10 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
+
+    // An online payment taken or still in progress on this cart: placing it another way would charge twice.
+    const blocked = await onlinePaymentBlocker(cartId);
+    if (blocked) return NextResponse.json({ orderId: null, ...blocked }, { status: 200 });
 
     const prepared = await prepareCartForCheckout(cartId, email, shippingAddress, "cod");
     if (!prepared) {
