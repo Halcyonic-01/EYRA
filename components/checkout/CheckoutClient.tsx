@@ -18,6 +18,9 @@ import { formatRupees } from "@/lib/money";
 import { WalletPanel } from "@/components/checkout/WalletPanel";
 import { payuEnabled, type PayuCheckoutForm } from "@/lib/payu";
 import { submitHostedForm } from "@/lib/payu-redirect";
+import { failureMessage, methodAllowed, type PaymentStanding } from "@/lib/payment-standing";
+import { usePaymentStanding } from "@/lib/use-payment-standing";
+import { PaymentStandingPanel } from "@/components/checkout/PaymentStandingPanel";
 import type { PaymentMode } from "@/lib/medusa-cart";
 
 const INDIAN_STATES = [
@@ -568,6 +571,7 @@ function PaymentStep({
   walletBalance, walletBusy, walletError, walletOnly,
   termsAccepted, onTermsChange,
   onSelectMethod, onToggleWallet, onBack, onPlaceOrder,
+  standing, standingChecking, onCheckStanding, failure, onDismissFailure,
 }: {
   totals: DisplayTotals; shippingForm: ShippingForm;
   paymentMethod: PaymentMethod | null; loading: boolean; razorpayError: string;
@@ -582,10 +586,62 @@ function PaymentStep({
   onSelectMethod: (m: PaymentMethod) => void;
   onToggleWallet: (on: boolean) => void;
   onBack: () => void; onPlaceOrder: () => void;
+  /** Where the cart's payment stands at the providers; null until asked. */
+  standing: PaymentStanding | null; standingChecking: boolean; onCheckStanding: () => void;
+  /** The last attempt failed or was closed, and nothing is pending: offer the other methods. */
+  failure: { reason: "failed" | "closed"; detail: string | null } | null;
+  onDismissFailure: () => void;
 }) {
+  const allowed = (m: PaymentMethod) => methodAllowed(standing, m);
+  const payBlocked = walletOnly ? Boolean(standing && standing.state !== "none") : Boolean(paymentMethod && !allowed(paymentMethod));
+  const others = (["prepaid", "payu", "cod"] as PaymentMethod[]).filter(
+    (m) =>
+      m !== paymentMethod &&
+      allowed(m) &&
+      (m !== "payu" || PAYU_ENABLED) &&
+      (m !== "cod" || !serviceability || serviceability.availablePaymentMethods.includes("cod"))
+  );
+  const LABEL: Record<PaymentMethod, string> = { prepaid: "Pay with Razorpay", payu: "Pay with PayU", cod: "Cash on Delivery" };
+  const cardState = (m: PaymentMethod) => (allowed(m) ? "" : " opacity-50 cursor-not-allowed");
   return (
     <div className="flex flex-col gap-5">
       <h2 className="font-sans font-medium text-[20px] text-black">Select Payment Method</h2>
+
+      <PaymentStandingPanel standing={standing} checking={standingChecking} onCheckAgain={onCheckStanding} />
+
+      {failure && !walletOnly && (!standing || standing.state === "none") && (
+        <div className="flex flex-col gap-3 p-4 bg-[#FFF5F4] border border-[#F3C9C4] rounded-2xl" data-testid="payment-failure" role="alert">
+          <p className="font-sans font-medium text-[14px] text-[#A1271B]">
+            {failure.reason === "failed" ? "Payment didn't go through" : "Payment not completed"}
+          </p>
+          <p className="font-sans text-[13px] leading-[20px] text-[#444]" data-testid="payment-failure-message">
+            {failureMessage(failure.reason, failure.detail)}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {paymentMethod && allowed(paymentMethod) && (
+              <button
+                type="button"
+                onClick={onDismissFailure}
+                className="min-h-[44px] px-5 rounded-full border border-[#CFCFCF] bg-white font-sans font-medium text-[14px] text-black"
+                data-testid="payment-retry-same"
+              >
+                Try {paymentMethod === "payu" ? "PayU" : paymentMethod === "cod" ? "again" : "Razorpay"} again
+              </button>
+            )}
+            {others.map((m) => (
+              <button
+                key={m}
+                type="button"
+                onClick={() => onSelectMethod(m)}
+                className="min-h-[44px] px-5 rounded-full border border-[#CFCFCF] bg-white font-sans font-medium text-[14px] text-black"
+                data-testid={m === "payu" ? "payu-fallback" : `payment-switch-${m}`}
+              >
+                {LABEL[m]} instead
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Delivery estimate chip when serviceability is confirmed */}
       {serviceability?.serviceable && serviceability.estimatedDays > 0 && (
@@ -626,9 +682,12 @@ function PaymentStep({
         {/* COD, hidden when courier doesn't support it for this pincode */}
         {(!serviceability || serviceability.availablePaymentMethods.includes("cod")) && <button
           onClick={() => onSelectMethod("cod")}
+          disabled={!allowed("cod")}
+          aria-disabled={!allowed("cod")}
+          data-testid="payment-method-cod"
           className={`flex items-start gap-4 p-5 rounded-2xl border-2 text-left transition-colors duration-150 w-full ${
             paymentMethod === "cod" ? "border-black bg-[#FAFAFA]" : "border-[#E1E1E1] hover:border-[#AAAAAA]"
-          }`}
+          }${cardState("cod")}`}
         >
           <div className={`mt-0.5 w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center ${paymentMethod === "cod" ? "border-black" : "border-[#CFCFCF]"}`}>
             {paymentMethod === "cod" && <div className="w-2.5 h-2.5 rounded-full bg-black" />}
@@ -652,9 +711,12 @@ function PaymentStep({
         {/* Razorpay */}
         <button
           onClick={() => onSelectMethod("prepaid")}
+          disabled={!allowed("prepaid")}
+          aria-disabled={!allowed("prepaid")}
+          data-testid="payment-method-razorpay"
           className={`flex items-start gap-4 p-5 rounded-2xl border-2 text-left transition-colors duration-150 w-full ${
             paymentMethod === "prepaid" ? "border-black bg-[#FAFAFA]" : "border-[#E1E1E1] hover:border-[#AAAAAA]"
-          }`}
+          }${cardState("prepaid")}`}
         >
           <div className={`mt-0.5 w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center ${paymentMethod === "prepaid" ? "border-black" : "border-[#CFCFCF]"}`}>
             {paymentMethod === "prepaid" && <div className="w-2.5 h-2.5 rounded-full bg-black" />}
@@ -682,10 +744,12 @@ function PaymentStep({
         {/* PayU, an alternative online gateway; the customer chooses it, it is never switched to for them */}
         {PAYU_ENABLED && <button
           onClick={() => onSelectMethod("payu")}
+          disabled={!allowed("payu")}
+          aria-disabled={!allowed("payu")}
           data-testid="payment-method-payu"
           className={`flex items-start gap-4 p-5 rounded-2xl border-2 text-left transition-colors duration-150 w-full ${
             paymentMethod === "payu" ? "border-black bg-[#FAFAFA]" : "border-[#E1E1E1] hover:border-[#AAAAAA]"
-          }`}
+          }${cardState("payu")}`}
         >
           <div className={`mt-0.5 w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center ${paymentMethod === "payu" ? "border-black" : "border-[#CFCFCF]"}`}>
             {paymentMethod === "payu" && <div className="w-2.5 h-2.5 rounded-full bg-black" />}
@@ -740,17 +804,6 @@ function PaymentStep({
         <p className="font-sans text-[13px] text-[#D93025]" data-testid="payment-error">{razorpayError}</p>
       )}
 
-      {/* Razorpay trouble: offer PayU, for the customer to choose */}
-      {PAYU_ENABLED && razorpayError && paymentMethod === "prepaid" && !loading && (
-        <button
-          type="button"
-          onClick={() => onSelectMethod("payu")}
-          className="self-start font-sans text-[13px] text-black underline underline-offset-2"
-          data-testid="payu-fallback"
-        >
-          Having trouble with Razorpay? Pay with PayU instead
-        </button>
-      )}
 
       {/* Address summary chip */}
       <div className="flex items-center gap-2 p-3 bg-[#F7F7F7] rounded-2xl">
@@ -781,7 +834,11 @@ function PaymentStep({
         .
       </p>
 
-      <div className="flex gap-3">
+      {/* On phones the buttons stay in reach at the bottom of the screen. */}
+      <div
+        className="sticky bottom-0 z-10 -mx-6 px-6 pt-3 pb-[max(12px,env(safe-area-inset-bottom))] bg-white/95 backdrop-blur border-t border-[#EFEFEF] flex gap-3 lg:static lg:mx-0 lg:p-0 lg:bg-transparent lg:border-0 lg:backdrop-blur-none"
+        data-testid="payment-actions"
+      >
         <button
           onClick={onBack}
           disabled={loading}
@@ -791,7 +848,8 @@ function PaymentStep({
         </button>
         <button
           onClick={onPlaceOrder}
-          disabled={(!walletOnly && !paymentMethod) || !termsAccepted || loading}
+          disabled={(!walletOnly && !paymentMethod) || !termsAccepted || loading || payBlocked}
+          data-testid="payment-submit"
           className="flex-[2] h-[52px] bg-black text-white font-sans font-medium text-[16px] rounded-full hover:bg-[#1a1a1a] disabled:opacity-40 disabled:cursor-not-allowed transition-colors duration-200 flex items-center justify-center gap-2"
           style={{ boxShadow: "inset 0px 6px 10px rgba(211,211,211,0.3)" }}
         >
@@ -908,12 +966,19 @@ export function CheckoutClient() {
   const [serviceability, setServiceability] = useState<ServiceabilityResult | null>(null);
 
   /* Payment */
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | null>(null);
+  // A method the customer picked on a payment result page (?method=); still checked before paying.
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | null>(() => {
+    if (typeof window === "undefined") return null;
+    const asked = new URLSearchParams(window.location.search).get("method");
+    return asked === "prepaid" || asked === "cod" || (asked === "payu" && PAYU_ENABLED) ? asked : null;
+  });
   const [payLoading, setPayLoading] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [razorpayError, setRazorpayError] = useState("");
   // Set while the browser is being sent to PayU, so a second tap cannot open a second attempt.
   const payuRedirecting = useRef(false);
+  // The last attempt failed or was closed with nothing pending: the other methods are offered.
+  const [failure, setFailure] = useState<{ reason: "failed" | "closed"; detail: string | null } | null>(null);
 
   // Back from PayU's page without paying: the browser may restore this page as it was, still "loading".
   useEffect(() => {
@@ -934,6 +999,9 @@ export function CheckoutClient() {
 
   // Credit covers the whole order: no payment method is needed.
   const walletOnly = displayTotals.walletCredit > 0 && displayTotals.total <= 0 && !displayTotals.isEstimate;
+
+  // Where this cart's payment stands at the providers, while the customer is choosing how to pay.
+  const { standing, checking: standingChecking, refresh: refreshStanding } = usePaymentStanding(cartId, step === 3);
 
   // The cart whose leftover credit has already been cleared. Clearing again later,
   // for example when Clerk refreshes the user as the tab regains focus, would remove
@@ -970,8 +1038,11 @@ export function CheckoutClient() {
 
   /* Choose how to pay. The delivery charge and total follow the choice. */
   async function handleSelectMethod(method: PaymentMethod) {
+    // Only ever the customer's own choice; the checkout never switches for them.
+    if (!methodAllowed(standing, method)) return;
     setPaymentMethod(method);
     setRazorpayError("");
+    setFailure(null);
     if (!cartId) return;
     const result = await fetchCheckoutPricing(cartId, modeFor(method), "keep");
     if (result.ok) setPricing(result.cart);
@@ -1105,6 +1176,7 @@ export function CheckoutClient() {
 
     if (!confirmedOrderId) {
       setRazorpayError(failure || "Could not place your order. Please try again or contact support.");
+      void refreshStanding();
       setPayLoading(false);
       return;
     }
@@ -1124,6 +1196,13 @@ export function CheckoutClient() {
     if (!paymentMethod && !walletOnly) return;
     if (!termsAccepted) {
       setRazorpayError("Please agree to the return terms to place your order.");
+      return;
+    }
+    setFailure(null);
+    // Never open a payment while an earlier one is taken, pending or unchecked; the server refuses too.
+    if (standing && !(walletOnly ? standing.state === "none" && standing.can_pay : methodAllowed(standing, paymentMethod!))) {
+      setRazorpayError("Please check the payment status above before paying.");
+      void refreshStanding();
       return;
     }
     setPayLoading(true);
@@ -1178,6 +1257,7 @@ export function CheckoutClient() {
       if (!confirmedOrderId) {
         console.error("[EYRA] COD order completion failed for cart", cartId);
         setRazorpayError(codFailure || "Could not place your order. Please try again or contact support.");
+        void refreshStanding();
         setPayLoading(false);
         return;
       }
@@ -1257,6 +1337,7 @@ export function CheckoutClient() {
         razorpayOrderId = data.razorpayOrderId ?? null;
         razorpayAmount = typeof data.amount === "number" ? data.amount : null;
         if (data.error === "checkout_refused") {
+          void refreshStanding();
           // e.g. prices changed since the cart was priced, or this cart is already paid.
           setRazorpayError(data.message || "Please review your cart and try again.");
           setPayLoading(false);
@@ -1335,8 +1416,9 @@ export function CheckoutClient() {
             "This may indicate a tampered callback. " +
             `payment_id: ${response.razorpay_payment_id}`
           );
-          setRazorpayError("Payment verification failed. Please contact support with your payment ID.");
+          setRazorpayError("We couldn't confirm your payment yet. Please don't pay again: the status above updates by itself, and our team is alerted if it doesn't.");
           setPayLoading(false);
+          void refreshStanding();
           return;
         }
 
@@ -1354,16 +1436,25 @@ export function CheckoutClient() {
             }),
           });
           if (!vRes.ok) {
-            setRazorpayError("Payment verification failed. Please contact support with your payment ID.");
+            setRazorpayError("We couldn't confirm your payment yet. Please don't pay again: the status above updates by itself, and our team is alerted if it doesn't.");
             setPayLoading(false);
+            void refreshStanding();
             return;
           }
           const vData = await vRes.json() as { verified: boolean; medusa_order_id?: string | null };
-          if (vData.medusa_order_id) confirmedOrderId = vData.medusa_order_id;
+          if (!vData.medusa_order_id) {
+            // Paid, but the order is not placed yet (the webhook finishes it): say so, never show an order id we don't have.
+            setRazorpayError("Your payment went through and we're placing your order now. Please don't pay again.");
+            setPayLoading(false);
+            void refreshStanding();
+            return;
+          }
+          confirmedOrderId = vData.medusa_order_id;
         } catch (err) {
           console.error("[EYRA/razorpay] Verify request failed for payment", response.razorpay_payment_id, ":", err);
-          setRazorpayError("Could not verify payment. Please contact support.");
+          setRazorpayError("We couldn't confirm your payment yet. Please don't pay again: the status above updates by itself, and our team is alerted if it doesn't.");
           setPayLoading(false);
+          void refreshStanding();
           return;
         }
 
@@ -1377,13 +1468,25 @@ export function CheckoutClient() {
         router.push(`/orders/success?${params.toString()}`);
       },
       modal: {
-        ondismiss() {
+        // Closed without a confirmed payment. Only once the backend confirms nothing is
+        // pending (a UPI request can still be approved) are the other methods offered.
+        async ondismiss() {
+          const latest = await refreshStanding();
+          if (!latest || latest.state === "none") {
+            setFailure({ reason: lastFailure ? "failed" : "closed", detail: lastFailure });
+          }
           setPayLoading(false);
         },
       },
     };
 
+    // Razorpay keeps its window open after a failed try so the customer can retry there; remember why.
+    let lastFailure: string | null = null;
     const rzp = new window.Razorpay(rzpOptions);
+    rzp.on("payment.failed", (...args: unknown[]) => {
+      const detail = (args[0] as { error?: { description?: unknown } } | undefined)?.error?.description;
+      lastFailure = typeof detail === "string" && detail ? detail : "The payment didn't go through";
+    });
     rzp.open();
   }
 
@@ -1434,7 +1537,10 @@ export function CheckoutClient() {
       return fail("Could not start the PayU payment. Please try again or choose another payment method.");
     }
 
-    if (data.error === "checkout_refused") return fail(data.message || "Please review your cart and try again.");
+    if (data.error === "checkout_refused") {
+      void refreshStanding();
+      return fail(data.message || "Please review your cart and try again.");
+    }
     if (data.error === "fully_covered_by_wallet") return fail("Your wallet credit now covers this order. Please place the order again.");
     if (data.error === "wallet_unavailable") return fail(data.message || "Could not apply your wallet credit. Please try again.");
     if (data.error || !data.form) {
@@ -1509,6 +1615,11 @@ export function CheckoutClient() {
                 onToggleWallet={handleToggleWallet}
                 onBack={() => setStep(2)}
                 onPlaceOrder={handlePlaceOrder}
+                standing={standing}
+                standingChecking={standingChecking}
+                onCheckStanding={() => void refreshStanding()}
+                failure={failure}
+                onDismissFailure={() => setFailure(null)}
               />
             )}
           </div>

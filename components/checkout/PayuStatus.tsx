@@ -113,9 +113,14 @@ export function PayuStatus() {
 
       <div className="flex gap-3 flex-wrap justify-center">
         {(view.kind === "failed" || view.kind === "cancelled") && (
-          <Link href="/checkout" className={PRIMARY} data-testid="payu-try-again">
-            Try again
-          </Link>
+          <>
+            <Link href="/checkout?method=payu" className={PRIMARY} data-testid="payu-try-again">
+              Try PayU again
+            </Link>
+            <Link href="/checkout?method=prepaid" className={SECONDARY} data-testid="payu-switch-razorpay">
+              Pay with Razorpay instead
+            </Link>
+          </>
         )}
         {view.kind === "waiting" && gaveUp && (
           <button type="button" onClick={checkAgain} className={PRIMARY} data-testid="payu-check-again">
@@ -134,7 +139,7 @@ export function PayuStatus() {
 
       {(view.kind === "failed" || view.kind === "cancelled") && (
         <p className="font-sans text-[13px] text-[#909090] max-w-[420px]">
-          You can pay with PayU again, or choose Razorpay or Cash on Delivery at checkout.
+          Your cart is saved. You choose how to pay next: PayU again, Razorpay, or Cash on Delivery where it&apos;s available.
         </p>
       )}
     </StatusShell>
@@ -142,9 +147,9 @@ export function PayuStatus() {
 }
 
 const PRIMARY =
-  "px-8 py-[14px] bg-black text-white font-sans font-medium text-[16px] rounded-full hover:bg-[#1a1a1a] transition-colors duration-200";
+  "min-h-[48px] inline-flex items-center justify-center px-8 py-[14px] bg-black text-white font-sans font-medium text-[16px] rounded-full hover:bg-[#1a1a1a] transition-colors duration-200";
 const SECONDARY =
-  "px-8 py-[14px] border border-[#CFCFCF] text-black font-sans font-medium text-[16px] rounded-full hover:bg-[#F7F7F7] transition-colors duration-200";
+  "min-h-[48px] inline-flex items-center justify-center px-8 py-[14px] border border-[#CFCFCF] text-black font-sans font-medium text-[16px] rounded-full hover:bg-[#F7F7F7] transition-colors duration-200";
 
 function StatusShell({
   testId, title, tone, children,

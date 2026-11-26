@@ -133,7 +133,7 @@ export async function startFakePayu() {
     sessions,
     verifyCalls,
     /** A pending payment settling later at PayU. */
-    settle: (txnid: string, outcome: "success" | "failure") => decide(txnid, outcome),
+    settle: (txnid: string, outcome: "success" | "failure" | "pending") => decide(txnid, outcome),
     close: () => new Promise<void>((done) => server.close(() => done())),
   };
 }

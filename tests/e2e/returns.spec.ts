@@ -34,7 +34,8 @@ test.describe("the policy wording", () => {
     expect(source).toContain('data-testid="return-terms-note"');
     expect(source).toContain("There is no return fee for a damaged or defective item");
     expect(source).toContain('href="/refund-policy"');
-    expect(source).toMatch(/disabled=\{\(!walletOnly && !paymentMethod\) \|\| !termsAccepted \|\| loading\}/);
+    // (also disabled while an earlier payment is taken, pending or unchecked)
+    expect(source).toMatch(/disabled=\{\(!walletOnly && !paymentMethod\) \|\| !termsAccepted \|\| loading( \|\| payBlocked)?\}/);
     // And the handler itself refuses, for anything that calls it without the button.
     expect(source).toMatch(/async function handlePlaceOrder\(\) \{[\s\S]{0,200}if \(!termsAccepted\)/);
   });
