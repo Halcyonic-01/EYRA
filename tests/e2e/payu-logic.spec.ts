@@ -3,6 +3,7 @@ import {
   cancelledByCustomer,
   checkedPayuForm,
   isPayuCheckoutUrl,
+  loopbackOrigin,
   looksLikePayuReturn,
   payuView,
   pickReturnFields,
@@ -36,6 +37,16 @@ test.describe("the hosted checkout address", () => {
     expect(isPayuCheckoutUrl("http://127.0.0.1:19443/_payment")).toBe(false);
     expect(isPayuCheckoutUrl("http://127.0.0.1:19443/_payment", "http://127.0.0.1:19443")).toBe(true);
     expect(isPayuCheckoutUrl("http://127.0.0.1:19444/_payment", "http://127.0.0.1:19443")).toBe(false);
+  });
+
+  test("the test-only fake origin is honoured for this machine only, never a real host", () => {
+    expect(loopbackOrigin("http://127.0.0.1:19443")).toBe("http://127.0.0.1:19443");
+    expect(loopbackOrigin("http://localhost:19443/")).toBe("http://localhost:19443");
+    for (const bad of ["https://evil.example.com", "http://127.0.0.1.evil.com", "http://10.0.0.5:19443", "not a url", "", undefined]) {
+      expect(loopbackOrigin(bad)).toBeNull();
+    }
+    // So a stray production setting cannot point checkout at another site.
+    expect(isPayuCheckoutUrl("https://evil.example.com/_payment", loopbackOrigin("https://evil.example.com"))).toBe(false);
   });
 
   test("the backend's form is used only when it is complete", () => {

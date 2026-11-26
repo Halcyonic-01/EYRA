@@ -73,6 +73,12 @@ test.describe("what the customer is told", () => {
     expect(view.message).toContain("refunded automatically");
   });
 
+  test("a Razorpay try left in limbo can be continued with Razorpay only, and says it can't charge twice", () => {
+    const s = standing({ state: "pending", provider_name: "Razorpay", provider_id: RAZORPAY_PROVIDER, can_pay: true, allowed_providers: [RAZORPAY_PROVIDER], resume: true });
+    expect(METHODS.filter((m) => methodAllowed(s, m))).toEqual(["prepaid"]);
+    expect(standingView(s, now)!.message).toContain("can't be charged twice");
+  });
+
   test("paid says the order is being placed; unknown pauses paying rather than guessing", () => {
     expect(standingView(standing({ state: "paid", provider_name: "Razorpay", can_pay: false }), now)!.message).toContain("Please don't pay again");
     expect(standingView(standing({ state: "unknown", can_pay: false }), now)!.message).toContain("paying again is paused");
