@@ -37,6 +37,17 @@ export function isPayuCheckoutUrl(action: string, extraOrigin?: string | null): 
   return url.protocol === "https:" && PAYU_CHECKOUT_HOSTS.includes(url.hostname) && url.pathname === "/_payment";
 }
 
+/** The origin when it is on this machine (a local fake), else null. */
+export function loopbackOrigin(value: string | undefined | null): string | null {
+  if (!value?.trim()) return null;
+  try {
+    const url = new URL(value.trim());
+    return ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname) ? url.origin : null;
+  } catch {
+    return null;
+  }
+}
+
 /** The backend's form, checked: a PayU address and string fields with a hash. Null otherwise. */
 export function checkedPayuForm(value: unknown, extraOrigin?: string | null): PayuCheckoutForm | null {
   if (!value || typeof value !== "object") return null;

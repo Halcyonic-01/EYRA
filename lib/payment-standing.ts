@@ -30,6 +30,8 @@ export interface PaymentStanding {
   retry_after: string | null;
   can_pay: boolean;
   allowed_providers: string[] | "any";
+  /** The pending try is on the current Razorpay order: paying again continues that order, which can be paid only once. */
+  resume?: boolean;
   refunds: StandingRefund[];
 }
 
@@ -96,6 +98,15 @@ export function standingView(standing: PaymentStanding | null, now: Date = new D
         poll: true,
       };
     case "pending": {
+      if (standing.resume) {
+        return {
+          tone: "warning",
+          title: `Your ${gateway} payment didn't complete`,
+          message: `You can pay again with ${gateway}: it continues the same payment, so you can't be charged twice. To pay another way, please wait until it has settled.`,
+          recheck: true,
+          poll: true,
+        };
+      }
       const wait = minutesUntil(standing.retry_after, now);
       return {
         tone: "warning",

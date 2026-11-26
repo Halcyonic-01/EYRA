@@ -9,6 +9,7 @@ import type { NextResponse } from "next/server";
 import { encodeReturnCookie } from "@/lib/payu-cookie";
 import {
   checkedPayuForm,
+  loopbackOrigin,
   type PayuCheckoutForm,
   type PayuOutcomeStatus,
   type PayuReturnFields,
@@ -29,9 +30,13 @@ function storeHeaders(): Record<string, string> {
   };
 }
 
-/** A local fake PayU's origin, for tests only. Unset in production, so only PayU's own hosts pass. */
+/**
+ * A local fake PayU's origin, for tests only: honoured only for this machine
+ * (localhost, 127.0.0.1, [::1]), so a stray setting in production can never
+ * send customers anywhere but PayU's own hosts.
+ */
 export function payuTestOrigin(): string | null {
-  return process.env.PAYU_CHECKOUT_ORIGIN?.trim() || null;
+  return loopbackOrigin(process.env.PAYU_CHECKOUT_ORIGIN);
 }
 
 /* ── Opening a payment ────────────────────────────────────── */
