@@ -144,7 +144,8 @@ async function medusaFetch<T>(
     });
 
     if (!res.ok) {
-      console.error(`[medusa] ${res.status} ${res.statusText}, ${url.toString()}`);
+      // 404: a handle that does not exist (an old link, a typo), shown as not found; not an error.
+      (res.status === 404 ? console.warn : console.error)(`[medusa] ${res.status} ${res.statusText}, ${url.toString()}`);
       return null;
     }
 

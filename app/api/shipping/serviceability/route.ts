@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
     // expected operational event, not a hypothetical.
     if (!res.ok) {
       console.error(
-        `[Shiprocket/serviceability] API returned ${res.status} ${res.statusText} for pincode ${pincode}. ` +
+        `[Shiprocket/serviceability] API returned ${res.status} ${res.statusText}. ` +
         (res.status === 401 || res.status === 403
           ? "SHIPROCKET_API_TOKEN is likely expired or invalid, regenerate it. "
           : "") +
@@ -106,7 +106,7 @@ export async function POST(request: NextRequest) {
 
     shiprocketData = (await res.json()) as ShiprocketServiceabilityResponse;
   } catch (err) {
-    console.error("[Shiprocket/serviceability] Serviceability fetch failed for pincode", pincode, ":", err);
+    console.error("[Shiprocket/serviceability] Serviceability fetch failed:", err);
     return Response.json(inconclusive);
   }
 

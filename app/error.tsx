@@ -13,7 +13,8 @@ export default function ErrorBoundary({
 }) {
   useEffect(() => {
     console.error("[EYRA] Unhandled route error:", error);
-    Sentry.captureException(error);
+    // A server error (it has a digest) was already reported by onRequestError; this copy has its message hidden.
+    if (!error.digest) Sentry.captureException(error);
   }, [error]);
 
   return (

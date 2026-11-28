@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { withSentryConfig } from "@sentry/nextjs/config";
 
 import { imageRemotePatterns } from "./config/image-hosts";
 
@@ -73,4 +74,20 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+// Source maps are uploaded to Sentry (readable stack traces) and then deleted
+// from the build, so they are never served. Without SENTRY_AUTH_TOKEN (local
+// builds, previews without it) no source maps are made at all.
+const uploadSourceMaps = Boolean(process.env.SENTRY_AUTH_TOKEN);
+
+export default withSentryConfig(nextConfig, {
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+  // The release is the Git commit Vercel builds; events carry the same name (lib/monitoring/sentry.ts).
+  release: { name: process.env.VERCEL_GIT_COMMIT_SHA, create: uploadSourceMaps },
+  sourcemaps: { disable: !uploadSourceMaps, deleteSourcemapsAfterUpload: true },
+  widenClientFileUpload: true,
+  silent: !process.env.CI,
+  // No build data is sent to Sentry beyond the source maps.
+  telemetry: false,
+});

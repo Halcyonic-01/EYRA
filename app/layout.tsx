@@ -79,8 +79,10 @@ export default async function RootLayout({
   try {
     user = await getCurrentUser();
   } catch (err) {
-    // Treat an unreachable Clerk as signed out so the shop still loads.
-    console.error("[layout] could not read the signed-in user:", err);
+    // Treat an unreachable Clerk as signed out so the shop still loads. A missing
+    // static file (/favicon.ico) renders without the proxy, so Clerk cannot run: expected, not logged.
+    const noProxy = err instanceof Error && err.message.includes("clerkMiddleware()");
+    if (!noProxy) console.error("[layout] could not read the signed-in user:", err);
   }
   if (user) await syncMedusaCustomer(user);
 

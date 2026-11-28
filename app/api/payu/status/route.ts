@@ -25,7 +25,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(answer, noStore);
   }
 
-  const outcome = await confirmPayuReturn(fields);
+  // The return route already reported a refusal of these same fields.
+  const outcome = await confirmPayuReturn(fields, { reportRefusal: false });
   if (outcome.status === "order" && outcome.orderId) {
     await sendOrderConfirmationEmail(outcome.orderId);
   }

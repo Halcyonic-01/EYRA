@@ -97,7 +97,11 @@ const BACKEND_STATUSES = new Set(["order", "pending", "processing", "failed", "r
  * completes the cart once paid. Safe to repeat. A 4xx means the fields did not
  * check out (never a success); anything else unanswered is "unavailable".
  */
-export async function confirmPayuReturn(fields: PayuReturnFields): Promise<BackendPayuOutcome> {
+export async function confirmPayuReturn(
+  fields: PayuReturnFields,
+  options: { reportRefusal?: boolean } = {}
+): Promise<BackendPayuOutcome> {
+  const { reportRefusal = true } = options;
   try {
     const res = await fetch(`${BASE_URL}/store/payu/return`, {
       method: "POST",
@@ -110,7 +114,8 @@ export async function confirmPayuReturn(fields: PayuReturnFields): Promise<Backe
       status?: unknown; order_id?: unknown; cart_id?: unknown; message?: unknown;
     };
     if (res.status >= 400 && res.status < 500 && res.status !== 429 && res.status !== 409) {
-      console.error(`[medusa-payu] return for ${fields.txnid ?? "?"} refused ${res.status}: ${String(body.message ?? "")}`);
+      // Forged or tampered fields, or a wrong PayU salt: reported (an error) once per return, not on every status check.
+      (reportRefusal ? console.error : console.warn)(`[medusa-payu] return for ${fields.txnid ?? "?"} refused ${res.status}: ${String(body.message ?? "")}`);
       return { status: "unverified", orderId: null, cartId: null };
     }
     if (!res.ok || typeof body.status !== "string" || !BACKEND_STATUSES.has(body.status)) {

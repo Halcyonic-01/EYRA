@@ -21,6 +21,12 @@ export interface EmailParams {
   idempotencyKey?: string;
   /** Adds the one-click unsubscribe headers mail apps show as an Unsubscribe button. */
   unsubscribeUrl?: string;
+  /**
+   * The caller retries a failed send and reports it once it gives up (the
+   * order confirmation: the backend's order-integrity job), so a failure here
+   * is logged as a warning, not reported as an error each time.
+   */
+  retriedElsewhere?: boolean;
 }
 
 export interface SendDeps {
@@ -94,11 +100,14 @@ export async function sendThroughResend(
       if (res.ok) return true;
 
       const retryable = res.status === 429 || (res.status >= 500 && !!params.idempotencyKey);
-      console.error(`[email] Resend API error ${res.status} (attempt ${attempt}):`, await res.text());
-      if (!retryable || attempt === 2) return false;
+      // Only the attempt that gives up is an error (and reported); one that will be retried is a warning.
+      const last = !retryable || attempt === 2;
+      (last && !params.retriedElsewhere ? console.error : console.warn)(`[email] Resend API error ${res.status} (attempt ${attempt}):`, await res.text());
+      if (last) return false;
     } catch (err) {
-      console.error(`[email] send failed (attempt ${attempt}):`, err);
-      if (!params.idempotencyKey || attempt === 2) return false;
+      const last = !params.idempotencyKey || attempt === 2;
+      (last && !params.retriedElsewhere ? console.error : console.warn)(`[email] send failed (attempt ${attempt}):`, err);
+      if (last) return false;
     }
     await wait(RETRY_DELAY_MS);
   }

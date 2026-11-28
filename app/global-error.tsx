@@ -16,7 +16,8 @@ export default function GlobalError({
 }) {
   useEffect(() => {
     console.error("[EYRA] Root layout crash:", error);
-    Sentry.captureException(error);
+    // A server error (it has a digest) was already reported by onRequestError; this copy has its message hidden.
+    if (!error.digest) Sentry.captureException(error);
   }, [error]);
 
   return (

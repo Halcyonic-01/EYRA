@@ -116,3 +116,33 @@ test.describe("sending through Resend", () => {
     expect(down.calls).toHaveLength(2);
   });
 });
+
+test.describe("which email failures are errors (errors go to Sentry)", () => {
+  function captureConsole() {
+    const logged = { error: 0, warn: 0 };
+    const original = { error: console.error, warn: console.warn };
+    console.error = () => void logged.error++;
+    console.warn = () => void logged.warn++;
+    return { logged, restore: () => Object.assign(console, original) };
+  }
+
+  test("an attempt that will be retried is a warning; only the one that gives up is an error", async () => {
+    const out = captureConsole();
+    try {
+      await sendThroughResend({ ...mail, idempotencyKey: "k1" }, live, fakeResend([503, 503]).deps);
+    } finally {
+      out.restore();
+    }
+    expect(out.logged).toEqual({ error: 1, warn: 1 });
+  });
+
+  test("a send the caller retries and reports itself (the order confirmation) is never an error", async () => {
+    const out = captureConsole();
+    try {
+      await sendThroughResend({ ...mail, retriedElsewhere: true }, live, fakeResend([422]).deps);
+    } finally {
+      out.restore();
+    }
+    expect(out.logged).toEqual({ error: 0, warn: 1 });
+  });
+});

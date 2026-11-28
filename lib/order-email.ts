@@ -268,6 +268,8 @@ export async function sendOrderConfirmationEmail(orderId: string): Promise<Confi
     subject: `Your EYRA order #${order.display_id} is confirmed`,
     html: renderOrderEmail(order),
     from: process.env.ORDER_EMAIL_FROM ?? "EYRA Orders <orders@eyra.org.in>",
+    // Released and tried again; the backend reports it once it gives up.
+    retriedElsewhere: true,
   });
 
   // A crash between sending and this mark lets the claim expire and the email
