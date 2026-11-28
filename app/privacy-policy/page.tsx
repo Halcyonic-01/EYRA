@@ -16,7 +16,7 @@ export default function PrivacyPolicyPage() {
       eyebrow="Legal"
       title="Privacy Policy"
       standfirst={`How ${seller.legalName} collects, uses, and protects your personal information when you visit, create an account on, or buy from eyra.org.in.`}
-      updated="August 2026"
+      updated="November 2026"
       sections={[
         {
           id: "commitment",
@@ -40,9 +40,24 @@ export default function PrivacyPolicyPage() {
               items: [
                 { label: "Device details", value: "IP address, operating system, browser type, device category, screen resolution, and time zone." },
                 { label: "Browsing activity", value: "Pages visited, collections and products viewed, referring and exit URLs, search keywords, and interaction times." },
-                { label: "Cookies", value: "Small files stored by your browser for session management, keeping your cart, and keeping you signed in." },
+                { label: "Cookies", value: "Small files stored by your browser for session management, keeping your cart, keeping you signed in, and remembering your analytics choice. Analytics cookies are set only if you accept analytics (see below)." },
                 { label: "Logs and web beacons", value: "Records of site events, server response times, and traffic flow." },
-                { label: "Analytics", value: "Anonymised data used to find broken parts of the site and improve checkout performance." },
+              ],
+            },
+          ],
+        },
+        {
+          id: "analytics",
+          heading: "Analytics choices",
+          blocks: [
+            "Analytics is optional. We ask before using it, and nothing is collected for analytics unless you choose \u201cAccept analytics\u201d.",
+            {
+              kind: "details",
+              items: [
+                { label: "If you accept", value: "We use PostHog to see how the store is used: pages and products viewed, items added to or removed from the bag, checkout steps, the payment method chosen and whether a payment succeeded, and orders placed or cancelled. This is linked to a random identifier, or to your customer number if you are signed in. We never send your name, email address, phone number or delivery address to PostHog. If session recording is switched on, it hides everything you type and never records account, order, wallet, sign-in, review or support pages." },
+                { label: "If you decline", value: "PostHog is not loaded at all: it sets no cookies and receives nothing from your visit. The store works exactly the same." },
+                { label: "Changing your mind", value: "Choose \u201cAnalytics settings\u201d at the bottom of any page to accept, decline, or withdraw consent you gave earlier. Withdrawing stops analytics straight away and removes PostHog\u2019s cookies from your browser. Your choice applies to the browser you make it in and is remembered for 12 months, after which we ask again. If you are signed in, it also decides whether your orders are included in analytics." },
+                { label: "Data already collected", value: "Withdrawing stops further collection; it does not delete analytics data collected while you had agreed. To ask us to delete it, use the contact details under \u201cData retention and your rights\u201d." },
               ],
             },
           ],
@@ -102,7 +117,8 @@ export default function PrivacyPolicyPage() {
                 { label: "Shiprocket and its couriers", value: "Delivery: name, delivery address, PIN code, and phone number for transit and live tracking." },
                 { label: "Clerk", value: "Sign-in: email and profile details used to sign you in securely." },
                 { label: "Resend, AiSensy and WATI", value: "Messaging: phone number and email address, used to send order alerts, receipts, pickup and payment-link messages, and store credit notices." },
-                { label: "Sentry and PostHog", value: "Reliability and analytics: anonymised device data, error logs, and usage data used to fix bugs." },
+                { label: "Sentry", value: "Error monitoring: technical error reports and device data used to find and fix faults on the site." },
+                { label: "PostHog", value: "Analytics, only if you accept it: the usage data described under \u201cAnalytics choices\u201d, linked to a random identifier or your customer number." },
                 { label: "Government authorities", value: "Strictly where required to comply with applicable law, court orders, or statutory tax audits." },
               ],
             },

@@ -167,3 +167,21 @@ export async function syncMedusaCustomer(
     return null;
   }
 }
+
+/* ── Analytics consent ────────────────────────────────────── */
+
+/**
+ * Records the customer's analytics choice on their Medusa profile
+ * (metadata.analytics_consent), where the backend checks it before sending an
+ * order event. Medusa merges metadata, so the profile's other keys are kept.
+ */
+export async function setCustomerAnalyticsConsent(
+  customerId: string,
+  consent: { status: "granted" | "denied"; at: string; version: number }
+): Promise<boolean> {
+  const result = await adminFetch<{ customer?: { id: string } }>(`/admin/customers/${customerId}`, {
+    method: "POST",
+    body: JSON.stringify({ metadata: { analytics_consent: consent } }),
+  });
+  return Boolean(result?.customer);
+}

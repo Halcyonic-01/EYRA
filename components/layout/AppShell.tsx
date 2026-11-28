@@ -5,6 +5,8 @@ import { usePathname } from "next/navigation";
 import { useCartStore, useWishlistStore } from "@/store/useStore";
 import { CartDrawer } from "@/components/cart/CartDrawer";
 import { ScrollToTop } from "@/components/layout/ScrollToTop";
+import { AnalyticsBridge } from "@/components/analytics/AnalyticsBridge";
+import { ConsentBanner } from "@/components/analytics/ConsentBanner";
 
 /**
  * Navbar and CartSyncBanner are themselves "use client" components, so
@@ -51,6 +53,8 @@ export function AppShell({
     return (
       <>
         {/* The shop stays visible behind the window; inert so nothing in it can be reached. */}
+        <AnalyticsBridge />
+        <ConsentBanner />
         <div aria-hidden="true" inert className="pointer-events-none select-none">
           {navbar}
           <div style={{ paddingTop: "var(--header-offset)" }}>{authBackdrop}</div>
@@ -62,6 +66,8 @@ export function AppShell({
 
   return (
     <>
+      <AnalyticsBridge />
+        <ConsentBanner />
       <ScrollToTop />
       {navbar}
       <main className="flex-1" style={{ paddingTop: "var(--header-offset)" }}>

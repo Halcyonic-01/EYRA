@@ -20,6 +20,8 @@ import { payuEnabled, type PayuCheckoutForm } from "@/lib/payu";
 import { submitHostedForm } from "@/lib/payu-redirect";
 import { failureMessage, methodAllowed, type PaymentStanding } from "@/lib/payment-standing";
 import { usePaymentStanding } from "@/lib/use-payment-standing";
+import { track } from "@/lib/analytics/client";
+import { methodName, type PaymentFailureReason } from "@/lib/analytics/events";
 import { PaymentStandingPanel } from "@/components/checkout/PaymentStandingPanel";
 import type { PaymentMode } from "@/lib/medusa-cart";
 
@@ -1003,6 +1005,23 @@ export function CheckoutClient() {
   // Where this cart's payment stands at the providers, while the customer is choosing how to pay.
   const { standing, checking: standingChecking, refresh: refreshStanding } = usePaymentStanding(cartId, step === 3);
 
+  // Analytics: one checkout_started per visit to checkout with items in the bag.
+  const checkoutTracked = useRef(false);
+  useEffect(() => {
+    if (checkoutTracked.current || items.length === 0) return;
+    checkoutTracked.current = true;
+    track("checkout_started", {
+      item_count: items.reduce((n, i) => n + i.quantity, 0),
+      cart_value: displayTotals.total,
+    });
+  }, [items, displayTotals.total]);
+
+  /** A payment that did not complete, in fixed categories (never the gateway's own text). */
+  function paymentFailed(reason: PaymentFailureReason) {
+    if (!paymentMethod && !walletOnly) return;
+    track("payment_failed", { method: methodName(paymentMethod ?? "prepaid", walletOnly), reason });
+  }
+
   // The cart whose leftover credit has already been cleared. Clearing again later,
   // for example when Clerk refreshes the user as the tab regains focus, would remove
   // credit from a cart whose payment has already been created.
@@ -1040,6 +1059,11 @@ export function CheckoutClient() {
   async function handleSelectMethod(method: PaymentMethod) {
     // Only ever the customer's own choice; the checkout never switches for them.
     if (!methodAllowed(standing, method)) return;
+    if (method !== paymentMethod) {
+      track("payment_method_selected", { method: methodName(method) });
+      // Chosen from the failure panel: the manual fallback the customer took.
+      if (failure && paymentMethod) track("payment_method_switched", { from: methodName(paymentMethod), to: methodName(method) });
+    }
     setPaymentMethod(method);
     setRazorpayError("");
     setFailure(null);
@@ -1176,6 +1200,7 @@ export function CheckoutClient() {
 
     if (!confirmedOrderId) {
       setRazorpayError(failure || "Could not place your order. Please try again or contact support.");
+      paymentFailed(failure ? "refused" : "error");
       void refreshStanding();
       setPayLoading(false);
       return;
@@ -1207,6 +1232,7 @@ export function CheckoutClient() {
     }
     setPayLoading(true);
     setRazorpayError("");
+    track("payment_started", { method: methodName(paymentMethod ?? "prepaid", walletOnly), amount: displayTotals.total });
 
     if (walletOnly) {
       await handleWalletOrder();
@@ -1257,6 +1283,7 @@ export function CheckoutClient() {
       if (!confirmedOrderId) {
         console.error("[EYRA] COD order completion failed for cart", cartId);
         setRazorpayError(codFailure || "Could not place your order. Please try again or contact support.");
+        paymentFailed(codFailure ? "refused" : "error");
         void refreshStanding();
         setPayLoading(false);
         return;
@@ -1338,6 +1365,7 @@ export function CheckoutClient() {
         razorpayAmount = typeof data.amount === "number" ? data.amount : null;
         if (data.error === "checkout_refused") {
           void refreshStanding();
+          paymentFailed("refused");
           // e.g. prices changed since the cart was priced, or this cart is already paid.
           setRazorpayError(data.message || "Please review your cart and try again.");
           setPayLoading(false);
@@ -1358,6 +1386,7 @@ export function CheckoutClient() {
     } catch (err) {
       console.error("[EYRA Security] create-order request failed:", err);
       setRazorpayError("Payment initialisation failed. Please try again or use Cash on Delivery.");
+      paymentFailed("error");
       setPayLoading(false);
       return;
     }
@@ -1416,7 +1445,7 @@ export function CheckoutClient() {
             "This may indicate a tampered callback. " +
             `payment_id: ${response.razorpay_payment_id}`
           );
-          setRazorpayError("We couldn't confirm your payment yet. Please don't pay again: the status above updates by itself, and our team is alerted if it doesn't.");
+          setRazorpayError("We couldn't confirm your payment yet. Please don't pay again: the status above updates by itself, and our team is alerted if it doesn't."); paymentFailed("unconfirmed");
           setPayLoading(false);
           void refreshStanding();
           return;
@@ -1436,7 +1465,7 @@ export function CheckoutClient() {
             }),
           });
           if (!vRes.ok) {
-            setRazorpayError("We couldn't confirm your payment yet. Please don't pay again: the status above updates by itself, and our team is alerted if it doesn't.");
+            setRazorpayError("We couldn't confirm your payment yet. Please don't pay again: the status above updates by itself, and our team is alerted if it doesn't."); paymentFailed("unconfirmed");
             setPayLoading(false);
             void refreshStanding();
             return;
@@ -1445,6 +1474,7 @@ export function CheckoutClient() {
           if (!vData.medusa_order_id) {
             // Paid, but the order is not placed yet (the webhook finishes it): say so, never show an order id we don't have.
             setRazorpayError("Your payment went through and we're placing your order now. Please don't pay again.");
+            paymentFailed("unconfirmed");
             setPayLoading(false);
             void refreshStanding();
             return;
@@ -1452,7 +1482,7 @@ export function CheckoutClient() {
           confirmedOrderId = vData.medusa_order_id;
         } catch (err) {
           console.error("[EYRA/razorpay] Verify request failed for payment", response.razorpay_payment_id, ":", err);
-          setRazorpayError("We couldn't confirm your payment yet. Please don't pay again: the status above updates by itself, and our team is alerted if it doesn't.");
+          setRazorpayError("We couldn't confirm your payment yet. Please don't pay again: the status above updates by itself, and our team is alerted if it doesn't."); paymentFailed("unconfirmed");
           setPayLoading(false);
           void refreshStanding();
           return;
@@ -1474,6 +1504,7 @@ export function CheckoutClient() {
           const latest = await refreshStanding();
           if (!latest || latest.state === "none") {
             setFailure({ reason: lastFailure ? "failed" : "closed", detail: lastFailure });
+            paymentFailed(lastFailure ? "declined" : "abandoned");
           }
           setPayLoading(false);
         },
@@ -1505,7 +1536,8 @@ export function CheckoutClient() {
     }
     payuRedirecting.current = true;
 
-    const fail = (message: string) => {
+    const fail = (message: string, reason: PaymentFailureReason = "error") => {
+      paymentFailed(reason);
       payuRedirecting.current = false;
       setRazorpayError(message);
       setPayLoading(false);
@@ -1539,7 +1571,7 @@ export function CheckoutClient() {
 
     if (data.error === "checkout_refused") {
       void refreshStanding();
-      return fail(data.message || "Please review your cart and try again.");
+      return fail(data.message || "Please review your cart and try again.", "refused");
     }
     if (data.error === "fully_covered_by_wallet") return fail("Your wallet credit now covers this order. Please place the order again.");
     if (data.error === "wallet_unavailable") return fail(data.message || "Could not apply your wallet credit. Please try again.");

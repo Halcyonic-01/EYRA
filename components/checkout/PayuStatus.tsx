@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { useCartStore } from "@/store/useStore";
+import { track } from "@/lib/analytics/client";
 import {
   PAYU_POLL_ATTEMPTS,
   PAYU_POLL_INTERVAL_MS,
@@ -28,6 +29,13 @@ export function PayuStatus() {
   const router = useRouter();
   const clearCart = useCartStore((s) => s.clearCart);
   const [view, setView] = useState<PayuView | null>(null);
+  // Analytics: a PayU failure or cancellation is counted once per visit to this page.
+  const failureTracked = useRef(false);
+  useEffect(() => {
+    if (failureTracked.current || (view?.kind !== "failed" && view?.kind !== "cancelled")) return;
+    failureTracked.current = true;
+    track("payment_failed", { method: "payu", reason: view.kind === "cancelled" ? "abandoned" : "declined" });
+  }, [view]);
   const [paymentId, setPaymentId] = useState<string | null>(null);
   const [gaveUp, setGaveUp] = useState(false);
   // Bumped by "Check again" to start a fresh round of checks.

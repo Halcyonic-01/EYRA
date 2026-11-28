@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 
 import { imageRemotePatterns } from "./config/image-hosts";
+import { analyticsConfig, analyticsRewrites } from "./lib/analytics/config";
 
 /**
  * Browser security headers for every response. The CSP only covers framing,
@@ -35,6 +36,15 @@ const nextConfig: NextConfig = {
   async headers() {
     return [{ source: "/(.*)", headers: securityHeaders }];
   },
+
+  // Product analytics goes to PostHog through this site (lib/analytics/config.ts),
+  // so blockers do not drop it and the browser talks to one origin only.
+  async rewrites() {
+    return analyticsRewrites(analyticsConfig(process.env));
+  },
+  // PostHog's paths end in "/", which Next would redirect away. Trailing-slash
+  // redirects for pages are kept in proxy.ts instead.
+  skipTrailingSlashRedirect: true,
 
   // Policy pages briefly lived under /legal/* before the final URL scheme was
   // settled. These keep any saved or shared link resolving.

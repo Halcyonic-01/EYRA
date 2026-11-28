@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Logo } from "@/components/ui/Logo";
+import { ConsentSettingsLink } from "@/components/analytics/ConsentBanner";
 import { NewsletterForm } from "./NewsletterForm";
 import { BisMark } from "./BisMark";
 import { TrustBar } from "./TrustBar";
@@ -164,6 +165,7 @@ export function Footer() {
                     </Link>
                   </li>
                 ))}
+                <ConsentSettingsLink className="text-[0.78rem] font-normal text-pearl hover:text-white transition-colors duration-200 tracking-[0.02em]" />
               </ul>
               <BisMark />
             </div>

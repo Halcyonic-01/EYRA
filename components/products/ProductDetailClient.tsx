@@ -15,6 +15,7 @@ import { choiceOptions, defaultSelection, isInCart, resolveVariant, type Selecti
 import { COD_CHARGE, rupees } from "@/config/offers";
 import { PolicyBadge } from "@/components/products/PolicyBadge";
 import { ProductOffers } from "@/components/offers/ProductOffers";
+import { track } from "@/lib/analytics/client";
 
 /** The anklet option: one anklet, or a pair of the same design (see the backend's anklet-pair sync). */
 const PACK = "Pack";
@@ -245,6 +246,19 @@ export function ProductDetailClient({
   const [ctaInView, setCtaInView] = useState(true);
   const [footerInView, setFooterInView] = useState(false);
   const showStickyBar = !ctaInView && !footerInView;
+
+  // One product_viewed per product shown (a re-render or a second effect run does not count again).
+  const viewed = useRef<string | null>(null);
+  useEffect(() => {
+    if (viewed.current === product.id) return;
+    viewed.current = product.id;
+    track("product_viewed", {
+      product_id: product.id,
+      product_type: product.type,
+      price: product.price,
+      in_stock: product.inStock > 0,
+    });
+  }, [product.id, product.type, product.price, product.inStock]);
 
   useEffect(() => {
     const cta = ctaRef.current;

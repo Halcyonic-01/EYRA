@@ -3,6 +3,7 @@ import { persist, createJSONStorage } from "zustand/middleware";
 import type { ChosenSize, Product, ProductVariant } from "@/components/products/types";
 import { isOldFixedOriginal, originalFor } from "@/lib/discount";
 import type { CartSummary, CartTotals } from "@/lib/medusa-cart";
+import { track } from "@/lib/analytics/client";
 
 export interface CartItem {
   product: Product;
@@ -232,6 +233,14 @@ export const useCartStore = create<CartStore>()(
           ),
         }));
         get().applySummary(result.summary);
+        // Counted once the server has the item, so a refused add is never counted.
+        track("product_added_to_cart", {
+          product_id: product.id,
+          variant_id: variantId ?? null,
+          product_type: product.type,
+          quantity,
+          price: unitPrice,
+        });
       } catch (err) {
         console.error("[cart] addToCart sync failed:", err);
         // Only a definitive server rejection (Medusa actually responded "no",
@@ -271,6 +280,7 @@ export const useCartStore = create<CartStore>()(
         const { removeCartLineItem } = await import("@/lib/medusa-cart");
         const summary = await removeCartLineItem(cartId, lineItemId);
         set({ syncStatus: "idle", syncError: null });
+        if (item) track("product_removed_from_cart", { product_id: item.product.id, variant_id: item.variantId ?? null, quantity: item.quantity });
         if (summary) get().applySummary(summary);
       } catch (err) {
         console.error("[cart] removeFromCart sync failed:", err);
